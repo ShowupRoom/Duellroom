@@ -57,13 +57,10 @@ function askIdle(D, msg) {
   msg.monster_sets.forEach((c, i) => register(D, c, 'set', sys(1153, 'Setzen'), r(IA.SELECT_MONSTER_SET, i)));
   msg.spell_sets.forEach((c, i) => register(D, c, 'spellset', sys(1153, 'Setzen'), r(IA.SELECT_SPELL_SET, i)));
   msg.activates.forEach((c, i) => { const d = descText(c.description, c.code); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n ? ': ' + d.replace(/\s+/g, ' ').slice(0, 90) : ''), r(IA.SELECT_ACTIVATE, i), true); });
-  const btns = [];
-  if (msg.to_bp) btns.push({ label: '⚔ Kampf', cls: 'gold', onclick: () => D.answer(r(IA.TO_BP, null)) });
-  if (msg.to_ep) btns.push({ label: 'Zug beenden ⏭', cls: 'red', onclick: () => D.answer(r(IA.TO_EP, null)) });
   const n = D.actList.length;
   D.setTip(D.conf.tutor ? idleTip(D, msg) : null); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
   D.phaseOpts = { BP: msg.to_bp ? r(IA.TO_BP, null) : null, EP: msg.to_ep ? r(IA.TO_EP, null) : null };
-  D.setBar(`${D.pname(msg.player)} · ${PHASE[D.phase] || 'Main Phase'}`, btns, n ? 'Tippe auf eine leuchtende Karte' : 'Keine Aktion möglich – beende die Phase');
+  D.hideBar(); // Kampf / Zugende: über das Phasenrad
   const p = D.wait('idle'); D.render(); return p;
 }
 function askBattle(D, msg) {
@@ -71,12 +68,9 @@ function askBattle(D, msg) {
   const r = (action, index) => ({ type: R.SELECT_BATTLECMD, action, index });
   msg.attacks.forEach((c, i) => register(D, c, 'attack', 'Angreifen' + (c.can_direct ? ' (direkt möglich)' : ''), r(BA.SELECT_BATTLE, i), true));
   msg.chains.forEach((c, i) => { const d = descText(c.description, c.code); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n ? ': ' + d.slice(0, 90) : ''), r(BA.SELECT_CHAIN, i), true); });
-  const btns = [];
-  if (msg.to_m2) btns.push({ label: 'Main Phase 2', cls: 'gold', onclick: () => D.answer(r(BA.TO_M2, null)) });
-  if (msg.to_ep) btns.push({ label: 'Zug beenden ⏭', cls: 'red', onclick: () => D.answer(r(BA.TO_EP, null)) });
   D.setTip(D.conf.tutor ? battleTip(D, msg) : null); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
   D.phaseOpts = { M2: msg.to_m2 ? r(BA.TO_M2, null) : null, EP: msg.to_ep ? r(BA.TO_EP, null) : null };
-  D.setBar(`${D.pname(msg.player)} · Kampfphase`, btns, msg.attacks.length ? 'Tippe ein leuchtendes Monster an, um anzugreifen' : 'Keine Angriffe möglich');
+  D.hideBar();
   const p = D.wait('battle'); D.render(); return p;
 }
 

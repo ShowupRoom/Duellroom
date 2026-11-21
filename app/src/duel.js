@@ -62,12 +62,14 @@ class Duel {
     if (!land && this.phaseEl.parentNode !== this.top) this.top.insertBefore(this.phaseEl, this.top.children[1] || null);
     if (land) {
       // Querformat: die Kartengröße richtet sich nach der Höhe (5 Reihen + herausschauende Hand + Gegnerhand)
-      const sp = this.safe(); const rowsH = this.mode.emz ? 5 * 1.42 : 4 * 1.42 + 0.32; const gaps = 4 * 3 + 6;
+      const sp = this.safe(); const RH = 1.1; // Querformat: Zonen fast quadratisch (Kartenausschnitt) – so wird das Feld größer
+      const rowsH = this.mode.emz ? 5 * RH : 4 * RH + 0.32; const gaps = 4 * 3 + 6; R.style.setProperty('--rh', RH);
       const cwH = (H - sp.t - sp.b - gaps - 4) / (rowsH + 0.34 + 1.0); const cwW = (W - sp.l - sp.r - 2 * 140 - 18 - 12) / (this.mode.cols3 ? 5 : 7);
       const cw = Math.max(30, Math.min(cwH, cwW, 112)); const boardW = cw * (this.mode.cols3 ? 5 : 7) + 18 + 12;
       const st = R.style; st.setProperty('--cw', cw.toFixed(1) + 'px'); st.setProperty('--hpk', (cw * 1.0).toFixed(1) + 'px'); st.setProperty('--opk', (cw * 0.34).toFixed(1) + 'px');
       st.setProperty('--sidew', Math.max(140, (W - sp.l - sp.r - boardW) / 2 - 6).toFixed(0) + 'px'); st.setProperty('--barh', '0px'); return;
     }
+    R.style.setProperty('--rh', '1.42');
     const b = this.boardWrap.getBoundingClientRect(); if (!b.width || !b.height) return;
     const rows = this.mode.emz ? 5 : 4.35; const cw = Math.max(30, Math.min((b.width - 22) / (this.mode.cols3 ? 5 : 7), b.height / (rows * 1.42 + 0.35), 96));
     R.style.setProperty('--cw', cw.toFixed(1) + 'px'); R.style.setProperty('--barh', this.bar.offsetHeight + 'px'); R.style.setProperty('--sidew', '100%');
@@ -445,9 +447,11 @@ class Duel {
 
   // ---------------------------------------------------------------- Prompt-Bereich & Antworten
   setBar(text, buttons = [], sub) {
-    clear(this.bar); this.bar.append(h('div', { class: 'bar-t' }, h('div', { class: 'bar-m' }, text), sub ? h('div', { class: 'bar-s' }, sub) : null), h('div', { class: 'bar-b' }, buttons.map((b) => h('button', { class: 'btn ' + (b.cls || ''), disabled: b.disabled, onclick: b.onclick }, b.label))));
+    this.bar.classList.remove('off'); clear(this.bar); this.bar.append(h('div', { class: 'bar-t' }, h('div', { class: 'bar-m' }, text), sub ? h('div', { class: 'bar-s' }, sub) : null), h('div', { class: 'bar-b' }, buttons.map((b) => h('button', { class: 'btn ' + (b.cls || ''), disabled: b.disabled, onclick: b.onclick }, b.label))));
   }
-  clearBar() { clear(this.bar); this.bar.append(h('div', { class: 'bar-t' }, h('div', { class: 'bar-m muted' }, ''))); }
+  /** Leiste ausblenden – im Zug steuert das Phasenrad Kampf und Zugende */
+  hideBar() { clear(this.bar); this.bar.classList.add('off'); }
+  clearBar() { this.hideBar(); }
   /** wartet auf eine Antwort der Oberfläche */
   wait(kind) { return new Promise((resolve) => { this.pending = { resolve, kind }; }); }
   answer(resp) { const p = this.pending; if (!p) return; this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
