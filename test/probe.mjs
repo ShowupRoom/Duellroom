@@ -1,0 +1,16 @@
+import { loadCore, Game, OcgDuelMode, MSG_NAME } from '../src/core.mjs';
+import { openScripts, openCards, openData } from '../app/src/pack.js';
+import { readFileSync } from 'node:fs';
+const rd = (f) => new Uint8Array(readFileSync(new URL('../app/dist/' + f, import.meta.url)));
+const readFor = await openScripts(rd('scripts.gz')); const cards = await openCards(rd('cards.gz')); const { decks } = await openData(rd('data.gz'));
+const lib = await loadCore(); const ex = (l) => l.flatMap(([c, n]) => Array(n).fill(c));
+const d = decks.find((x) => x.fmt === 'advanced' && x.status === 'ok');
+const g = await Game.create(lib, { flags: OcgDuelMode.MODE_MR5, decks: [{ main: ex(d.main), extra: ex(d.extra) }, { main: ex(d.main), extra: ex(d.extra) }], cards, readScript: readFor('official'), seed: [1n, 2n, 3n, 4n] });
+const r = await g.next();
+console.log(MSG_NAME[r.msg.type], Object.keys(r.msg));
+console.log(g.events.map((m) => MSG_NAME[m.type]).join(','));
+const s = g.snapshot();
+console.log(JSON.stringify(s.players[0].hand[0], (k, v) => typeof v === 'bigint' ? String(v) : v));
+console.log(Object.keys(s.players[0]), s.players[0].mzone.length, s.players[0].szone.length, s.players[0].extra[0] && Object.keys(s.players[0].extra[0]));
+console.log(JSON.stringify(g.events.filter((m)=>MSG_NAME[m.type]==='DRAW'||MSG_NAME[m.type]==='HINT').slice(0,4), (k, v) => typeof v === 'bigint' ? String(v) : v));
+console.log(JSON.stringify(r.msg, (k, v) => typeof v === 'bigint' ? String(v) : v).slice(0, 600));

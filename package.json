@@ -1,0 +1,1 @@
+{"name":"ygo-duell","version":"0.1.0","private":true,"type":"module","dependencies":{"esbuild":"^0.28.2","node-sqlite3-wasm":"^0.8.61","ocgcore-wasm":"^0.1.7","peerjs":"^1.5.4"}}
