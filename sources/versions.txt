@@ -2,4 +2,5 @@ CardScripts: 2026-11-20 a5b8e937
 BabelCDB: 2026-11-20 7d2ad0a
 LFLists: 2026-11-16 336ec7e
 windbot: 2026-08-27 bffe6b6
+de-DE: 2026-11-20 2ec5397
 Quellen bereit in /home/runner/work/_temp/src
