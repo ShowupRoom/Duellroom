@@ -16,6 +16,8 @@ const idb = () => (dbp = dbp || new Promise((res) => {
 }));
 const idbGet = async (k) => { const db = await idb(); if (!db) return null; return new Promise((res) => { try { const q = db.transaction('img').objectStore('img').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch (e) { res(null); } }); };
 const idbPut = async (k, v) => { const db = await idb(); if (!db) return; try { db.transaction('img', 'readwrite').objectStore('img').put(v, k); } catch (e) { /* ignorieren */ } };
+const idbHas = async (k) => { const db = await idb(); if (!db) return false; return new Promise((res) => { try { const q = db.transaction('img').objectStore('img').getKey(k); q.onsuccess = () => res(q.result !== undefined); q.onerror = () => res(false); } catch (e) { res(false); } }); };
+const idbPutWait = async (k, v) => { const db = await idb(); if (!db) return false; return new Promise((res) => { try { const tx = db.transaction('img', 'readwrite'); tx.objectStore('img').put(v, k); tx.oncomplete = () => res(true); tx.onerror = () => res(false); tx.onabort = () => res(false); } catch (e) { res(false); } }); };
 export const idbCount = async () => { const db = await idb(); if (!db) return 0; return new Promise((res) => { try { const q = db.transaction('img').objectStore('img').count(); q.onsuccess = () => res(q.result); q.onerror = () => res(0); } catch (e) { res(0); } }); };
 
 const urls = new Map(); // Schlüssel → Objekt-URL | 'fail'
@@ -55,12 +57,17 @@ export function wantImage(img, k, code) {
   waiting.get(kk).push(img); pump();
 }
 /** Bilder vorab laden (für Offline-Betrieb); gibt Fortschritt zurück */
-export async function preload(codes, onProgress = () => {}) {
+export async function preload(codes, onProgress = () => {}, ctl = { stop: false }) {
   const ids = [...new Set(codes.map(imageId))]; let done = 0, ok = 0; const kinds = ['small', 'crop'];
   const work = []; for (const id of ids) for (const k of kinds) work.push([k, id]);
   let i = 0; const total = work.length;
-  const lane = async () => { while (i < work.length) { const [k, id] = work[i++]; const kk = key(k, id); if (!urls.has(kk)) { const u = await fetchOne(k, id); urls.set(kk, u); if (u !== 'fail') ok++; } else if (urls.get(kk) !== 'fail') ok++; onProgress(++done, total); } };
-  await Promise.all([lane(), lane(), lane(), lane()]); return { ok, total };
+  // Nur auf dem Gerät speichern (kein Objekt-URL im Speicher behalten – bei tausenden Bildern wichtig)
+  const one = async (k, id) => {
+    const kk = key(k, id); if (await idbHas(kk)) return true;
+    try { const r = await fetch(BASE + PATH[k] + id + '.jpg', { mode: 'cors' }); if (!r.ok) return false; const b = await r.blob(); if (!b.size || !/image/.test(b.type)) return false; return await idbPutWait(kk, b); } catch (e) { return false; }
+  };
+  const lane = async () => { while (i < work.length && !ctl.stop) { const [k, id] = work[i++]; if (await one(k, id)) ok++; onProgress(++done, total); } };
+  await Promise.all([lane(), lane(), lane(), lane(), lane()]); return { ok, total, done, stopped: !!ctl.stop && done < total };
 }
 
 // ---- Elemente -------------------------------------------------------------
