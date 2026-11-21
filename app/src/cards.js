@@ -11,14 +11,48 @@ export const setImages = (v) => { cfg.images = !!v; store.set('images', !!v); };
 const BASE = 'https://images.ygoprodeck.com/images/';
 const PATH = { small: 'cards_small/', crop: 'cards_cropped/', big: 'cards/' };
 let dbp = null;
-const idb = () => (dbp = dbp || new Promise((res) => {
-  try { const r = indexedDB.open('duellraum-bilder', 1); r.onupgradeneeded = () => r.result.createObjectStore('img'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch (e) { res(null); }
-}));
-const idbGet = async (k) => { const db = await idb(); if (!db) return null; return new Promise((res) => { try { const q = db.transaction('img').objectStore('img').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch (e) { res(null); } }); };
-const idbPut = async (k, v) => { const db = await idb(); if (!db) return; try { db.transaction('img', 'readwrite').objectStore('img').put(v, k); } catch (e) { /* ignorieren */ } };
-const idbHas = async (k) => { const db = await idb(); if (!db) return false; return new Promise((res) => { try { const q = db.transaction('img').objectStore('img').getKey(k); q.onsuccess = () => res(q.result !== undefined); q.onerror = () => res(false); } catch (e) { res(false); } }); };
-const idbPutWait = async (k, v) => { const db = await idb(); if (!db) return false; return new Promise((res) => { try { const tx = db.transaction('img', 'readwrite'); tx.objectStore('img').put(v, k); tx.oncomplete = () => res(true); tx.onerror = () => res(false); tx.onabort = () => res(false); } catch (e) { res(false); } }); };
-export const idbCount = async () => { const db = await idb(); if (!db) return 0; return new Promise((res) => { try { const q = db.transaction('img').objectStore('img').count(); q.onsuccess = () => res(q.result); q.onerror = () => res(0); } catch (e) { res(0); } }); };
+const open = () => new Promise((res) => {
+  try {
+    const r = indexedDB.open('duellraum-bilder', 1); r.onupgradeneeded = () => r.result.createObjectStore('img');
+    r.onsuccess = () => { const db = r.result; const drop = () => { dbp = null; try { db.close(); } catch (e) { /* schon zu */ } }; db.onclose = drop; db.onversionchange = drop; res(db); };
+    r.onerror = () => res(null); r.onblocked = () => res(null);
+  } catch (e) { res(null); }
+});
+const idb = () => (dbp = dbp || open());
+// Ein Zugriff; bei toter Verbindung (iOS kappt sie im Hintergrund) wird neu verbunden und es gibt einen zweiten Versuch.
+const tx = async (mode, fn) => {
+  for (let t = 0; t < 2; t++) {
+    const db = await idb(); if (!db) return { ok: false };
+    try {
+      const v = await new Promise((res, rej) => {
+        const x = db.transaction('img', mode); const q = fn(x.objectStore('img')); let out;
+        if (q) q.onsuccess = () => { out = q.result; };
+        x.oncomplete = () => res(out); x.onerror = () => rej(x.error || new Error('Fehler')); x.onabort = () => rej(x.error || new Error('Abbruch'));
+      });
+      return { ok: true, v };
+    } catch (e) { dbp = null; try { db.close(); } catch (e2) { /* egal */ } }
+  }
+  return { ok: false };
+};
+// Gespeichert wird als Rohdaten (ArrayBuffer): Blobs in IndexedDB gehen auf iPhones manchmal verloren
+const pack = async (b) => ({ t: b.type || 'image/jpeg', d: await b.arrayBuffer() });
+const unpack = (v) => (v instanceof Blob ? v : v && v.d ? new Blob([v.d], { type: v.t || 'image/jpeg' }) : null);
+const idbGet = async (k) => { const r = await tx('readonly', (s) => s.get(k)); return r.ok ? unpack(r.v) : null; };
+const idbPut = async (k, b) => { try { const v = await pack(b); const r = await tx('readwrite', (s) => { s.put(v, k); }); if (r.ok) persistStorage(); return r.ok; } catch (e) { return false; } };
+const idbHas = async (k) => { const r = await tx('readonly', (s) => s.getKey(k)); return r.ok && r.v !== undefined; };
+const idbPutWait = idbPut;
+export const idbCount = async () => { const r = await tx('readonly', (s) => s.count()); return r.ok ? r.v : 0; };
+let persisted = null;
+/** Bittet den Browser, die Bilder nicht von selbst zu löschen (auf dem iPhone nur für die App auf dem Home-Bildschirm wirksam) */
+export const persistStorage = async () => {
+  try { if (navigator.storage && navigator.storage.persist) { persisted = (await navigator.storage.persisted()) || (await navigator.storage.persist()); } } catch (e) { /* nicht unterstützt */ }
+  return persisted;
+};
+export const storageInfo = async () => {
+  const o = { persisted: await persistStorage(), used: 0, quota: 0 };
+  try { const e = await navigator.storage.estimate(); o.used = e.usage || 0; o.quota = e.quota || 0; } catch (e) { /* egal */ }
+  return o;
+};
 
 const urls = new Map(); // Schlüssel → Objekt-URL | 'fail'
 const waiting = new Map(); // Schlüssel → [img-Elemente]

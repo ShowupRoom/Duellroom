@@ -2,7 +2,7 @@
 import { h, $, clear, toast, uid, shuffled, rand32, sound } from './util.js';
 import { App, FORMAT_INFO, FORMATS, allDecks, fmtOf, fmtById, nameOf, withTutor, expand, count, cardOf, cleanName, customDecks, deleteCustom, consOf, ADV_LISTS, LIST_NAME, imageId } from './data.js';
 import { consBlock, consChip } from './cons.js';
-import { cardEl, cfg as imgCfg, setImages, preload, idbCount, isOcg, ocgTag } from './cards.js';
+import { cardEl, cfg as imgCfg, setImages, preload, idbCount, storageInfo, isOcg, ocgTag } from './cards.js';
 import { openModal, confirmBox, showCard } from './ui.js';
 import { go, back, screens } from './nav.js';
 import { store } from './store.js';
@@ -236,7 +236,7 @@ screens.learn = () => h('div', { class: 'screen' }, hdr('Lernen & Regeln', 'In w
 screens.settings = () => {
   const root = h('div', { class: 'screen' }, hdr('Einstellungen')); const body = h('div', { class: 'body' }); root.append(body);
   const paint = async () => {
-    clear(body); const n = await idbCount(); const deckCodes = () => { const s = new Set(); for (const d of allDecks()) for (const sec of ['main', 'extra', 'side']) for (const [c] of (d[sec] || [])) s.add(c); return s; };
+    clear(body); const n = await idbCount(); const si = await storageInfo(); const mbOf = (x) => Math.round(x / 1048576); const deckCodes = () => { const s = new Set(); for (const d of allDecks()) for (const sec of ['main', 'extra', 'side']) for (const [c] of (d[sec] || [])) s.add(c); return s; };
     const tog = (label, sub, get, set) => h('label', { class: 'panel row set-row' }, h('div', { class: 'grow' }, h('div', null, label), h('div', { class: 'muted small' }, sub)), h('input', { type: 'checkbox', class: 'sw', checked: get(), onchange: (e) => { set(e.target.checked); } }));
     body.append(h('div', { class: 'wrap col' },
       tog('Kartenbilder', 'Bilder werden bei Internet einmal geladen und auf dem Gerät gemerkt. Ohne Bilder erscheinen gezeichnete Karten.', () => imgCfg.images, (v) => setImages(v)),
@@ -246,12 +246,13 @@ screens.settings = () => {
       h('div', { class: 'panel col' }, h('b', null, 'Startlebenspunkte'), h('div', { class: 'row' }, [4000, 8000, 16000].map((v) => h('button', { class: 'chip' + (settings.lp === v ? ' on' : ''), onclick: () => { settings.lp = v; paint(); } }, v)))),
       h('div', { class: 'panel col' }, h('b', null, 'Widmung auf dem Startbildschirm'), h('input', { class: 'input', value: settings.dedication, maxlength: 60, oninput: (e) => { settings.dedication = e.target.value; } })),
       h('div', { class: 'panel col' }, h('b', null, 'Bilder für Offline-Betrieb vorladen'), h('div', { class: 'muted small' }, `${n} Bilder auf diesem Gerät gespeichert. Lade alle Karten auf einmal (unabhängig vom Format) oder nur die Beliebt-/Turnier-Decks eines Formats (ca. 15 KB je Karte).`),
+        h('div', { class: 'small', style: 'color:' + (si.persisted ? 'var(--ok,#6c6)' : 'var(--warn,#e9b44c)') }, si.persisted ? '🔒 Speicher dauerhaft gesichert – der Browser löscht die Bilder nicht von selbst.' : '⚠️ Speicher nicht gesichert – der Browser darf Bilder bei Platzmangel oder nach einigen Tagen ohne Nutzung löschen. Auf dem iPhone: Seite über „Teilen → Zum Home-Bildschirm“ als App ablegen, dann bleibt alles erhalten.'), si.quota ? h('div', { class: 'muted small' }, `Belegt: ${mbOf(si.used)} MB von ca. ${mbOf(si.quota)} MB erlaubt.`) : null,
         h('div', { class: 'row', style: 'flex-wrap:wrap' }, [['Alle Decks aller Formate', 'alle Karten, die in irgendeinem Deck vorkommen', () => deckCodes()], ['Wirklich alle Karten', 'alle Karten der Datenbank – für eigene Decks mit beliebigen Karten', () => { const s = deckCodes(); for (const c of App.cards.values()) if (!(c.type & 0x4000)) s.add(c.code); return s; }]].map(([label, what, get]) => h('button', { class: 'btn sm pri', onclick: async (e) => {
           const b = e.currentTarget; if (b._ctl) { b._ctl.stop = true; return; } // zweiter Tipp = abbrechen
           const codes = [...get()]; const n = new Set(codes.map(imageId)).size; const mb = Math.round(n * 15 / 1024);
           if (!(await confirmBox(`${label} laden?`, `${n} Karten (${what}), ca. ${mb} MB. Am besten im WLAN und mit Strom. Schon gespeicherte Bilder werden übersprungen. Du kannst jederzeit abbrechen (Knopf nochmal antippen) und später weitermachen.`, 'Laden', 'Abbrechen'))) return;
-          const ctl = { stop: false }; b._ctl = ctl; const r = await preload(codes, (a, t) => { b.textContent = `${Math.round(a / t * 100)} % · tippen = stopp`; }, ctl); b._ctl = null;
-          toast(r.stopped ? `Gestoppt – ${r.ok} Bilder gespeichert. Du kannst später weitermachen.` : `${r.ok} von ${r.total} Bildern gespeichert` + (r.ok < r.total ? ' – manche Karten haben kein Bild oder es gab keine Verbindung.' : '')); paint();
+          const ctl = { stop: false }; b._ctl = ctl; const r = await preload(codes, (a, t) => { b.textContent = `${Math.round(a / t * 100)} % · tippen = stopp`; }, ctl); b._ctl = null; const had = await idbCount();
+          toast(r.stopped ? `Gestoppt – ${r.ok} Bilder gespeichert. Du kannst später weitermachen.` : `${r.ok} von ${r.total} Bildern gespeichert (jetzt ${had} auf dem Gerät)` + (r.ok < r.total ? ' – manche Karten haben kein Bild oder es gab keine Verbindung.' : '')); paint();
         } }, label))),
         h('div', { class: 'row', style: 'flex-wrap:wrap' }, ['goat', 'edison', 'advanced', 'genesys'].map((f) => h('button', { class: 'btn sm', onclick: async (e) => { const b = e.currentTarget; const codes = new Set(); for (const d of allDecks(f).filter((x) => x.grp === 'Beliebte Decks' || x.grp === 'Turnier-Decks' || x.custom)) for (const s of ['main', 'extra']) for (const [c] of d[s]) codes.add(c); b.disabled = true; const r = await preload([...codes], (a, t) => { b.textContent = `${a}/${t}`; }); b.textContent = FORMAT_INFO[f].title; b.disabled = false; toast(`${r.ok} von ${r.total} Bildern gespeichert` + (r.ok < r.total ? ' – ohne Internet nicht möglich?' : '')); paint(); } }, FORMAT_INFO[f].title)))),
       h('div', { class: 'panel col' }, h('b', null, 'Eigene Decks'), h('div', { class: 'muted small' }, customDecks().length + ' gespeichert (nur auf diesem Gerät).'),
