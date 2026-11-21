@@ -1,8 +1,9 @@
 // Gemeinsame Daten der App: Karten, Decks, Listen, Texte, Kern
 import { openCards, openData, fetchBin } from './pack.js';
 import { OcgDuelMode } from '../../src/core.mjs';
-import { FORMATS, count } from '../../src/decks.mjs';
+import { FORMATS, count, allowed } from '../../src/decks.mjs';
 import { analyze } from '../../src/tutor.mjs';
+import { consistency, consSummary } from '../../src/konsistenz.mjs';
 import { store } from './store.js';
 
 export const App = { cards: null, decks: [], lists: null, strings: null, readFor: null, lib: null, byName: null };
@@ -45,7 +46,15 @@ export function saveCustom(deck) {
   store.set('decks', all); return rec;
 }
 export function deleteCustom(id) { store.set('decks', customDecks().filter((d) => d.id !== id)); }
-export function withTutor(d) { if (!d.tutor || !d.tutor.goal) { d.tutor = { ...analyze(d, App.cards, App.strings && App.strings.setname), ...(d.tutor || {}) }; } return d; }
+export function withTutor(d) {
+  if (!d.tutor || !d.tutor.goal) { d.tutor = { ...analyze(d, App.cards, App.strings && App.strings.setname), ...(d.tutor || {}) }; }
+  if (d.tutor.cons === undefined) { try { d.tutor.cons = consSummary(consOf(d)); } catch (e) { d.tutor.cons = null; } }
+  return d;
+}
+/** Erlaubte Kopien einer Karte im Format des Decks */
+export const limitOf = (deck) => { const f = fmtById(deck.fmt, deck.fmt === 'advanced' ? deck.list : undefined); return (code) => allowed(code, f, App.lists); };
+/** Konsistenz-Bewertung eines Decks (null, wenn zu wenige Karten) */
+export const consOf = (deck) => consistency(deck, App.cards, App.strings && App.strings.setname, limitOf(deck));
 export function allDecks(fmt) {
   const mine = customDecks().filter((d) => !fmt || d.fmt === fmt).map((d) => ({ ...d, grp: 'Meine Decks', sub: '', status: d.status || 'ok', repairs: d.repairs || [] }));
   return [...mine, ...App.decks.filter((d) => !fmt || d.fmt === fmt)];

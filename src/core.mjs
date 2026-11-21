@@ -39,6 +39,24 @@ export function placesFromMask(mask, asking = 0) {
   return out;
 }
 
+/** Zufallszahlen aus dem Duell-Startwert (gleicher Startwert → gleiche Mischung, z. B. für „Gleiche Hand nochmal“) */
+export function seededRandom(seed) {
+  let a = 0x9e3779b9;
+  for (const x of seed) { a = Math.imul(a ^ Number(BigInt(x) & 0xffffffffn), 0x85ebca6b); a ^= a >>> 13; a = Math.imul(a, 0xc2b2ae35); a ^= a >>> 16; }
+  return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+/** Fisher-Yates; „stack“ = Karten, die zuerst gezogen werden sollen (die Oberseite des Decks ist das Listenende) */
+export function shuffleDeck(main, rnd, stack) {
+  const a = [...main];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  if (stack && stack.length) {
+    const top = [];
+    for (const code of stack) { const i = a.lastIndexOf(code); if (i >= 0) { a.splice(i, 1); top.push(code); } }
+    a.push(...top.reverse());
+  }
+  return a;
+}
+
 export class Game {
   /**
    * @param lib  Kern
@@ -72,8 +90,10 @@ export class Game {
       const ok = await lib.loadScript(this.handle, f, opts.readScript(f));
       if (!ok) throw new Error('Basisskript fehlt: ' + f);
     }
+    // Der Kern mischt nicht selbst: Ohne Mischen wären die Starthände immer die letzten Karten der Deckliste.
+    const rnd = seededRandom(seed);
     for (let t = 0; t < 2; t++) {
-      const d = opts.decks[t];
+      const d = { ...opts.decks[t], main: opts.shuffle === false ? opts.decks[t].main : shuffleDeck(opts.decks[t].main, rnd, opts.stack && opts.stack[t]) };
       d.main.forEach((code, i) => lib.duelNewCard(this.handle, { team: t, duelist: 0, code, controller: t, location: LOC.DECK, sequence: i, position: OcgPosition.FACEDOWN_DEFENSE }));
       (d.extra || []).forEach((code, i) => lib.duelNewCard(this.handle, { team: t, duelist: 0, code, controller: t, location: LOC.EXTRA, sequence: i, position: OcgPosition.FACEDOWN_DEFENSE }));
     }

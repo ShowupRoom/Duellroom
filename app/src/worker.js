@@ -18,7 +18,7 @@ self.onmessage = async (e) => {
     if (op === 'init') { ready = ready || load(a && a.v); res = await ready; }
     else if (op === 'create') {
       await (ready || (ready = load(a.v))); drop();
-      g = await Game.create(lib, { flags: a.flags, decks: a.decks, cards, readScript: readFor(a.scripts), seed: a.seed, startingLP: a.lp });
+      g = await Game.create(lib, { flags: a.flags, decks: a.decks, cards, readScript: readFor(a.scripts), seed: a.seed, startingLP: a.lp, stack: a.stack });
       res = true;
     } else if (op === 'step') {
       if (!g) throw new Error('Kein Duell aktiv');

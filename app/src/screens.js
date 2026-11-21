@@ -1,6 +1,7 @@
 // Start, Formatwahl, Spieler-Setup, Deckauswahl mit Tutor, Lernen, Einstellungen
 import { h, $, clear, toast, uid, shuffled, rand32, sound } from './util.js';
-import { App, FORMAT_INFO, FORMATS, allDecks, fmtOf, fmtById, nameOf, withTutor, expand, count, cardOf, cleanName, customDecks, deleteCustom } from './data.js';
+import { App, FORMAT_INFO, FORMATS, allDecks, fmtOf, fmtById, nameOf, withTutor, expand, count, cardOf, cleanName, customDecks, deleteCustom, consOf } from './data.js';
+import { consBlock, consChip } from './cons.js';
 import { cardEl, cfg as imgCfg, setImages, preload, idbCount, isOcg, ocgTag } from './cards.js';
 import { openModal, confirmBox, showCard } from './ui.js';
 import { go, back, screens } from './nav.js';
@@ -123,7 +124,7 @@ screens.decks = ({ fmt, list, title, onPick }) => {
   const f = FORMATS[fmt]; let decks = allDecks(fmt).filter((d) => fmt !== 'advanced' || d.custom || d.list === list);
   const groups = GROUP_ORDER.filter((g) => decks.some((d) => d.grp === g));
   let grp = groups.includes('Beliebte Decks') ? 'Beliebte Decks' : (decks.some((d) => d.custom) ? 'Meine Decks' : groups.includes('Turnier-Decks') ? 'Turnier-Decks' : groups[0]);
-  let sub = null, q = '';
+  let sub = null, q = ''; let sortBy = 'name';
   const root = h('div', { class: 'screen' }, hdr(title || 'Deck wählen', FORMAT_INFO[fmt].title + (fmt === 'advanced' ? ' · ' + list.toUpperCase() : '')));
   const top = h('div', { class: 'dk-top' }); const bodyEl = h('div', { class: 'body' }); root.append(top, bodyEl);
   const render = () => {
@@ -132,11 +133,13 @@ screens.decks = ({ fmt, list, title, onPick }) => {
       h('div', { class: 'tabs' }, groups.map((g) => h('button', { class: 'chip' + (g === grp && !q ? ' on' : ''), onclick: () => { grp = g; sub = null; q = ''; render(); } }, g + ' (' + decks.filter((d) => d.grp === g).length + ')'))));
     const subs = [...new Set(decks.filter((d) => d.grp === grp).map((d) => d.sub).filter(Boolean))].sort();
     if (!q && subs.length > 1 && subs.length < 60) top.append(h('div', { class: 'tabs' }, h('button', { class: 'chip' + (sub === null ? ' on' : ''), onclick: () => { sub = null; render(); } }, 'Alle'), subs.map((s) => h('button', { class: 'chip' + (sub === s ? ' on' : ''), onclick: () => { sub = s; render(); } }, s.replace(/^\d /, '')))));
+    top.append(h('div', { class: 'tabs' }, h('span', { class: 'muted small', style: 'align-self:center' }, 'Sortieren:'), [['name', 'Name'], ['cons', '🎯 Konsistenz']].map(([k, t]) => h('button', { class: 'chip' + (sortBy === k ? ' on' : ''), onclick: () => { sortBy = k; render(); } }, t))));
     renderList();
   };
   const renderList = () => {
     clear(bodyEl);
     let list2 = q ? decks.filter((d) => (d.name + ' ' + (d.sub || '')).toLowerCase().includes(q.toLowerCase())).slice(0, 120) : decks.filter((d) => d.grp === grp && (!sub || d.sub === sub));
+    if (sortBy === 'cons') list2 = [...list2].sort((a, b) => ((withTutor(b).tutor.cons?.s ?? -1) - (withTutor(a).tutor.cons?.s ?? -1)));
     if (!list2.length) bodyEl.append(h('div', { class: 'muted', style: 'text-align:center;padding:30px' }, grp === 'Meine Decks' && !q ? 'Noch keine eigenen Decks. In der Deck-Werkstatt kannst du welche bauen.' : 'Nichts gefunden.'));
     bodyEl.append(h('div', { class: 'wrap dk-grid' }, list2.map((d) => deckRow(d, () => openDeck(d)))));
   };
@@ -150,17 +153,23 @@ export function deckRow(d, onclick) {
   return h('button', { class: 'deck-row', onclick },
     cardEl(art, { cls: 'sm' }),
     h('div', { class: 'grow', style: 'text-align:left' }, h('div', { class: 'dr-n' }, d.name), h('div', { class: 'muted small dr-s' }, [d.sub, t.style].filter(Boolean).join(' · ')),
-      h('div', { class: 'row', style: 'gap:6px;margin-top:3px;flex-wrap:wrap' }, d.status === 'angepasst' ? h('span', { class: 'chip warn' }, 'angepasst') : null, d.custom ? h('span', { class: 'chip ok' }, 'eigenes Deck') : null, stat(d) ? h('span', { class: 'chip' }, stat(d)) : null)));
+      h('div', { class: 'row', style: 'gap:6px;margin-top:3px;flex-wrap:wrap' }, d.status === 'angepasst' ? h('span', { class: 'chip warn' }, 'angepasst') : null, d.custom ? h('span', { class: 'chip ok' }, 'eigenes Deck') : null, consChip(t.cons), stat(d) ? h('span', { class: 'chip' }, stat(d)) : null)));
 }
 const stat = (d) => { const s = store.get('stats', {})[d.id]; return s ? `${s.w}–${s.l}` : ''; };
 
 // ---- Deck-Detail mit Tutor -----------------------------------------------------------
+/** Starthand-Test: alleine mit dem Deck üben – Hand ziehen, Combos wie im Duell ausspielen, neu mischen */
+export function startTest(deck) {
+  const d = withTutor(deck); const fmt = d.fmt || 'advanced'; const lst = fmt === 'advanced' ? (d.list || 'tcg') : (d.list || 'tcg');
+  go('duel', { fmt, list: lst, mode: 'solo', test: true, players: [{ name: 'Du', deck: d }, { name: 'Übungsgegner', deck: d }], human: [true, false], lp: settings.lp, tutor: settings.tutor });
+}
 export function deckDetail(deck, { edit } = {}) {
   withTutor(deck); const t = deck.tutor; const root = h('div', { class: 'ddet' });
   root.append(h('div', { class: 'row', style: 'flex-wrap:wrap;gap:6px' }, h('span', { class: 'chip on' }, t.style || 'Deck'), h('span', { class: 'chip' }, count(deck.main) + ' Haupt'), h('span', { class: 'chip' }, count(deck.extra) + ' Extra'), deck.src && !/^http/.test(deck.src) ? h('span', { class: 'chip muted' }, deck.src) : null, deck.status === 'angepasst' ? h('span', { class: 'chip warn' }, 'regelkonform angepasst') : null));
   root.append(h('div', { class: 'tutor panel' }, h('div', { class: 'tut-h' }, h('span', { class: 'tut-ic' }, '🎓'), h('b', null, 'Tutor: Das Ziel dieses Decks')),
     h('p', { class: 'tut-g' }, t.goal), t.plan?.length ? h('ol', { class: 'tut-p' }, t.plan.map((s) => h('li', null, s))) : null,
     t.hint ? h('p', { class: 'small' }, h('b', null, 'Tipp: '), t.hint) : null, t.weak ? h('p', { class: 'small' }, h('b', null, 'Achtung: '), t.weak) : null));
+  try { const cons = consOf(deck); if (cons) root.append(h('div', { class: 'panel' }, h('div', { class: 'tut-h' }, h('span', { class: 'tut-ic' }, '🎯'), h('b', null, 'Konsistenz')), consBlock(cons))); } catch (e) { /* ohne Bewertung */ }
   if (t.engines && t.engines.length) {
     const ER = [['st', 'Starter', 'starter'], ['ex', 'Verlängerer', 'extender'], ['bo', 'Boss', 'boss'], ['su', 'Support', 'removal']];
     root.append(h('div', { class: 'panel engines' }, h('div', { class: 'tut-h' }, h('span', { class: 'tut-ic' }, '⚙'), h('b', null, t.engines.length > 1 ? `Engines in diesem Deck (${t.engines.length})` : 'Engine in diesem Deck')),
@@ -179,6 +188,7 @@ export function deckDetail(deck, { edit } = {}) {
   if (deck.repairs?.length) root.append(h('details', { class: 'panel', style: 'margin-top:10px' }, h('summary', null, 'Was wurde angepasst? (' + deck.repairs.length + ')'), h('ul', { class: 'small muted' }, deck.repairs.map((r) => h('li', null, r)))));
   root.append(h('div', { class: 'row', style: 'margin-top:12px;flex-wrap:wrap' },
     h('button', { class: 'btn', onclick: () => testHand(deck) }, '🖐 Probehand ziehen'),
+    h('button', { class: 'btn', onclick: () => startTest(deck) }, '🧪 Starthand-Test'),
     h('button', { class: 'btn ghost', onclick: () => { const d = { ...structuredClone(deck), id: undefined, name: deck.name + ' (eigene Version)' }; go('editor', { deck: d }); } }, '✎ Im Editor anpassen')));
   const s = store.get('stats', {})[deck.id]; if (s) root.append(h('p', { class: 'small muted' }, `Deine Bilanz mit diesem Deck: ${s.w} Siege, ${s.l} Niederlagen.`));
   return root;

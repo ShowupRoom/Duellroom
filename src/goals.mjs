@@ -8,7 +8,7 @@ const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const uniq = (a) => [...new Set(a)];
 
 /** Gehört die Karte (Setcode s) zum Archetyp a? (Untertypen gehören zum Obertyp) */
-const matches = (s, a) => (s & 0xfff) === (a & 0xfff) && ((s & a & 0xf000) === (a & 0xf000));
+export const matches = (s, a) => (s & 0xfff) === (a & 0xfff) && ((s & a & 0xf000) === (a & 0xf000));
 
 const FROM = { deck: 'dem Deck', hand: 'der Hand', gy: 'dem Friedhof', graveyard: 'dem Friedhof', 'extra deck': 'dem Extradeck', banishment: 'den verbannten Karten' };
 const SUMMON = { fusion: 'Fusionsbeschwörung', ritual: 'Ritualbeschwörung', synchro: 'Synchrobeschwörung', xyz: 'Xyz-Beschwörung', link: 'Linkbeschwörung', pendulum: 'Pendelbeschwörung' };

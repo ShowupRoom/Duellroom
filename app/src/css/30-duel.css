@@ -57,3 +57,5 @@
 
 .d-hand>.hc:first-child{margin-left:auto!important}.d-hand>.hc:last-child{margin-right:auto}
 @media (min-width:860px) and (min-aspect-ratio:1/1){.d-sheet{bottom:var(--barh,60px)}}
+
+.d-test{flex:none;display:flex;align-items:center;gap:6px;padding:4px 10px;overflow-x:auto;scrollbar-width:none;background:rgba(246,201,107,.08);border-bottom:1px solid var(--line)}.d-test::-webkit-scrollbar{display:none}.d-test .chip{flex:none;white-space:nowrap}.d-test-t{flex:none;font-size:12px;font-weight:700;color:var(--gold);white-space:nowrap}

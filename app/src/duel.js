@@ -5,12 +5,12 @@ import { DuelAI } from '../../src/ai.mjs';
 import { randomResponse, OcgResponseType as R, OcgMessageType as MSG, SelectIdleCMDAction as IA, SelectBattleCMDAction as BA, LOC, MSG_NAME } from '../../src/core.mjs';
 import { cardEl, fieldEl } from './cards.js';
 import { openModal, confirmBox, cardInfoBody } from './ui.js';
-import { screens, back, root as navRoot, setGuard } from './nav.js';
+import { screens, back, replace, root as navRoot, setGuard } from './nav.js';
 import { store } from './store.js';
 import { sys, descText, PHASE, PHASE_HELP, victoryText, typeText, levelText, attrName, statsText } from './strings.js';
 import { idleTip, battleTip, introText } from './tips.js';
 import { ask } from './prompts.js';
-import { settings } from './screens.js';
+import { settings, handComment } from './screens.js';
 import { LocalEngine, RemoteEngine, HostLink, maskEvents } from './engine.js';
 import { session, keepAwake } from './net.js';
 import { netRematch, netMenu } from './online.js';
@@ -41,7 +41,8 @@ class Duel {
     this.handEl = h('div', { class: 'd-hand' }); this.handEl.addEventListener('click', (e) => { const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); }); this.bar = h('div', { class: 'd-bar' });
     this.sheet = h('div', { class: 'd-sheet' }); this.fx = h('div', { class: 'd-fx' });
     this.over = h('div', { class: 'd-over' });
-    r.append(this.top, this.oppBar, this.boardWrap, this.meBar, this.handEl, this.bar, this.sheet, this.fx, this.over);
+    this.testBar = this.conf.test ? this.buildTestBar() : null;
+    r.append(this.top, ...(this.testBar ? [this.testBar] : []), this.oppBar, this.boardWrap, this.meBar, this.handEl, this.bar, this.sheet, this.fx, this.over);
     this.ro = new ResizeObserver(() => this.fit()); this.ro.observe(this.boardWrap); this.ro.observe(this.bar);
   }
   fit() {
@@ -61,12 +62,12 @@ class Duel {
       if (conf.mode === 'net-guest') this.eng = conf.remote;
       else {
         const mk = (i) => ({ main: expand(conf.players[i].deck.main), extra: expand(conf.players[i].deck.extra) });
-        const seed = [BigInt(rand32()), BigInt(rand32()), BigInt(rand32()), BigInt(rand32())];
-        this.eng = new LocalEngine(); await this.eng.create({ flags: m.flags, decks: [mk(0), mk(1)], scripts: m.scripts, seed, lp: conf.lp });
+        const seed = conf.seed ? conf.seed.map((x) => BigInt(x)) : [BigInt(rand32()), BigInt(rand32()), BigInt(rand32()), BigInt(rand32())]; this.seedUsed = seed.map(Number);
+        this.eng = new LocalEngine(); await this.eng.create({ flags: m.flags, decks: [mk(0), mk(1)], scripts: m.scripts, seed, lp: conf.lp, stack: conf.stack });
         if (conf.mode === 'net-host') this.host = new HostLink(this.net, 1 - this.viewer);
       }
     } catch (e) { this.fatal(e); return; }
-    if (!conf.resume) await this.coin();
+    if (!conf.resume && !conf.test) await this.coin();
     this.loop().catch((e) => this.fatal(e));
   }
   netSetup() {
@@ -114,7 +115,7 @@ class Duel {
         if (this.viewer !== p) await this.handover(p);
         this.render();
         if (r.retry) toast('Das ist nicht erlaubt – bitte noch einmal wählen.');
-        if (!this.introShown[p]) { this.introShown[p] = true; if (this.conf.tutor) await this.intro(p); }
+        if (!this.introShown[p]) { this.introShown[p] = true; if (this.conf.tutor && !this.conf.test) await this.intro(p); }
         resp = await ask(this, msg);
         if (this.stopped) return;
       } else {
@@ -221,7 +222,7 @@ class Duel {
   async finish(winner, reason) {
     this.ended = true; this.stopped = true; if (this.net) { this.net.inDuel = false; this.net.wantAwake = false; keepAwake(false); }
     const draw = winner == null || winner > 1; const stats = store.get('stats', {});
-    if (!draw) for (let p = 0; p < 2; p++) { if (!this.conf.human[p] || (this.net && p !== this.viewer)) continue; const id = this.deckOf(p).id; if (!id) continue; const s = stats[id] || { w: 0, l: 0 }; if (p === winner) s.w++; else s.l++; stats[id] = s; }
+    if (!draw && !this.conf.test) for (let p = 0; p < 2; p++) { if (!this.conf.human[p] || (this.net && p !== this.viewer)) continue; const id = this.deckOf(p).id; if (!id) continue; const s = stats[id] || { w: 0, l: 0 }; if (p === winner) s.w++; else s.l++; stats[id] = s; }
     store.set('stats', stats); beep('win');
     const name = draw ? 'Unentschieden' : `${this.pname(winner)} gewinnt!`;
     this.closeSheet(); this.clearBar();
@@ -368,6 +369,33 @@ class Duel {
       h('button', { class: 'btn', onclick: () => { this.anim = !this.anim; store.set('anim', this.anim); toast(this.anim ? 'Animationen an' : 'Animationen aus (schneller)'); m.close(); } }, `✨ Animationen: ${this.anim ? 'an' : 'aus'}`),
       h('button', { class: 'btn', onclick: () => { m.close(); this.surrender(); } }, '🏳 Aufgeben'),
       h('button', { class: 'btn red', onclick: async () => { m.close(); if (this.net) { if (await confirmBox('Duell verlassen?', 'Das Online-Duell wird für beide beendet.', 'Verlassen', 'Weiterspielen', true)) { this.net.send({ t: 'leave' }); this.destroy(); netMenu(); } } else back(); } }, '⟵ Duell verlassen')), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Weiterspielen') });
+  }
+  // ---------------------------------------------------------------- Starthand-Test
+  buildTestBar() {
+    const b = (t, fn) => h('button', { class: 'chip', onclick: fn }, t);
+    return h('div', { class: 'd-test' }, h('span', { class: 'd-test-t', title: 'Starthand-Test' }, '🧪'),
+      b('↻ Neue Hand', () => this.testRestart({})), b('⟲ Gleiche', () => this.testRestart({ same: true })), b('✋ Wählen', () => this.testPick()), b('🎓 Check', () => this.testCheck()));
+  }
+  testRestart({ same, stack }) {
+    const conf = { ...this.conf, seed: same ? (this.conf.seed || this.seedUsed) : undefined, stack: stack !== undefined ? stack : (same ? this.conf.stack : undefined) };
+    this.destroy(); replace('duel', conf);
+  }
+  testCheck() {
+    const hand = ((this.snap && this.snap.players[0].hand) || []).map((c) => c.code).filter(Boolean);
+    const d = this.deckOf(0); const body = h('div', null, h('div', { class: 'hand-row' }, hand.map((c) => cardEl(c, { cls: 'md' }))), h('div', { class: 'tutor panel', style: 'margin-top:12px' }, h('div', { class: 'tut-h' }, h('span', { class: 'tut-ic' }, '🎓'), h('b', null, 'Was sagt der Tutor?')), hand.length ? handComment(hand, d).map((t) => h('p', { class: 'small' }, t)) : h('p', { class: 'small' }, 'Keine Karten auf der Hand.')));
+    const m = openModal({ host: this.root, title: 'Hand-Check', body, footer: h('button', { class: 'btn pri', onclick: () => m.close() }, 'OK') });
+  }
+  testPick() {
+    const d = this.deckOf(0); const chosen = []; const maxN = 5;
+    const body = h('div'); const info = h('p', { class: 'small muted' }); const go = h('button', { class: 'btn pri' }, '▶ Zufällige Hand');
+    const paint = () => {
+      go.textContent = chosen.length ? `▶ Mit dieser Hand starten (${chosen.length})` : '▶ Zufällige Hand'; clear(body); info.textContent = `Gewählt: ${chosen.length} / ${maxN} – tippe Karten an, die du auf der Starthand haben willst. Der Rest wird gemischt.`;
+      body.append(info, h('div', { class: 'hand-row' }, chosen.map((c, i) => h('button', { onclick: () => { chosen.splice(i, 1); paint(); } }, cardEl(c, { cls: 'md' })))),
+        h('div', { class: 'dgrid', style: 'margin-top:8px' }, d.main.map(([c, n]) => { const k = chosen.filter((x) => x === c).length; return h('button', { class: 'dg-c' + (k ? ' sel' : ''), style: k ? 'outline:2px solid var(--gold);border-radius:6px' : '', onclick: () => { if (chosen.length >= maxN) { toast('Mehr als 5 Karten passen nicht auf die Hand.'); return; } if (k >= n) { toast(`Nur ${n}× im Deck.`); return; } chosen.push(c); paint(); } }, cardEl(c, { cls: 'sm' }), h('span', { class: 'inn', style: 'position:absolute;right:0;bottom:0;background:#000b;color:var(--gold);border-radius:6px;padding:0 4px;font-size:11px' }, k ? `${k}/${n}` : `×${n}`)); })));
+    };
+    paint();
+    const m = openModal({ host: this.root, title: 'Starthand wählen', cls: 'tall', body, footer: [h('button', { class: 'btn ghost', onclick: () => m.close() }, 'Abbrechen'), go] });
+    go.onclick = () => { m.close(); this.testRestart({ stack: [chosen.slice(), []] }); };
   }
   async surrender() {
     if (!this.conf.human[this.viewer] || !(await confirmBox('Aufgeben?', `${this.pname(this.viewer)} gibt auf.`, 'Aufgeben', 'Weiter', true))) return;
