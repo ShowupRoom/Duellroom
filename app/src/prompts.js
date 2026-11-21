@@ -53,7 +53,7 @@ function askIdle(D, msg) {
   const r = (action, index) => ({ type: R.SELECT_IDLECMD, action, index });
   msg.summons.forEach((c, i) => register(D, c, 'summon', sys(1151, 'Normalbeschwörung'), r(IA.SELECT_SUMMON, i), true));
   msg.special_summons.forEach((c, i) => register(D, c, 'special', sys(1152, 'Spezialbeschwörung'), r(IA.SELECT_SPECIAL_SUMMON, i), true));
-  msg.pos_changes.forEach((c, i) => register(D, c, 'pos', 'Kampfposition ändern', r(IA.SELECT_POS_CHANGE, i)));
+  msg.pos_changes.forEach((c, i) => { const cur = D.cardAt(c.controller, c.location, c.sequence); const down = cur && !(cur.position & 5); register(D, c, 'pos', down ? 'Flipbeschwörung' : 'Kampfposition ändern', r(IA.SELECT_POS_CHANGE, i)); }); // verdecktes Monster aufdecken = Flipbeschwörung
   msg.monster_sets.forEach((c, i) => register(D, c, 'set', sys(1153, 'Setzen'), r(IA.SELECT_MONSTER_SET, i)));
   msg.spell_sets.forEach((c, i) => register(D, c, 'spellset', sys(1153, 'Setzen'), r(IA.SELECT_SPELL_SET, i)));
   msg.activates.forEach((c, i) => { const d = descText(c.description, c.code); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n ? ': ' + d.replace(/\s+/g, ' ').slice(0, 90) : ''), r(IA.SELECT_ACTIVATE, i), true); });

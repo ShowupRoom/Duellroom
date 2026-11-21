@@ -316,7 +316,7 @@ class Duel {
     if (this.zoneSel && this.zoneSel.allowed.has(k)) z.classList.add('zsel'); if (this.zoneSel && this.zoneSel.chosen.has(k)) z.classList.add('zchosen');
   }
   cardNode(c) {
-    const vis = this.visible(c); const own = c.controller === this.viewer; const def = !!(c.position & 12);
+    const vis = this.visible(c); const own = c.controller === this.viewer; const def = c.location === LOC.MZONE && !!(c.position & 12); // nur Monster haben eine Kampfposition – verdeckte Zauber/Fallen (Kern: „verdeckt, Verteidigung“) bleiben aufrecht
     const ctr = Object.values(c.counters || {}).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0);
     return fieldEl(c.code, { back: !vis, peek: own && !(c.position & FACEUP), def, atk: c.attack, defv: c.defense, over: (c.overlayCards || []).length, counters: ctr });
   }
