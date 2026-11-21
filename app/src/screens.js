@@ -8,6 +8,7 @@ import { go, back, screens } from './nav.js';
 import { store } from './store.js';
 import { ROLE_DE, roleOf } from '../../src/tutor.mjs';
 import { validate, deckPoints, isExtra } from '../../src/decks.mjs';
+import { handtrapPlan } from '../../src/block.mjs';
 import { kind, KIND_DE } from './strings.js';
 import { AI_LEVELS } from '../../src/ai.mjs';
 
@@ -179,6 +180,10 @@ export function deckDetail(deck, { edit } = {}) {
   }
   const keys = t.keys || {}; const rows = [['starters', 'Starter – bringen die Combo ins Rollen', 'starter'], ['extenders', 'Verlängerer – bringen mehr Monster ins Spiel', 'extender'], ['bosses', 'Bosse – dein Endziel', 'boss'], ['handtraps', 'Handtraps – nur im Zug des Gegners', 'handtrap'], ['removal', 'Entferner & Fallen – räumen Hindernisse', 'removal']];
   for (const [k, label, role] of rows) if (keys[k]?.length) root.append(h('div', { class: 'keyrow' }, h('div', { class: 'small muted' }, label), h('div', { class: 'keycards' }, keys[k].slice(0, 6).map((c) => h('button', { class: 'keyc', onclick: () => showCard(c) }, cardEl(c, { cls: 'md' }), h('span', { class: 'role ' + role }, ROLE_DE[role] || role))))));
+  const hp = handtrapPlan(keys.handtraps || [], App.cards);
+  if (hp.length) root.append(h('div', { class: 'panel' }, h('div', { class: 'tut-h' }, h('span', { class: 'tut-ic' }, '🛑'), h('b', null, 'Blockieren – Handtraps richtig einsetzen')),
+    h('p', { class: 'small' }, 'Stoppe den ersten wichtigen Schritt des Gegners (Starter, Sucheffekt): Wird er blockiert, fallen alle Kettenglieder weg, die darauf aufbauen. Im Duell sagt dir der Tutor (💡), ob sich das Blockieren gerade lohnt.'),
+    h('ul', { class: 'small' }, hp.map((x) => h('li', null, h('b', null, nameOf(x.code)), ': ' + x.when)))));
   const sec = [['main', 'Hauptdeck'], ['extra', 'Extradeck'], ['side', 'Sidedeck']];
   for (const [k, label] of sec) if (deck[k]?.length) {
     root.append(h('h4', { class: 'dsec' }, `${label} (${count(deck[k])})`));

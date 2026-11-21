@@ -1,6 +1,7 @@
 // Der Tutor im Duell: schlägt auf Grundlage der Deck-Analyse sinnvolle Aktionen vor
 import { cardOf, nameOf, descOf } from './data.js';
 import { roleOf } from '../../src/tutor.mjs';
+import { blockAdvice, summonAdvice } from '../../src/block.mjs';
 
 export const first = (txt, n = 190) => { const t = (txt || '').replace(/\s+/g, ' ').trim(); const m = t.match(/^.*?[.。!](?=\s|$)/); let s = m ? m[0] : t; return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 const inK = (arr, c) => (arr || []).includes(c);
@@ -49,6 +50,10 @@ export function battleTip(D, msg) {
   return { keys: [], text: 'Kein Angriff ist wirklich sicher. Verzichte lieber darauf: Ein schwächeres Monster würde zerstört werden.', ep: true };
 }
 export function chainTip(D, msg) {
+  const me = msg.player; const opts = msg.selects.map((s, i) => ({ i, code: s.code, card: cardOf(s.code) }));
+  const top = D.chain && D.chain.length ? D.chain[D.chain.length - 1] : null;
+  if (top && top.p !== me) { const adv = blockAdvice(cardOf(top.code), opts, nameOf); if (adv) return { text: adv.text, keys: [], pick: adv.pick, level: adv.level }; }
+  else if (!top && D.spCount && D.spCount[1 - me] > 0) { const adv = summonAdvice(D.spCount[1 - me], opts, nameOf); if (adv) return { text: adv.text, keys: [], pick: adv.pick, level: adv.level }; }
   const T = D.deckOf(msg.player).tutor || {}; const K = T.keys || {};
   const a = msg.selects.findIndex((s) => inK(K.handtraps, s.code) || inK(K.removal, s.code));
   if (a >= 0) { const s = msg.selects[a]; return { text: `«${nameOf(s.code)}» passt hier gut: ${first(descOf(cardOf(s.code)))}`, keys: [] }; }

@@ -175,7 +175,7 @@ function askChain(D, msg) {
   return new Promise((resolve) => {
     const tip = D.conf.tutor ? chainTip(D, msg) : null;
     const fin = (i) => { m.close(); resolve({ type: R.SELECT_CHAIN, index: i }); };
-    const rows = msg.selects.map((s, i) => { const d = descText(s.description, s.code); return h('div', { class: 'ch-row' }, h('button', { onclick: () => D.info(s.code) }, cardEl(s.code, { cls: 'sm' })), h('div', { class: 'grow' }, h('b', null, cleanName(nameOf(s.code))), h('div', { class: 'small muted' }, (d && s.description > 0n ? d : 'Effekt aktivieren').slice(0, 130))), h('button', { class: 'btn pri sm', onclick: () => fin(i) }, 'Aktivieren')); });
+    const rows = msg.selects.map((s, i) => { const d = descText(s.description, s.code); return h('div', { class: 'ch-row' }, h('button', { onclick: () => D.info(s.code) }, cardEl(s.code, { cls: 'sm' })), h('div', { class: 'grow' }, h('b', null, cleanName(nameOf(s.code)), tip && tip.pick === i ? h('span', { class: 'chip ok', style: 'margin-left:6px' }, '★ jetzt') : null), h('div', { class: 'small muted' }, (d && s.description > 0n ? d : 'Effekt aktivieren').slice(0, 130))), h('button', { class: 'btn sm ' + (tip && tip.pick === i ? 'gold' : 'pri'), onclick: () => fin(i) }, 'Aktivieren')); });
     const body = h('div', { class: 'col' }, ctxLines(D), rows, tip ? h('div', { class: 'tutor panel small' }, '💡 ' + tip.text) : null);
     const m = M(D, { title: msg.forced ? 'Ein Effekt löst aus' : 'Möchtest du antworten?', sticky: true, cls: 'peek', body, footer: msg.forced ? null : h('button', { class: 'btn', onclick: () => fin(null) }, 'Nein, weiter') });
   });
