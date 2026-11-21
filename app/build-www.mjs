@@ -7,10 +7,13 @@ const OUT = 'app/www'; rmSync(OUT, { recursive: true, force: true }); mkdirSync(
 const stub = (re) => ({ name: 'stub', setup(b) { b.onResolve({ filter: re }, (a) => ({ path: a.path, namespace: 'stub' })); b.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({ contents: 'export default function(){throw new Error("nicht im Hauptthread")}', loader: 'js' })); } });
 // Datenblöcke
 for (const [a, b] of [['scripts.gz', 'scripts.dat'], ['cards.gz', 'cards.dat'], ['data.gz', 'decks.dat'], ['de.gz', 'de.dat']]) copyFileSync('app/dist/' + a, OUT + '/data/' + b);
-const hash = createHash('sha1'); for (const f of readdirSync('app/src')) if (f.endsWith('.js')) hash.update(readFileSync('app/src/' + f)); for (const d of ['src', 'app/src/css']) for (const f of readdirSync(d)) if (/\.(mjs|css)$/.test(f)) hash.update(readFileSync(d + '/' + f)); for (const f of readdirSync(OUT + '/data')) hash.update(readFileSync(OUT + '/data/' + f));
+// App-Sperre: Prüfcode aus app/lock.txt (oder LOCK_CODE); ohne Datei ist die App offen
+const LOCK = (process.env.LOCK_CODE || (existsSync('app/lock.txt') ? readFileSync('app/lock.txt', 'utf-8') : '')).trim();
+if (LOCK && !/^v1\.\d{5,7}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{40,}$/.test(LOCK)) throw new Error('app/lock.txt hat nicht das erwartete Format (v1.…) – Bau abgebrochen, damit die App nicht versehentlich ausgesperrt wird');
+const hash = createHash('sha1'); hash.update('lock:' + LOCK); for (const f of readdirSync('app/src')) if (f.endsWith('.js')) hash.update(readFileSync('app/src/' + f)); for (const d of ['src', 'app/src/css']) for (const f of readdirSync(d)) if (/\.(mjs|css)$/.test(f)) hash.update(readFileSync(d + '/' + f)); for (const f of readdirSync(OUT + '/data')) hash.update(readFileSync(OUT + '/data/' + f));
 for (const f of readdirSync('app/src/css')) hash.update(readFileSync('app/src/css/' + f));
 const V = hash.digest('hex').slice(0, 10);
-const common = { bundle: true, write: true, format: 'iife', platform: 'browser', target: ['es2020', 'safari15'], minify: !process.env.DEV, legalComments: 'none', define: { 'process.env.NODE_ENV': '"production"', __VERSION__: JSON.stringify(V) }, logLevel: 'warning' };
+const common = { bundle: true, write: true, format: 'iife', platform: 'browser', target: ['es2020', 'safari15'], minify: !process.env.DEV, legalComments: 'none', define: { 'process.env.NODE_ENV': '"production"', __VERSION__: JSON.stringify(V), __LOCK__: JSON.stringify(LOCK) }, logLevel: 'warning' };
 await build({ ...common, entryPoints: ['app/src/main.js'], outfile: OUT + '/app.js', plugins: [stub(/ocgcore\.(sync|jspi)-/)] });
 await build({ ...common, entryPoints: ['app/src/worker.js'], outfile: OUT + '/worker.js', plugins: [stub(/ocgcore\.jspi-/)] });
 const css = readdirSync('app/src/css').filter((f) => f.endsWith('.css')).sort().map((f) => readFileSync('app/src/css/' + f, 'utf-8')).join('\n');

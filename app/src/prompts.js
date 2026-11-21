@@ -5,6 +5,7 @@ import { OcgResponseType as R, OcgMessageType as MSG, SelectIdleCMDAction as IA,
 import { cardMatchesOpcode } from 'ocgcore-wasm';
 import { cardEl } from './cards.js';
 import { openModal } from './ui.js';
+import { effectView, excerptNode } from './effecttext.js';
 import { sys, descText, PHASE, RACE_BITS, ATTR_BITS, fill } from './strings.js';
 import { idleTip, battleTip, chainTip } from './tips.js';
 
@@ -45,7 +46,7 @@ export async function ask(D, msg) {
 
 // ---------------------------------------------------------------- Hauptphase & Kampf
 function register(D, c, kind, label, resp, pri) {
-  const k = key(c.controller, c.location, c.sequence); const rec = { kind, code: c.code, key: k, label, resp, pri };
+  const k = key(c.controller, c.location, c.sequence); const rec = { kind, code: c.code, key: k, label, resp, pri, c };
   if (!D.acts.has(k)) D.acts.set(k, []); D.acts.get(k).push(rec); D.actList.push(rec); return rec;
 }
 function askIdle(D, msg) {
@@ -169,7 +170,7 @@ function askChain(D, msg) {
   return new Promise((resolve) => {
     const tip = D.conf.tutor ? chainTip(D, msg) : null;
     const fin = (i) => { m.close(); resolve({ type: R.SELECT_CHAIN, index: i }); };
-    const rows = msg.selects.map((s, i) => { const d = descText(s.description, s.code); return h('div', { class: 'ch-row' }, h('button', { onclick: () => D.info(s.code) }, cardEl(s.code, { cls: 'sm' })), h('div', { class: 'grow' }, h('b', null, cleanName(nameOf(s.code)), tip && tip.pick === i ? h('span', { class: 'chip ok', style: 'margin-left:6px' }, '★ jetzt') : null), h('div', { class: 'small muted' }, (d && s.description > 0n ? d : 'Effekt aktivieren').slice(0, 130))), h('button', { class: 'btn sm ' + (tip && tip.pick === i ? 'gold' : 'pri'), onclick: () => fin(i) }, 'Aktivieren')); });
+    const rows = msg.selects.map((s, i) => { const d = descText(s.description, s.code); const vw = effectView(s.code, s.description, s.location); const ex = excerptNode(vw, 170); return h('div', { class: 'ch-row' }, h('button', { onclick: () => D.info(s.code, vw) }, cardEl(s.code, { cls: 'sm' })), h('div', { class: 'grow' }, h('b', null, cleanName(nameOf(s.code)), tip && tip.pick === i ? h('span', { class: 'chip ok', style: 'margin-left:6px' }, '★ jetzt') : null), ex ? h('div', { class: 'small fx-ex' }, ex) : h('div', { class: 'small muted' }, (d && s.description > 0n ? d : 'Effekt aktivieren').slice(0, 130))), h('button', { class: 'btn sm ' + (tip && tip.pick === i ? 'gold' : 'pri'), onclick: () => fin(i) }, 'Aktivieren')); });
     const body = h('div', { class: 'col' }, ctxLines(D), rows, tip ? h('div', { class: 'tutor panel small' }, '💡 ' + tip.text) : null);
     const m = M(D, { title: msg.forced ? 'Ein Effekt löst aus' : 'Möchtest du antworten?', sticky: true, cls: 'peek', body, footer: msg.forced ? null : h('button', { class: 'btn', onclick: () => fin(null) }, 'Nein, weiter') });
   });
@@ -178,8 +179,9 @@ function askEffectYN(D, msg) {
   return new Promise((resolve) => {
     const name = cleanName(nameOf(msg.code)); const d = descText(msg.description, msg.code);
     const text = d ? fill(d, name, name) : `Möchtest du den Effekt von «${name}» aktivieren?`;
+    const vw = effectView(msg.code, msg.description, msg.location); const ex = excerptNode(vw, 190);
     const fin = (y) => { m.close(); resolve({ type: R.SELECT_EFFECTYN, yes: y }); };
-    const m = M(D, { title: 'Effekt aktivieren?', sticky: true, cls: 'peek', body: h('div', { class: 'row' }, h('button', { onclick: () => D.info(msg.code) }, cardEl(msg.code, { cls: 'sm' })), h('div', { class: 'grow' }, h('b', null, name), h('div', { class: 'small' }, text))), footer: [h('button', { class: 'btn', onclick: () => fin(false) }, 'Nein'), h('button', { class: 'btn pri', onclick: () => fin(true) }, 'Ja')] });
+    const m = M(D, { title: 'Effekt aktivieren?', sticky: true, cls: 'peek', body: h('div', { class: 'row' }, h('button', { onclick: () => D.info(msg.code, vw) }, cardEl(msg.code, { cls: 'sm' })), h('div', { class: 'grow' }, h('b', null, name), h('div', { class: 'small' }, text), ex ? h('div', { class: 'small fx-ex' }, ex) : null)), footer: [h('button', { class: 'btn', onclick: () => fin(false) }, 'Nein'), h('button', { class: 'btn pri', onclick: () => fin(true) }, 'Ja')] });
   });
 }
 function askYesNo(D, msg) {

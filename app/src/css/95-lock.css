@@ -1,0 +1,18 @@
+/* App-Sperre */
+.lock{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(120% 90% at 50% 0%,#0f2150 0%,#070e22 60%,#040813 100%);color:#e6edff;transition:opacity .25s}
+.lock.out{opacity:0;pointer-events:none}
+.lock-box{width:min(340px,100%);display:flex;flex-direction:column;gap:12px;align-items:stretch;text-align:center}
+.lock-logo{font-size:44px;line-height:1;filter:drop-shadow(0 0 14px rgba(246,201,107,.5))}
+.lock-t{font-size:26px;font-weight:800;letter-spacing:.02em;color:#f6c96b}
+.lock-s{font-size:14px;color:#93a6d1;margin-bottom:6px}
+.lock-in{font:inherit;font-size:17px;color:#fff;background:rgba(255,255,255,.07);border:1px solid rgba(120,160,255,.35);border-radius:12px;padding:13px 14px;text-align:center;width:100%;outline:none}
+.lock-in:focus{border-color:#5ea6ff;box-shadow:0 0 0 3px rgba(94,166,255,.25)}
+.lock-keep{display:flex;gap:8px;align-items:center;justify-content:center;font-size:13px;color:#93a6d1;cursor:pointer}
+.lock-keep input{width:17px;height:17px;accent-color:#5ea6ff}
+.lock-err{min-height:1.3em;font-size:13px;color:#ff8da0}
+.lock-go{font:inherit;font-weight:700;font-size:16px;color:#061022;background:linear-gradient(180deg,#8cc2ff,#5ea6ff);border:0;border-radius:12px;padding:13px;cursor:pointer}
+.lock-go:disabled{opacity:.55;cursor:default}
+.lock-go:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.lock-box.shake{animation:lockshake .35s}
+@keyframes lockshake{20%{transform:translateX(-8px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}}
+@media (prefers-reduced-motion:reduce){.lock,.lock-box.shake{transition:none;animation:none}}

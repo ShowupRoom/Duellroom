@@ -2,6 +2,7 @@
 import { h, $, clear, toast, uid, shuffled, rand32, sound } from './util.js';
 import { App, FORMAT_INFO, FORMATS, allDecks, fmtOf, fmtById, nameOf, withTutor, expand, count, cardOf, cleanName, customDecks, deleteCustom, consOf, ADV_LISTS, LIST_NAME, imageId } from './data.js';
 import { consBlock, consChip } from './cons.js';
+import { lockOn, relock } from './lock.js';
 import { cardEl, cfg as imgCfg, setImages, preload, idbCount, storageInfo, isOcg, ocgTag } from './cards.js';
 import { openModal, confirmBox, showCard } from './ui.js';
 import { go, back, screens } from './nav.js';
@@ -255,6 +256,7 @@ screens.settings = () => {
           toast(r.stopped ? `Gestoppt – ${r.ok} Bilder gespeichert. Du kannst später weitermachen.` : `${r.ok} von ${r.total} Bildern gespeichert (jetzt ${had} auf dem Gerät)` + (r.ok < r.total ? ' – manche Karten haben kein Bild oder es gab keine Verbindung.' : '')); paint();
         } }, label))),
         h('div', { class: 'row', style: 'flex-wrap:wrap' }, ['goat', 'edison', 'advanced', 'genesys', 'speed'].map((f) => h('button', { class: 'btn sm', onclick: async (e) => { const b = e.currentTarget; const codes = new Set(); for (const d of allDecks(f).filter((x) => x.grp === 'Beliebte Decks' || x.grp === 'Turnier-Decks' || x.custom || f === 'speed')) for (const s of ['main', 'extra']) for (const [c] of d[s]) codes.add(c); b.disabled = true; const r = await preload([...codes], (a, t) => { b.textContent = `${a}/${t}`; }); b.textContent = FORMAT_INFO[f].title; b.disabled = false; toast(`${r.ok} von ${r.total} Bildern gespeichert` + (r.ok < r.total ? ' – ohne Internet nicht möglich?' : '')); paint(); } }, FORMAT_INFO[f].title)))),
+      lockOn() ? h('div', { class: 'panel col' }, h('b', null, 'App-Sperre'), h('div', { class: 'muted small' }, 'Dieses Gerät ist freigeschaltet. Nach dem Sperren fragt die App beim nächsten Start wieder nach dem Passwort.'), h('button', { class: 'btn sm', onclick: relock }, '🔒 Jetzt sperren')) : null,
       h('div', { class: 'panel col' }, h('b', null, 'Eigene Decks'), h('div', { class: 'muted small' }, customDecks().length + ' gespeichert (nur auf diesem Gerät).'),
         h('button', { class: 'btn red sm', onclick: async () => { if (await confirmBox('Alle eigenen Decks löschen?', 'Das kann nicht rückgängig gemacht werden.', 'Löschen', 'Abbrechen', true)) { customDecks().forEach((d) => deleteCustom(d.id)); paint(); } } }, 'Alle eigenen Decks löschen')),
       h('div', { class: 'muted small', style: 'padding:6px' }, 'Spielkern: EDOPro-Kern (ocgcore) als WebAssembly · Regeln und Kartenskripte stammen aus dem Project-Ignis-Projekt · Deck-Sammlungen aus frei zugänglichen Quellen.')));

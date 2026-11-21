@@ -4,6 +4,7 @@ import { App } from './data.js';
 import { cardEl, isOcg, ocgTag } from './cards.js';
 import { typeText, levelText, attrName, statsText, kind } from './strings.js';
 import { cleanName, descOf } from './data.js';
+import { markNode } from './effecttext.js';
 
 export function openModal({ title, body, footer, center = false, cls = '', onClose, host, sticky = false } = {}) {
   const box = h('div', { class: 'box ' + cls },
@@ -19,7 +20,7 @@ export function confirmBox(title, text, yes = 'Ja', no = 'Abbrechen', danger = f
     const m = openModal({ title, center: true, body: h('p', { style: 'margin:6px 0 10px' }, text), footer: [h('button', { class: 'btn ghost', onclick: () => { res(false); m.close(); } }, no), h('button', { class: 'btn ' + (danger ? 'red' : 'pri'), onclick: () => { res(true); m.close(); } }, yes)], onClose: () => res(false) });
   });
 }
-export function cardInfoBody(code, extra) {
+export function cardInfoBody(code, extra, mk) {
   const c = App.cards.get(code); if (!c) return h('div', null, 'Unbekannte Karte ' + code);
   const lv = levelText(c), at = attrName(c.attribute);
   return h('div', { class: 'cinfo' },
@@ -28,7 +29,7 @@ export function cardInfoBody(code, extra) {
         (c.type & 1) ? h('div', { class: 'small', style: 'margin-top:4px' }, [at, lv].filter(Boolean).join(' · ')) : null,
         (c.type & 1) ? h('div', { class: 'small gold' }, statsText(c)) : null,
         (c.type & 0x1000000) ? h('div', { class: 'small muted' }, `Pendel-Skala ${c.lscale} / ${c.rscale}`) : null, isOcg(c) ? h('div', { class: 'small', style: 'margin-top:4px' }, ocgTag(), ' nur im OCG erschienen') : null, extra || null)),
-    h('div', { class: 'cinfo-t' }, descOf(c).replace(/\r/g, '')));
+    h('div', { class: 'cinfo-t' }, mk && mk.ranges && mk.ranges.length ? markNode(mk) : descOf(c).replace(/\r/g, '')));
 }
 export function showCard(code, footer) {
   const m = openModal({ title: null, body: cardInfoBody(code), footer: footer || h('button', { class: 'btn', onclick: () => m.close() }, 'Schließen'), cls: 'cardbox' });

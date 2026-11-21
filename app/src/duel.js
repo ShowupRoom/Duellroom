@@ -5,6 +5,7 @@ import { DuelAI } from '../../src/ai.mjs';
 import { randomResponse, OcgResponseType as R, OcgMessageType as MSG, SelectIdleCMDAction as IA, SelectBattleCMDAction as BA, LOC, MSG_NAME } from '../../src/core.mjs';
 import { cardEl, fieldEl } from './cards.js';
 import { openModal, confirmBox, cardInfoBody } from './ui.js';
+import { effectView, mergeViews, markNode, revealMark } from './effecttext.js';
 import { screens, back, replace, root as navRoot, setGuard } from './nav.js';
 import { store } from './store.js';
 import { sys, descText, PHASE, PHASE_HELP, victoryText, typeText, levelText, attrName, statsText } from './strings.js';
@@ -192,8 +193,8 @@ class Duel {
   addLog(s) { this.logLines.push(s); if (this.logLines.length > 400) this.logLines.shift(); }
   async banner(o) {
     if (!this.anim) return;
-    const el = h('div', { class: 'fx-b ' + (o.cls || '') }, o.code ? cardEl(o.code, { cls: 'md' }) : null, o.back ? cardEl(0, { back: true, cls: 'md' }) : null, h('div', { class: 'fx-bt' }, h('div', { class: 'fx-h' }, o.title), o.sub ? h('div', { class: 'fx-s' }, o.sub) : null));
-    this.fx.append(el); let done; const p = new Promise((r) => { done = r; }); el.addEventListener('pointerdown', () => done());
+    const el = h('div', { class: 'fx-b ' + (o.cls || '') }, o.code ? cardEl(o.code, { cls: 'md' }) : null, o.back ? cardEl(0, { back: true, cls: 'md' }) : null, h('div', { class: 'fx-bt' }, h('div', { class: 'fx-h' }, o.title), o.sub ? h('div', { class: 'fx-s' }, o.sub) : null, o.mark ? h('div', { class: 'fx-tx' }, o.mark) : null));
+    this.fx.append(el); if (o.mark) revealMark(el.querySelector('.fx-tx')); let done; const p = new Promise((r) => { done = r; }); el.addEventListener('pointerdown', () => done());
     await Promise.race([sleep((o.ms || 750) * 0.7), p]); el.classList.add('out'); setTimeout(() => el.remove(), 200);
   }
   seeCard(code, ctrl, pos) { return ctrl === this.viewer || (pos & FACEUP) || pos === undefined; }
@@ -211,7 +212,8 @@ class Duel {
         case MSG.SET: this.addLog(`${this.pname(m.controller)} setzt eine Karte`); beep('tap'); break;
         case MSG.CHAINING: {
           this.chain.push({ code: m.code, p: m.controller }); this.addLog(`Kette ${this.chain.length}: «${nameOf(m.code)}» (${this.pname(m.controller)})`); this.renderTop(); beep('chain');
-          await this.banner({ title: `Kette ${this.chain.length}`, sub: nameOf(m.code), code: m.code, cls: 'chain', ms: 800 }); break; }
+          const vw = effectView(m.code, m.description, m.triggering_location != null ? m.triggering_location : m.location); const has = !!(vw.ranges && vw.ranges.length);
+          await this.banner({ title: `Kette ${this.chain.length}`, sub: nameOf(m.code), code: m.code, cls: 'chain', ms: has ? 1100 + Math.min(2400, vw.text.length * 8) : 800, mark: has ? markNode(vw) : null }); break; }
         case MSG.CHAIN_NEGATED: case MSG.CHAIN_DISABLED: this.addLog('Der Effekt wurde negiert'); await this.banner({ title: 'Negiert!', cls: 'neg', ms: 500 }); break;
         case MSG.CHAIN_END: this.chain = []; this.renderTop(); break;
         case MSG.ATTACK: {
@@ -393,7 +395,7 @@ class Duel {
     const body = h('div', null, hiddenN ? h('p', { class: 'small muted' }, `${hiddenN} verdeckte Karte(n) nicht sichtbar.`) : null, shown.length ? h('div', { class: 'cgrid' }, [...(l === LOC.GRAVE ? [...shown].reverse() : shown)].map((c) => { const k = key(c.controller, c.location, c.sequence); const e = h('button', { class: 'cg' + (this.acts.has(k) ? ' hl' : '') + (this.cand.has(k) ? ' cand' : '') + (this.chosen.has(k) ? ' chosen' : ''), onclick: () => { m.close(); if (this.cand.has(k)) this.cand.get(k)(k); else this.openSheet(c, k); } }, cardEl(c.code, { cls: 'md' }), h('div', { class: 'small' }, cleanName(c.name))); return e; })) : h('p', { class: 'muted' }, 'Leer.'));
     const m = openModal({ host: this.root, title, body, footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Schließen') });
   }
-  info(code) { const m = openModal({ host: this.root, title: null, body: cardInfoBody(code), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Schließen') }); return m; }
+  info(code, mk) { const m = openModal({ host: this.root, title: null, body: cardInfoBody(code, null, mk), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Schließen') }); const t = mk && mk.ranges && mk.ranges.length ? m.el.querySelector('mark.fx-mark') : null; if (t && t.scrollIntoView) setTimeout(() => t.scrollIntoView({ block: 'center' }), 30); return m; }
   openSheet(c, k) {
     this.selKey = k; this.render();
     const vis = this.visible(c); clear(this.sheet); this.sheet.classList.add('open');
@@ -401,7 +403,7 @@ class Duel {
     const own = c.controller === this.viewer; const card = cardOf(c.code);
     const head = vis ? h('div', { class: 'sh-top' }, cardEl(c.code, { cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'sh-n' }, cleanName(c.name)), h('div', { class: 'small muted' }, typeText(card)), (card.type & 1) ? h('div', { class: 'small' }, [attrName(card.attribute), levelText(card)].filter(Boolean).join(' · ')) : null, (card.type & 1) ? h('div', { class: 'small gold' }, statsText({ ...card, attack: c.attack, defense: c.defense }) + (c.attack !== card.attack || c.defense !== card.defense ? ' (aktuell)' : '')) : null))
       : h('div', { class: 'sh-top' }, cardEl(0, { back: true, cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'sh-n' }, 'Verdeckte Karte'), h('div', { class: 'small muted' }, `von ${this.pname(c.controller)}`)));
-    this.sheet.append(h('button', { class: 'sh-x', onclick: () => this.closeSheet() }, '✕'), head, vis ? h('div', { class: 'sh-t' }, descOf(card).replace(/\r/g, '')) : null);
+    this.sheet.append(h('button', { class: 'sh-x', onclick: () => this.closeSheet() }, '✕'), head, vis ? h('div', { class: 'sh-t' }, (() => { const mv = mergeViews(acts.filter((a) => a.kind === 'activate' && a.c).map((a) => effectView(a.code, a.c.description, a.c.location))); return mv && mv.ranges.length ? markNode(mv) : descOf(card).replace(/\r/g, ''); })()) : null);
     if (acts.length) this.sheet.append(h('div', { class: 'sh-acts' }, acts.map((a) => h('button', { class: 'btn ' + (a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, a.label))));
     else if (own && this.pending && this.pending.kind === 'idle') this.sheet.append(h('div', { class: 'small muted', style: 'margin-top:6px' }, 'Mit dieser Karte ist gerade keine Aktion möglich.'));
     this.sheet.append(h('button', { class: 'btn ghost sm', style: 'margin-top:8px', onclick: () => this.info(c.code) }, 'Ganzen Text'));
