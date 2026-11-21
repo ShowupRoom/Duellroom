@@ -246,6 +246,10 @@ class Duel {
     else if ((to === LOC.DECK || to === LOC.EXTRA) && (from & (LOC.MZONE | LOC.SZONE | LOC.GRAVE | LOC.REMOVED))) this.addLog(`${n} geht zurück ins Deck`);
     else if (to === LOC.HAND && from === LOC.DECK) this.addLog(`${this.pname(m.to.controller)} fügt eine Karte aus dem Deck der Hand hinzu`);
   }
+  /** Offene Hand des Gegners (z. B. unter „Gedankenlesen“) ansehen */
+  showHand(p) {
+    const pl = this.snap.players[p]; const mo = openModal({ host: this.root, title: `Offene Hand von ${this.pname(p)}`, center: true, body: h('div', { class: 'cgrid' }, pl.hand.map((c) => (c && c.isPublic && c.code ? h('button', { class: 'cg', onclick: () => this.info(c.code) }, cardEl(c.code, { cls: 'md' }), h('div', { class: 'small' }, nameOf(c.code))) : h('div', { class: 'cg' }, cardEl(0, { back: true, cls: 'md' }), h('div', { class: 'small muted' }, 'verdeckt'))))), footer: h('button', { class: 'btn pri', onclick: () => mo.close() }, 'Schließen') });
+  }
   confirmShow(m) {
     if (!m.cards || !m.cards.length) return Promise.resolve();
     return new Promise((res) => {
@@ -267,13 +271,14 @@ class Duel {
 
   // ---------------------------------------------------------------- Darstellung
   cardAt(p, l, s) { const a = this.snap && this.snap.players[p][LK[l]]; return a ? a[s] || null : null; }
-  visible(c) { return c && (c.controller === this.viewer || (c.position & FACEUP) > 0); }
+  visible(c) { return c && (c.controller === this.viewer || (c.position & FACEUP) > 0 || !!c.isPublic); }
   /** Ist eine in einer Auswahl genannte Karte für den Betrachter sichtbar? */
   selVisible(s) { if (s.controller === this.viewer) return true; const c = this.cardAt(s.controller, s.location, s.sequence); if (c) return (c.position & FACEUP) > 0; return s.position !== undefined ? (s.position & FACEUP) > 0 : false; }
   render() { if (!this.snap) return; this.renderTop(); this.renderStrips(); this.renderBoard(); this.renderHand(); this.renderSheet(); this.renderActs(); }
   renderTop() {
     const tp = this.turnPlayer;
-    this.turnEl.textContent = this.turnNo ? `Zug ${this.turnNo} · ${PHASE[this.phase] || ''} · ${this.pname(tp)}` : 'Duell beginnt …';
+    const mineT = tp === this.viewer; clear(this.turnEl); this.turnEl.className = 'd-turn' + (this.turnNo ? (mineT ? ' mine' : ' theirs') : '');
+    if (this.turnNo) this.turnEl.append(h('b', { class: 'tn-w' }, mineT ? '▶ DEIN ZUG' : `▶ ${this.pname(tp).toUpperCase()} AM ZUG`), h('span', { class: 'tn-p' }, `Zug ${this.turnNo}`)); else this.turnEl.textContent = 'Duell beginnt …';
     this.chainEl.textContent = this.chain.length ? `⛓ ${this.chain.length}` : ''; this.chainEl.style.display = this.chain.length ? '' : 'none';
     this.tipBtn.style.display = this.conf.tutor && this.conf.human[this.viewer] ? '' : 'none';
     const cur = PH_PILLS.find((x) => x[2].includes(this.phase)); const po = this.phaseOpts || {}; const can = PH_PILLS.some((x) => po[x[0]]); if (!can) this.closePhMenu();
@@ -303,9 +308,9 @@ class Duel {
     for (const [bar, p] of [[this.oppBar, o], [this.meBar, v]]) {
       const lp = s.lp[p]; const pl = s.players[p]; const max = Math.max(this.conf.lp, lp);
       const cur = this.lpShown[p]; const fl = this.floats.filter((f) => f.p === p); this.floats = this.floats.filter((f) => f.p !== p);
-      clear(bar); const hb = h('div', { class: 'lpbar' }, h('i', { style: `width:${Math.max(0, Math.min(100, (lp / max) * 100))}%` }));
+      clear(bar); bar.classList.toggle('turn', !!this.turnNo && this.turnPlayer === p); const hb = h('div', { class: 'lpbar' }, h('i', { style: `width:${Math.max(0, Math.min(100, (lp / max) * 100))}%` }));
       const num = h('div', { class: 'lpn' }, String(cur)); bar.append(h('div', { class: 'st-n' + (this.turnPlayer === p ? ' act' : '') }, this.pname(p)), h('div', { class: 'lpw' }, hb, num),
-        h('div', { class: 'st-c' }, p === o ? h('span', { class: 'hbacks' }, Array.from({ length: Math.min(pl.hand.length, 12) }, () => h('i'))) : null, h('span', { class: 'chip' }, `🂠 ${pl.deck}`), p === o ? h('span', { class: 'chip' }, `✋ ${pl.hand.length}`) : null));
+        h('div', { class: 'st-c' }, p === o ? h('span', { class: 'hbacks' }, Array.from({ length: Math.min(pl.hand.length, 12) }, () => h('i'))) : null, h('span', { class: 'chip' }, `🂠 ${pl.deck}`), p === o ? h('span', { class: 'chip' }, `✋ ${pl.hand.length}`) : null, p === o && pl.hand.some((c) => c && c.isPublic) ? h('button', { class: 'chip pubh', onclick: () => this.showHand(o) }, '👁 Hand offen') : null));
       if (p === o) { clear(this.ohand); for (let i = 0; i < Math.min(pl.hand.length, 14); i++) this.ohand.append(h('i')); }
       this.tweenLp(p, num, cur, lp); this.lpShown[p] = lp;
       for (const f of fl) { const e = h('div', { class: 'lpf ' + (f.d < 0 ? 'neg' : 'pos') }, (f.d > 0 ? '+' : '') + f.d); bar.append(e); setTimeout(() => e.remove(), this.tempo === 'fast' ? 900 : 1600); }

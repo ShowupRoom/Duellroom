@@ -197,3 +197,17 @@ mark.fx-mark{background:rgba(246,201,107,.2);color:#ffe3a1;border-radius:3px;pad
 .sh-top .grow{min-width:0}.sh-n{overflow-wrap:anywhere;hyphens:auto}
 .duel.land .opt-h .card.md{--w:58px}.duel.land .modal.peek .opt-h{gap:10px}
 .land .d-top{gap:4px}.land .d-top .ibtn{flex:1 1 0;min-width:0;max-width:34px;width:auto;height:32px;padding:0}
+
+/* Wer ist dran? */
+.d-turn{display:inline-flex;gap:8px;align-items:baseline;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(6,16,40,.6);white-space:nowrap}
+.d-turn .tn-w{font-size:12.5px;letter-spacing:.6px;font-weight:900}.d-turn .tn-p{font-size:12px;color:#cfe6ff}
+.d-turn.mine{border-color:rgba(79,211,255,.85);background:rgba(79,211,255,.16)}.d-turn.mine .tn-w{color:#8fe9ff}
+.d-turn.theirs{border-color:rgba(255,110,125,.85);background:rgba(255,90,115,.18)}.d-turn.theirs .tn-w{color:#ffa5b0}
+.land .d-turnb{display:block;order:9;flex:1 0 100%;padding:0;border:0;background:none}
+.land .d-turn{display:flex;flex-direction:column;gap:1px;align-items:center;white-space:normal;text-align:center;border-radius:10px;padding:5px 6px;line-height:1.2}
+.land .d-turn .tn-w{font-size:12px}.land .d-turn .tn-p{font-size:11px}
+.d-strip.turn{box-shadow:0 0 0 2px var(--gold),0 0 16px rgba(246,201,107,.4)}
+.chip.pubh{cursor:pointer;border-color:var(--gold);color:var(--gold)}
+.land .d-top{flex-wrap:wrap}.land .d-turn .tn-p{display:none}.land .d-turn{flex-direction:row;justify-content:center;padding:6px 6px}
+.d-turnb{overflow:hidden}.d-turn{max-width:100%;overflow:hidden}.d-turn .tn-w{overflow:hidden;text-overflow:ellipsis}
+@media (max-width:430px) and (orientation:portrait){.d-turn .tn-p{display:none}}

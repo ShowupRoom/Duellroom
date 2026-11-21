@@ -15,7 +15,8 @@ export async function loadCore() { return createCore({ sync: true }); }
 
 const QUERY = OcgQueryFlags.CODE | OcgQueryFlags.POSITION | OcgQueryFlags.LEVEL | OcgQueryFlags.RANK |
   OcgQueryFlags.ATTRIBUTE | OcgQueryFlags.RACE | OcgQueryFlags.ATTACK | OcgQueryFlags.DEFENSE | OcgQueryFlags.OVERLAY_CARD |
-  OcgQueryFlags.COUNTERS | OcgQueryFlags.STATUS | OcgQueryFlags.EQUIP_CARD | OcgQueryFlags.TARGET_CARD;
+  OcgQueryFlags.COUNTERS | OcgQueryFlags.STATUS | OcgQueryFlags.EQUIP_CARD | OcgQueryFlags.TARGET_CARD |
+  OcgQueryFlags.IS_PUBLIC; // „offene“ Karten (z. B. Hand unter „Gedankenlesen“) – sonst bleibt die gegnerische Hand verdeckt
 
 const PROMPTS = new Set([
   MSG.SELECT_IDLECMD, MSG.SELECT_BATTLECMD, MSG.SELECT_EFFECTYN, MSG.SELECT_YESNO, MSG.SELECT_OPTION, MSG.SELECT_CARD,

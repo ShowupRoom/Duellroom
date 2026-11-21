@@ -29,7 +29,7 @@ export function maskSnap(s, v) {
   const op = P[o];
   op.hand = op.hand.map((c) => (c && !c.isPublic ? hideCard(c) : c));
   op.extra = op.extra.map((c) => (c && !(c.position & FACEUP) ? hideCard(c) : c));
-  for (const k of ['mzone', 'szone', 'banished']) op[k] = op[k].map((c) => (c && !(c.position & FACEUP) ? hideCard(c) : c));
+  for (const k of ['mzone', 'szone', 'banished']) op[k] = op[k].map((c) => (c && !(c.position & FACEUP) && !c.isPublic ? hideCard(c) : c)); // „Gedankenlesen“ macht gesetzte Karten offen
   // eigene verdeckt verbannte Karten bleiben sichtbar
   return { ...s, players: P };
 }
