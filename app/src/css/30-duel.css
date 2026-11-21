@@ -11,6 +11,7 @@
 .lpf{position:absolute;right:20px;top:-8px;font-weight:900;font-size:24px;animation:flo 1.5s forwards;pointer-events:none;text-shadow:0 0 10px #000}.lpf.neg{color:var(--red)}.lpf.pos{color:var(--grn)}@keyframes flo{0%{transform:translateY(8px) scale(.6);opacity:0}15%{opacity:1;transform:translateY(0) scale(1.2)}100%{transform:translateY(-26px);opacity:0}}
 .d-board{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:2px 0;position:relative}
 .bd{display:grid;grid-template-columns:repeat(7,var(--cw));gap:3px;position:relative}
+.bd.c3{grid-template-columns:repeat(5,var(--cw))}
 .bd.emz{grid-template-rows:repeat(5,calc(var(--cw)*1.42))}.bd.noemz{grid-template-rows:calc(var(--cw)*1.42) calc(var(--cw)*1.42) calc(var(--cw)*.32) calc(var(--cw)*1.42) calc(var(--cw)*1.42)}
 .zn{position:relative;border:1px solid rgba(110,185,255,.3);border-radius:7px;background:linear-gradient(180deg,rgba(24,60,130,.35),rgba(8,24,60,.55));display:grid;place-items:center;min-width:0;box-shadow:inset 0 0 10px rgba(79,211,255,.08);transition:box-shadow .15s,border-color .15s}
 .zn .zl{position:absolute;font-size:calc(var(--cw)*.16);color:rgba(150,200,255,.35);text-transform:uppercase;letter-spacing:.5px;pointer-events:none}

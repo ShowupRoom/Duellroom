@@ -53,7 +53,7 @@ function hydrate(l) {
 
 // ---- Format wählen ----------------------------------------------------------
 screens.formats = () => h('div', { class: 'screen' }, hdr('Format wählen', 'Welche Regeln und welche Verbotsliste?'),
-  h('div', { class: 'body' }, h('div', { class: 'wrap fmt-grid' }, ['goat', 'edison', 'advanced', 'genesys'].map((id) => {
+  h('div', { class: 'body' }, h('div', { class: 'wrap fmt-grid' }, ['goat', 'edison', 'advanced', 'genesys', 'speed'].map((id) => {
     const f = FORMAT_INFO[id]; const n = allDecks(id).filter((d) => d.status !== 'entwurf').length;
     return h('button', { class: 'panel fmt-card f-' + id, onclick: () => go('setup', { fmt: id }) },
       h('div', { class: 'fmt-ic' }, f.icon), h('div', { class: 'grow' }, h('div', { class: 'fmt-t' }, f.title), h('div', { class: 'gold small' }, f.sub), h('p', { class: 'muted fmt-b' }, f.blurb), h('div', { class: 'chip' }, n + ' Decks')));
@@ -119,7 +119,7 @@ function deckMini(d) {
 }
 
 // ---- Deck wählen ----------------------------------------------------------------
-const GROUP_ORDER = ['Meine Decks', 'Beliebte Decks', 'Turnier-Decks', 'Archetypen', 'Mechaniken', 'Master Duel', 'Anime', 'Structure Decks', 'Starter Decks', 'Weltmeisterschaft', 'Entwürfe'];
+const GROUP_ORDER = ['Meine Decks', 'Beliebte Decks', 'Turnier-Decks', 'Archetypen', 'Mechaniken', 'Master Duel', 'Anime', 'Structure Decks', 'Promo-Decks', 'Starter Decks', 'Weltmeisterschaft', 'Entwürfe'];
 export function deckArt(d) { const t = withTutor(d).tutor; return (t.keys?.bosses?.[0]) || (t.keys?.starters?.[0]) || d.main[0]?.[0]; }
 screens.decks = ({ fmt, list, title, onPick }) => {
   const f = FORMATS[fmt]; let decks = allDecks(fmt).filter((d) => fmt !== 'advanced' || d.custom || list === 'none' || d.list === list);
@@ -254,7 +254,7 @@ screens.settings = () => {
           const ctl = { stop: false }; b._ctl = ctl; const r = await preload(codes, (a, t) => { b.textContent = `${Math.round(a / t * 100)} % · tippen = stopp`; }, ctl); b._ctl = null; const had = await idbCount();
           toast(r.stopped ? `Gestoppt – ${r.ok} Bilder gespeichert. Du kannst später weitermachen.` : `${r.ok} von ${r.total} Bildern gespeichert (jetzt ${had} auf dem Gerät)` + (r.ok < r.total ? ' – manche Karten haben kein Bild oder es gab keine Verbindung.' : '')); paint();
         } }, label))),
-        h('div', { class: 'row', style: 'flex-wrap:wrap' }, ['goat', 'edison', 'advanced', 'genesys'].map((f) => h('button', { class: 'btn sm', onclick: async (e) => { const b = e.currentTarget; const codes = new Set(); for (const d of allDecks(f).filter((x) => x.grp === 'Beliebte Decks' || x.grp === 'Turnier-Decks' || x.custom)) for (const s of ['main', 'extra']) for (const [c] of d[s]) codes.add(c); b.disabled = true; const r = await preload([...codes], (a, t) => { b.textContent = `${a}/${t}`; }); b.textContent = FORMAT_INFO[f].title; b.disabled = false; toast(`${r.ok} von ${r.total} Bildern gespeichert` + (r.ok < r.total ? ' – ohne Internet nicht möglich?' : '')); paint(); } }, FORMAT_INFO[f].title)))),
+        h('div', { class: 'row', style: 'flex-wrap:wrap' }, ['goat', 'edison', 'advanced', 'genesys', 'speed'].map((f) => h('button', { class: 'btn sm', onclick: async (e) => { const b = e.currentTarget; const codes = new Set(); for (const d of allDecks(f).filter((x) => x.grp === 'Beliebte Decks' || x.grp === 'Turnier-Decks' || x.custom || f === 'speed')) for (const s of ['main', 'extra']) for (const [c] of d[s]) codes.add(c); b.disabled = true; const r = await preload([...codes], (a, t) => { b.textContent = `${a}/${t}`; }); b.textContent = FORMAT_INFO[f].title; b.disabled = false; toast(`${r.ok} von ${r.total} Bildern gespeichert` + (r.ok < r.total ? ' – ohne Internet nicht möglich?' : '')); paint(); } }, FORMAT_INFO[f].title)))),
       h('div', { class: 'panel col' }, h('b', null, 'Eigene Decks'), h('div', { class: 'muted small' }, customDecks().length + ' gespeichert (nur auf diesem Gerät).'),
         h('button', { class: 'btn red sm', onclick: async () => { if (await confirmBox('Alle eigenen Decks löschen?', 'Das kann nicht rückgängig gemacht werden.', 'Löschen', 'Abbrechen', true)) { customDecks().forEach((d) => deleteCustom(d.id)); paint(); } } }, 'Alle eigenen Decks löschen')),
       h('div', { class: 'muted small', style: 'padding:6px' }, 'Spielkern: EDOPro-Kern (ocgcore) als WebAssembly · Regeln und Kartenskripte stammen aus dem Project-Ignis-Projekt · Deck-Sammlungen aus frei zugänglichen Quellen.')));

@@ -1,6 +1,6 @@
 // Duell-Oberfläche: Spielfeld, Hand, Ereignisse, Übergabe zwischen den Spielern
 import { h, clear, sleep, toast, shuffled, beep, rand32, zkey as key } from './util.js';
-import { App, MODES, fmtById, expand, nameOf, cardOf, cleanName, withTutor, descOf } from './data.js';
+import { App, MODES, FORMATS, fmtById, expand, nameOf, cardOf, cleanName, withTutor, descOf } from './data.js';
 import { DuelAI } from '../../src/ai.mjs';
 import { randomResponse, OcgResponseType as R, OcgMessageType as MSG, SelectIdleCMDAction as IA, SelectBattleCMDAction as BA, LOC, MSG_NAME } from '../../src/core.mjs';
 import { cardEl, fieldEl } from './cards.js';
@@ -21,7 +21,7 @@ const FACEUP = 5;
 
 class Duel {
   constructor(conf) {
-    this.conf = conf; this.mode = MODES[conf.fmt]; this.fmtDef = fmtById(conf.fmt, conf.list);
+    this.conf = conf; this.mode = MODES[conf.fmt]; if (this.mode.lp) conf.lp = this.mode.lp; // Speed Duell: fest 4000 LP this.fmtDef = fmtById(conf.fmt, conf.list);
     this.net = conf.mode === 'net-host' || conf.mode === 'net-guest' ? session : null; this.viewer = this.net ? conf.seat : (conf.human[0] ? 0 : 1); this.snap = null; this.logLines = []; this.chain = []; this.stopped = false; this.turnNo = 0; this.phase = 0; this.turnPlayer = 0;
     this.actList = []; this.acts = new Map(); this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.tip = null; this.tipKeys = new Set(); this.pending = null; this.hintText = ''; this.introShown = [false, false];
     this.lpShown = [conf.lp, conf.lp]; this.floats = []; this.prevHand = [0, 0]; this.newHand = 0; this.anim = store.get('anim', true);
@@ -39,7 +39,7 @@ class Duel {
     this.oppBar = h('div', { class: 'd-strip opp' }); this.meBar = h('div', { class: 'd-strip me' });
     this.boardWrap = h('div', { class: 'd-board' }); this.board = h('div', { class: 'bd' }); this.ohand = h('div', { class: 'd-ohand' }); this.boardWrap.append(this.board, this.ohand);
     this.wheel = h('button', { class: 'ph-wheel', title: 'Phase wählen', onclick: () => this.phaseTap() }, h('b', null, '–'), h('small', null, ''));
-    this.phaseEl = h('div', { class: 'd-phases' }, this.wheel, h('div', { class: 'ph-pills' }, PH_PILLS.map((x) => h('button', { class: 'ph', 'data-ph': x[0], title: x[1], onclick: () => this.phasePick(x[0]) }, x[0]))));
+    this.phaseEl = h('div', { class: 'd-phases' }, this.wheel, h('div', { class: 'ph-pills' }, PH_PILLS.filter((x) => !(this.mode.noM2 && x[0] === 'M2')).map((x) => h('button', { class: 'ph', 'data-ph': x[0], title: x[1], onclick: () => this.phasePick(x[0]) }, x[0]))));
     this.board.addEventListener('click', (e) => { const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); });
     this.handEl = h('div', { class: 'd-hand' }); this.handEl.addEventListener('click', (e) => { const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); }); this.bar = h('div', { class: 'd-bar' });
     this.sheet = h('div', { class: 'd-sheet' }); this.fx = h('div', { class: 'd-fx' });
@@ -63,13 +63,13 @@ class Duel {
     if (land) {
       // Querformat: die Kartengröße richtet sich nach der Höhe (5 Reihen + herausschauende Hand + Gegnerhand)
       const sp = this.safe(); const rowsH = this.mode.emz ? 5 * 1.42 : 4 * 1.42 + 0.32; const gaps = 4 * 3 + 6;
-      const cwH = (H - sp.t - sp.b - gaps - 4) / (rowsH + 0.34 + 1.0); const cwW = (W - sp.l - sp.r - 2 * 140 - 18 - 12) / 7;
-      const cw = Math.max(30, Math.min(cwH, cwW, 112)); const boardW = cw * 7 + 18 + 12;
+      const cwH = (H - sp.t - sp.b - gaps - 4) / (rowsH + 0.34 + 1.0); const cwW = (W - sp.l - sp.r - 2 * 140 - 18 - 12) / (this.mode.cols3 ? 5 : 7);
+      const cw = Math.max(30, Math.min(cwH, cwW, 112)); const boardW = cw * (this.mode.cols3 ? 5 : 7) + 18 + 12;
       const st = R.style; st.setProperty('--cw', cw.toFixed(1) + 'px'); st.setProperty('--hpk', (cw * 1.0).toFixed(1) + 'px'); st.setProperty('--opk', (cw * 0.34).toFixed(1) + 'px');
       st.setProperty('--sidew', Math.max(140, (W - sp.l - sp.r - boardW) / 2 - 6).toFixed(0) + 'px'); st.setProperty('--barh', '0px'); return;
     }
     const b = this.boardWrap.getBoundingClientRect(); if (!b.width || !b.height) return;
-    const rows = this.mode.emz ? 5 : 4.35; const cw = Math.max(30, Math.min((b.width - 22) / 7, b.height / (rows * 1.42 + 0.35), 96));
+    const rows = this.mode.emz ? 5 : 4.35; const cw = Math.max(30, Math.min((b.width - 22) / (this.mode.cols3 ? 5 : 7), b.height / (rows * 1.42 + 0.35), 96));
     R.style.setProperty('--cw', cw.toFixed(1) + 'px'); R.style.setProperty('--barh', this.bar.offsetHeight + 'px'); R.style.setProperty('--sidew', '100%');
   }
 
@@ -85,7 +85,7 @@ class Duel {
       else {
         const mk = (i) => ({ main: expand(conf.players[i].deck.main), extra: expand(conf.players[i].deck.extra) });
         const seed = conf.seed ? conf.seed.map((x) => BigInt(x)) : [BigInt(rand32()), BigInt(rand32()), BigInt(rand32()), BigInt(rand32())]; this.seedUsed = seed.map(Number);
-        this.eng = new LocalEngine(); await this.eng.create({ flags: m.flags, decks: [mk(0), mk(1)], scripts: m.scripts, seed, lp: conf.lp, stack: conf.stack });
+        this.eng = new LocalEngine(); await this.eng.create({ flags: m.flags, decks: [mk(0), mk(1)], scripts: m.scripts, seed, lp: conf.lp, hand: m.hand, stack: conf.stack });
         if (conf.mode === 'net-host') this.host = new HostLink(this.net, 1 - this.viewer);
       }
     } catch (e) { this.fatal(e); return; }
@@ -328,18 +328,19 @@ class Duel {
     return z;
   }
   renderBoard() {
-    const v = this.viewer, o = 1 - v; const b = this.board; clear(b); b.className = 'bd' + (this.mode.emz ? ' emz' : ' noemz');
-    const colMe = (s) => s + 2, colOp = (s) => 6 - s;
+    const v = this.viewer, o = 1 - v; const b = this.board; clear(b); const c3 = !!this.mode.cols3, NC = c3 ? 5 : 7; b.className = 'bd' + (this.mode.emz ? ' emz' : ' noemz') + (c3 ? ' c3' : ''); // Speed Duell: nur 3 Spalten (Zonen 1–3)
+    const colMe = (s) => s + (c3 ? 1 : 2), colOp = (s) => (c3 ? 5 : 6) - s;
     for (const [p, rowM, rowS, col, mir] of [[o, 2, 1, colOp, true], [v, 4, 5, colMe, false]]) {
       for (let s = 0; s < 5; s++) {
+        if (c3 && (s === 0 || s === 4)) continue;
         b.append(this.zone(p, LOC.MZONE, s, rowM, col(s)));
         const pz = this.mode.pzone && (s === 0 || s === 4) ? (s === 0 ? 'pz pz-l' : 'pz pz-r') : '';
         b.append(this.zone(p, LOC.SZONE, s, rowS, col(s), { cls: pz }));
       }
-      b.append(this.zone(p, LOC.SZONE, 5, rowM, mir ? 7 : 1, { cls: 'fz', label: 'Feld' }));
-      b.append(this.pile(p, LOC.EXTRA, rowS, mir ? 7 : 1, 'Extra'));
-      b.append(this.pile(p, LOC.GRAVE, rowM, mir ? 1 : 7, 'Friedhof'));
-      b.append(this.pile(p, LOC.DECK, rowS, mir ? 1 : 7, 'Deck'));
+      b.append(this.zone(p, LOC.SZONE, 5, rowM, mir ? NC : 1, { cls: 'fz', label: 'Feld' }));
+      b.append(this.pile(p, LOC.EXTRA, rowS, mir ? NC : 1, 'Extra'));
+      b.append(this.pile(p, LOC.GRAVE, rowM, mir ? 1 : NC, 'Friedhof'));
+      b.append(this.pile(p, LOC.DECK, rowS, mir ? 1 : NC, 'Deck'));
     }
     if (this.mode.emz) { // gemeinsame Extra-Monsterzonen: links = eigene 5 / gegnerische 6
       for (const [col, ms, mo] of [[3, 5, 6], [5, 6, 5]]) {
@@ -352,13 +353,13 @@ class Duel {
         b.append(z);
       }
     }
-    b.append(h('div', { class: 'midinfo', style: 'grid-row:3;grid-column:' + (this.mode.emz ? '1 / 3' : '1 / 8') }, this.mode.emz ? '' : this.phaseLine()));
+    b.append(h('div', { class: 'midinfo', style: 'grid-row:3;grid-column:' + (this.mode.emz ? '1 / 3' : '1 / ' + (NC + 1)) }, this.mode.emz ? '' : this.phaseLine()));
   }
   phaseLine() { return this.turnNo ? `${PHASE[this.phase] || ''}` : ''; }
   renderHand() {
     const v = this.viewer; const hand = this.snap.players[v].hand; clear(this.handEl);
     const n = this.newHand; this.newHand = 0;
-    if (this.root.classList.contains('land')) { const cw = parseFloat(this.root.style.getPropertyValue('--cw')) || 40; const w = cw * 1.35, maxW = cw * 7.4, cnt = hand.filter(Boolean).length; this.handEl.style.setProperty('--hov', cnt > 1 ? -Math.max(-4, (cnt * w - maxW) / (cnt - 1)).toFixed(1) + 'px' : '0px'); }
+    if (this.root.classList.contains('land')) { const cw = parseFloat(this.root.style.getPropertyValue('--cw')) || 40; const w = cw * 1.35, maxW = cw * (this.mode.cols3 ? 5.4 : 7.4), cnt = hand.filter(Boolean).length; this.handEl.style.setProperty('--hov', cnt > 1 ? -Math.max(-4, (cnt * w - maxW) / (cnt - 1)).toFixed(1) + 'px' : '0px'); }
     hand.forEach((c, i) => {
       if (!c) return; const k = key(v, LOC.HAND, c.sequence); const el = h('div', { class: 'hc', 'data-k': k, style: hand.length > 6 ? 'margin-left:-14px' : '' }, cardEl(c.code, { cls: 'hcard' }));
       if (i >= hand.length - n) el.classList.add('new'); this.mark(el, k); this.handEl.append(el);

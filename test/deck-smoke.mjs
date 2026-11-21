@@ -4,16 +4,16 @@ import { loadCore, Game, OcgDuelMode, randomResponse } from '../src/core.mjs';
 import { loadCards, scriptReader, mulberry } from './lib.mjs';
 const file = process.argv[2] || new URL('../data/decks.json', import.meta.url).pathname;
 const maxP = +(process.env.MAXP || 700);
-const MODE = { goat: 'MODE_GOAT', edison: 'MODE_MR1', advanced: 'MODE_MR5', genesys: 'MODE_MR1' };
+const MODE = { goat: 'MODE_GOAT', edison: 'MODE_MR1', advanced: 'MODE_MR5', genesys: 'MODE_MR1', speed: 'MODE_SPEED' };
 const decks = JSON.parse(readFileSync(file, 'utf-8'));
 const cards = loadCards(); const lib = await loadCore();
 const ex = (l) => l.flatMap(([c, n]) => Array(n).fill(c));
 const cnt = (l) => l.reduce((s, e) => s + e[1], 0);
 for (const d of decks) { d.nMain = cnt(d.main); d.unknown = [...d.main, ...d.extra].filter((e) => !cards.has(e[0])).map((e) => e[0]); }
-const oppFor = {}; for (const f of ['goat', 'edison', 'advanced', 'genesys']) oppFor[f] = decks.find((d) => d.fmt === f && d.nMain >= 40 && !d.unknown.length);
+const oppFor = {}; for (const f of ['goat', 'edison', 'advanced', 'genesys', 'speed']) oppFor[f] = decks.find((d) => d.fmt === f && d.nMain >= (f === 'speed' ? 20 : 40) && !d.unknown.length);
 const res = {}; const t0 = Date.now();
 for (const [k, d] of decks.entries()) {
-  if (d.unknown?.length || d.nMain < 40) { res[d.id] = { skipped: true }; continue; }
+  if (d.unknown?.length || d.nMain < (d.fmt === 'speed' ? 20 : 40)) { res[d.id] = { skipped: true }; continue; }
   const opp = oppFor[d.fmt]; const mode = MODE[d.fmt]; const rnd = mulberry(k + 7); const r = { turns: 0, ended: false, prompts: 0, lua: [] };
   try {
     const g = await Game.create(lib, { flags: OcgDuelMode[mode], decks: [{ main: ex(d.main), extra: ex(d.extra) }, { main: ex(opp.main), extra: ex(opp.extra) }], cards, readScript: scriptReader(d.fmt === 'goat' ? 'goat' : d.fmt === 'edison' ? 'edison' : 'official'), seed: [BigInt(k + 1), 2n, 3n, 4n] });

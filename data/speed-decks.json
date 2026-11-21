@@ -1,0 +1,2475 @@
+[
+ {
+  "id": "speed-yami-yugi",
+  "name": "Yami Yugi (Magier)",
+  "sub": "Starter-Deck · Destiny Masters",
+  "src": "yugipedia.com/wiki/Speed_Duel_Starter_Decks:_Destiny_Masters",
+  "main": [
+   [
+    "Dark Magician",
+    1
+   ],
+   [
+    "Feral Imp",
+    1
+   ],
+   [
+    "Rogue Doll",
+    2
+   ],
+   [
+    "Dark Magician Girl",
+    1
+   ],
+   [
+    "Legion the Fiend Jester",
+    2
+   ],
+   [
+    "The Stern Mystic",
+    1
+   ],
+   [
+    "Double Coston",
+    1
+   ],
+   [
+    "Blue Dragon Summoner",
+    1
+   ],
+   [
+    "Thousand Knives",
+    1
+   ],
+   [
+    "Sage's Stone",
+    1
+   ],
+   [
+    "Dark Magic Attack",
+    1
+   ],
+   [
+    "Riryoku",
+    1
+   ],
+   [
+    "Tribute Doll",
+    1
+   ],
+   [
+    "Wonder Wand",
+    1
+   ],
+   [
+    "Lightforce Sword",
+    1
+   ],
+   [
+    "Magician's Circle",
+    1
+   ],
+   [
+    "Magic Jammer",
+    1
+   ],
+   [
+    "Seven Tools of the Bandit",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-ishizu",
+  "name": "Ishizu Ishtar (Grabwächter)",
+  "sub": "Starter-Deck · Destiny Masters",
+  "src": "yugipedia.com/wiki/Speed_Duel_Starter_Decks:_Destiny_Masters",
+  "main": [
+   [
+    "Gravekeeper's Curse",
+    1
+   ],
+   [
+    "Gravekeeper's Spear Soldier",
+    2
+   ],
+   [
+    "Gravekeeper's Vassal",
+    1
+   ],
+   [
+    "Gravekeeper's Chief",
+    1
+   ],
+   [
+    "Gravekeeper's Cannonholder",
+    1
+   ],
+   [
+    "Gravekeeper's Assailant",
+    2
+   ],
+   [
+    "Gravekeeper's Priestess",
+    2
+   ],
+   [
+    "Gravekeeper's Recruiter",
+    1
+   ],
+   [
+    "Gravekeeper's Shaman",
+    1
+   ],
+   [
+    "Gravekeeper's Oracle",
+    1
+   ],
+   [
+    "A Cat of Ill Omen",
+    1
+   ],
+   [
+    "Gravekeeper's Stele",
+    1
+   ],
+   [
+    "Hidden Temples of Necrovalley",
+    1
+   ],
+   [
+    "Sebek's Blessing",
+    1
+   ],
+   [
+    "Blast Held by a Tribute",
+    1
+   ],
+   [
+    "Rite of Spirit",
+    1
+   ],
+   [
+    "The Eye of Truth",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-pegasus-dm",
+  "name": "Pegasus (Toons)",
+  "sub": "Starter-Deck · Destiny Masters",
+  "src": "yugipedia.com/wiki/Speed_Duel_Starter_Decks:_Destiny_Masters",
+  "main": [
+   [
+    "Rogue Doll",
+    1
+   ],
+   [
+    "Toon Alligator",
+    2
+   ],
+   [
+    "Parrot Dragon",
+    1
+   ],
+   [
+    "Dark Rabbit",
+    1
+   ],
+   [
+    "Toon Masked Sorcerer",
+    2
+   ],
+   [
+    "Toon Mermaid",
+    1
+   ],
+   [
+    "Toon Summoned Skull",
+    1
+   ],
+   [
+    "Relinquished",
+    1
+   ],
+   [
+    "Black Illusion Ritual",
+    1
+   ],
+   [
+    "Toon Table of Contents",
+    1
+   ],
+   [
+    "Toon Rollback",
+    1
+   ],
+   [
+    "Toon World",
+    2
+   ],
+   [
+    "Yami",
+    1
+   ],
+   [
+    "Sword of Deep-Seated",
+    1
+   ],
+   [
+    "Toon Defense",
+    1
+   ],
+   [
+    "Jar of Greed",
+    1
+   ],
+   [
+    "Wild Tornado",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-kaiba",
+  "name": "Seto Kaiba (Drachen)",
+  "sub": "Starter-Deck · Duelists of Tomorrow",
+  "src": "yugipedia.com/wiki/Speed_Duel_Starter_Decks:_Duelists_of_Tomorrow",
+  "main": [
+   [
+    "Blue-Eyes White Dragon",
+    1
+   ],
+   [
+    "Battle Ox",
+    2
+   ],
+   [
+    "Ryu-Kishin Powered",
+    2
+   ],
+   [
+    "Luster Dragon #2",
+    1
+   ],
+   [
+    "Lord of D.",
+    2
+   ],
+   [
+    "Twin-Headed Behemoth",
+    1
+   ],
+   [
+    "Tyrant Dragon",
+    1
+   ],
+   [
+    "Spirit Ryu",
+    1
+   ],
+   [
+    "Kaibaman",
+    1
+   ],
+   [
+    "The Flute of Summoning Dragon",
+    1
+   ],
+   [
+    "Stamping Destruction",
+    1
+   ],
+   [
+    "Cost Down",
+    1
+   ],
+   [
+    "Burst Stream of Destruction",
+    1
+   ],
+   [
+    "Mountain",
+    1
+   ],
+   [
+    "Interdimensional Matter Transporter",
+    1
+   ],
+   [
+    "Dragon's Rebirth",
+    1
+   ],
+   [
+    "Trap Jammer",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-joey",
+  "name": "Joey Wheeler (Rotaugen)",
+  "sub": "Starter-Deck · Duelists of Tomorrow",
+  "src": "yugipedia.com/wiki/Speed_Duel_Starter_Decks:_Duelists_of_Tomorrow",
+  "main": [
+   [
+    "Red-Eyes Black Dragon",
+    1
+   ],
+   [
+    "Meteor Dragon",
+    1
+   ],
+   [
+    "Flame Manipulator",
+    1
+   ],
+   [
+    "Masaki the Legendary Swordsman",
+    1
+   ],
+   [
+    "Alligator's Sword",
+    1
+   ],
+   [
+    "Baby Dragon",
+    1
+   ],
+   [
+    "Time Wizard",
+    1
+   ],
+   [
+    "Little-Winguard",
+    1
+   ],
+   [
+    "Copycat",
+    1
+   ],
+   [
+    "Gearfried the Iron Knight",
+    1
+   ],
+   [
+    "Polymerization",
+    2
+   ],
+   [
+    "Stray Lambs",
+    1
+   ],
+   [
+    "Legendary Sword",
+    1
+   ],
+   [
+    "Sogen",
+    1
+   ],
+   [
+    "Dicephoon",
+    1
+   ],
+   [
+    "Graceful Dice",
+    1
+   ],
+   [
+    "Skull Dice",
+    1
+   ],
+   [
+    "Kunai with Chain",
+    1
+   ],
+   [
+    "Red-Eyes Spirit",
+    1
+   ]
+  ],
+  "extra": [
+   [
+    "Flame Swordsman",
+    1
+   ],
+   [
+    "Thousand Dragon",
+    1
+   ],
+   [
+    "Alligator's Sword Dragon",
+    1
+   ]
+  ]
+ },
+ {
+  "id": "speed-mai",
+  "name": "Mai Valentine (Harpyien)",
+  "sub": "Starter-Deck · Duelists of Tomorrow",
+  "src": "yugipedia.com/wiki/Speed_Duel_Starter_Decks:_Duelists_of_Tomorrow",
+  "main": [
+   [
+    "Harpie Lady 1",
+    1
+   ],
+   [
+    "Harpie Lady 2",
+    1
+   ],
+   [
+    "Harpie Lady 3",
+    1
+   ],
+   [
+    "Harpie Lady Sisters",
+    1
+   ],
+   [
+    "Amazoness Chain Master",
+    1
+   ],
+   [
+    "Amazoness Swords Woman",
+    1
+   ],
+   [
+    "Amazoness Sage",
+    1
+   ],
+   [
+    "Birdface",
+    2
+   ],
+   [
+    "Sonic Shooter",
+    1
+   ],
+   [
+    "Elegant Egotist",
+    2
+   ],
+   [
+    "Triangle Ecstasy Spark",
+    1
+   ],
+   [
+    "Cyber Shield",
+    1
+   ],
+   [
+    "Harpies' Hunting Ground",
+    1
+   ],
+   [
+    "Amazoness Heirloom",
+    1
+   ],
+   [
+    "Amazoness Archers",
+    1
+   ],
+   [
+    "Windstorm of Etaqua",
+    1
+   ],
+   [
+    "Shadow of Eyes",
+    1
+   ],
+   [
+    "Wild Tornado",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-yugi-battle",
+  "name": "Yugi Muto (Zauberer)",
+  "sub": "Starter-Deck · Match of the Millennium",
+  "src": "yugipedia.com/wiki/Speed_Duel_Starter_Decks:_Match_of_the_Millennium",
+  "main": [
+   [
+    "Dark Magician",
+    1
+   ],
+   [
+    "Gaia The Fierce Knight",
+    1
+   ],
+   [
+    "Curse of Dragon",
+    1
+   ],
+   [
+    "Winged Dragon, Guardian of the Fortress #1",
+    1
+   ],
+   [
+    "Beaver Warrior",
+    1
+   ],
+   [
+    "Celtic Guardian",
+    1
+   ],
+   [
+    "Silver Fang",
+    1
+   ],
+   [
+    "Giant Soldier of Stone",
+    1
+   ],
+   [
+    "Shadow Specter",
+    1
+   ],
+   [
+    "Charging Gaia the Fierce Knight",
+    1
+   ],
+   [
+    "Senju of the Thousand Hands",
+    1
+   ],
+   [
+    "Old Vindictive Magician",
+    1
+   ],
+   [
+    "Kuriboh",
+    1
+   ],
+   [
+    "Magician of Faith",
+    1
+   ],
+   [
+    "Sphere Kuriboh",
+    1
+   ],
+   [
+    "Black Luster Soldier",
+    1
+   ],
+   [
+    "Black Luster Ritual",
+    1
+   ],
+   [
+    "Polymerization",
+    1
+   ],
+   [
+    "Soul Release",
+    1
+   ],
+   [
+    "Spell Shattering Arrow",
+    1
+   ],
+   [
+    "Spiral Spear Strike",
+    1
+   ],
+   [
+    "Twister",
+    1
+   ],
+   [
+    "Summoner's Art",
+    1
+   ],
+   [
+    "Fighting Spirit",
+    1
+   ],
+   [
+    "White Elephant's Gift",
+    1
+   ],
+   [
+    "Goblin Circus",
+    1
+   ],
+   [
+    "Backup Squad",
+    1
+   ],
+   [
+    "Spellbinding Circle",
+    1
+   ],
+   [
+    "Magic Jammer",
+    1
+   ],
+   [
+    "Eliminating the League",
+    1
+   ]
+  ],
+  "extra": [
+   [
+    "Gaia the Dragon Champion",
+    1
+   ]
+  ]
+ },
+ {
+  "id": "speed-pegasus-mom",
+  "name": "Maximillion Pegasus (Illusion)",
+  "sub": "Starter-Deck · Match of the Millennium",
+  "src": "yugipedia.com/wiki/Speed_Duel_Starter_Decks:_Match_of_the_Millennium",
+  "main": [
+   [
+    "Thousand-Eyes Idol",
+    1
+   ],
+   [
+    "Illusionist Faceless Mage",
+    1
+   ],
+   [
+    "Toon Alligator",
+    1
+   ],
+   [
+    "Red Archery Girl",
+    1
+   ],
+   [
+    "Manga Ryu-Ran",
+    1
+   ],
+   [
+    "Toon Barrel Dragon",
+    1
+   ],
+   [
+    "Toon Buster Blader",
+    1
+   ],
+   [
+    "Toon Dark Magician",
+    1
+   ],
+   [
+    "Toon Summoned Skull",
+    1
+   ],
+   [
+    "Toon Mermaid",
+    1
+   ],
+   [
+    "Toon Masked Sorcerer",
+    2
+   ],
+   [
+    "Toon Gemini Elf",
+    1
+   ],
+   [
+    "Sonic Bird",
+    1
+   ],
+   [
+    "Djinn Prognosticator of Rituals",
+    1
+   ],
+   [
+    "Djinn Disserere of Rituals",
+    1
+   ],
+   [
+    "Relinquished",
+    1
+   ],
+   [
+    "Black Illusion Ritual",
+    1
+   ],
+   [
+    "Toon World",
+    1
+   ],
+   [
+    "Toon Table of Contents",
+    1
+   ],
+   [
+    "Toon Rollback",
+    1
+   ],
+   [
+    "Polymerization",
+    1
+   ],
+   [
+    "Fulfillment of the Contract",
+    1
+   ],
+   [
+    "Toon Mask",
+    1
+   ],
+   [
+    "Seven Tools of the Bandit",
+    1
+   ],
+   [
+    "Dust Tornado",
+    1
+   ],
+   [
+    "Shield Spear",
+    1
+   ],
+   [
+    "Security Orb",
+    1
+   ],
+   [
+    "Skill Successor",
+    1
+   ]
+  ],
+  "extra": [
+   [
+    "Thousand-Eyes Restrict",
+    1
+   ]
+  ]
+ },
+ {
+  "id": "speed-rex",
+  "name": "Rex Raptor (Dinosaurier)",
+  "sub": "Starter-Deck · Ultimate Predators",
+  "src": "yugipedia.com/wiki/Speed_Duel_Starter_Decks:_Ultimate_Predators",
+  "main": [
+   [
+    "Serpent Night Dragon",
+    1
+   ],
+   [
+    "Two-Headed King Rex",
+    1
+   ],
+   [
+    "Uraby",
+    2
+   ],
+   [
+    "Crawling Dragon #2",
+    1
+   ],
+   [
+    "Tomozaurus",
+    1
+   ],
+   [
+    "Anthrosaurus",
+    1
+   ],
+   [
+    "Black Tyranno",
+    1
+   ],
+   [
+    "Super-Ancient Dinobeast",
+    1
+   ],
+   [
+    "Mad Sword Beast",
+    1
+   ],
+   [
+    "Gilasaurus",
+    1
+   ],
+   [
+    "Gale Lizard",
+    1
+   ],
+   [
+    "Dark Driceratops",
+    1
+   ],
+   [
+    "Hyper Hammerhead",
+    1
+   ],
+   [
+    "Element Saurus",
+    1
+   ],
+   [
+    "Black Stego",
+    1
+   ],
+   [
+    "Gentlemander",
+    1
+   ],
+   [
+    "Raise Body Heat",
+    1
+   ],
+   [
+    "Ultra Evolution Pill",
+    1
+   ],
+   [
+    "Spacetime Transcendence",
+    1
+   ],
+   [
+    "Cost Down",
+    1
+   ],
+   [
+    "Summoner's Art",
+    1
+   ],
+   [
+    "White Elephant's Gift",
+    1
+   ],
+   [
+    "Heat Wave",
+    1
+   ],
+   [
+    "Card Advance",
+    2
+   ],
+   [
+    "Hunting Instinct",
+    1
+   ],
+   [
+    "Reinforcements",
+    1
+   ],
+   [
+    "Pharaoh's Treasure",
+    1
+   ],
+   [
+    "Limit Impulse",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-weevil",
+  "name": "Weevil Underwood (Insekten)",
+  "sub": "Starter-Deck · Ultimate Predators",
+  "src": "yugipedia.com/wiki/Speed_Duel_Starter_Decks:_Ultimate_Predators",
+  "main": [
+   [
+    "Perfectly Ultimate Great Moth",
+    1
+   ],
+   [
+    "Petit Moth",
+    1
+   ],
+   [
+    "Big Insect",
+    1
+   ],
+   [
+    "Basic Insect",
+    1
+   ],
+   [
+    "Winged Cleaver",
+    1
+   ],
+   [
+    "Kumootoko",
+    1
+   ],
+   [
+    "Alinsection",
+    1
+   ],
+   [
+    "Insect Queen",
+    1
+   ],
+   [
+    "Cocoon of Evolution",
+    1
+   ],
+   [
+    "Man-Eater Bug",
+    1
+   ],
+   [
+    "Pinch Hopper",
+    1
+   ],
+   [
+    "Insect Princess",
+    1
+   ],
+   [
+    "Gokipon",
+    2
+   ],
+   [
+    "Bee List Soldier",
+    1
+   ],
+   [
+    "Beetron",
+    1
+   ],
+   [
+    "Laser Cannon Armor",
+    1
+   ],
+   [
+    "Forest",
+    1
+   ],
+   [
+    "Verdant Sanctuary",
+    1
+   ],
+   [
+    "Insect Neglect",
+    1
+   ],
+   [
+    "Worm Bait",
+    1
+   ],
+   [
+    "Enchanting Fitting Room",
+    1
+   ],
+   [
+    "Dark Factory of Mass Production",
+    1
+   ],
+   [
+    "Amulet of Ambition",
+    1
+   ],
+   [
+    "White Elephant's Gift",
+    1
+   ],
+   [
+    "Eradicating Aerosol",
+    1
+   ],
+   [
+    "Spider Egg",
+    1
+   ],
+   [
+    "Corrosive Scales",
+    1
+   ],
+   [
+    "Adhesion Trap Hole",
+    1
+   ],
+   [
+    "Order to Smash",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-bcf-yugi",
+  "name": "Yami Yugi (Kartenritter)",
+  "sub": "Promo-Deck · Battle City Finals",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-battle-city-finals.html",
+  "main": [
+   [
+    "Slifer the Sky Dragon",
+    1
+   ],
+   [
+    "King's Knight",
+    1
+   ],
+   [
+    "Queen's Knight",
+    1
+   ],
+   [
+    "Jack's Knight",
+    1
+   ],
+   [
+    "Joker's Knight",
+    1
+   ],
+   [
+    "Imperial Bower",
+    1
+   ],
+   [
+    "Arcana Triumph Joker",
+    1
+   ],
+   [
+    "Big Shield Gardna",
+    1
+   ],
+   [
+    "Obnoxious Celtic Guard",
+    1
+   ],
+   [
+    "Breaker the Magical Warrior",
+    1
+   ],
+   [
+    "Magikuriboh",
+    1
+   ],
+   [
+    "Dark Magician",
+    1
+   ],
+   [
+    "Dark Magician Girl",
+    1
+   ],
+   [
+    "Swords of Revealing Light",
+    1
+   ],
+   [
+    "Monster Reborn",
+    1
+   ],
+   [
+    "Thunderspeed Summon",
+    1
+   ],
+   [
+    "Spell Shattering Arrow",
+    1
+   ],
+   [
+    "Joker's Wild",
+    1
+   ],
+   [
+    "Court of Cards",
+    1
+   ],
+   [
+    "Quaking Mirror Force",
+    1
+   ],
+   [
+    "Dust Tornado",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-bcf-kaiba",
+  "name": "Seto Kaiba (Obelisk)",
+  "sub": "Promo-Deck · Battle City Finals",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-battle-city-finals.html",
+  "main": [
+   [
+    "Obelisk the Tormentor",
+    1
+   ],
+   [
+    "Blue-Eyes White Dragon",
+    1
+   ],
+   [
+    "The King of D.",
+    1
+   ],
+   [
+    "Des Feral Imp",
+    1
+   ],
+   [
+    "Ancient Lamp",
+    1
+   ],
+   [
+    "La Jinn the Mystical Genie of the Lamp",
+    1
+   ],
+   [
+    "X-Head Cannon",
+    1
+   ],
+   [
+    "Y-Dragon Head",
+    1
+   ],
+   [
+    "Z-Metal Tank",
+    1
+   ],
+   [
+    "Enemy Controller",
+    1
+   ],
+   [
+    "Shrink",
+    1
+   ],
+   [
+    "Union Hangar",
+    1
+   ],
+   [
+    "The Flute of Summoning Dragon",
+    1
+   ],
+   [
+    "Dragon Revival Rhapsody",
+    1
+   ],
+   [
+    "Trade-In",
+    1
+   ],
+   [
+    "Union Scramble",
+    1
+   ],
+   [
+    "Shadow Spell",
+    1
+   ],
+   [
+    "Loop of Destruction",
+    1
+   ],
+   [
+    "Champion's Vigilance",
+    1
+   ],
+   [
+    "XYZ-Dragon Cannon",
+    1
+   ],
+   [
+    "XY-Dragon Cannon",
+    1
+   ],
+   [
+    "XZ-Tank Cannon",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-bcf-joey",
+  "name": "Joey Wheeler (Krieger)",
+  "sub": "Promo-Deck · Battle City Finals",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-battle-city-finals.html",
+  "main": [
+   [
+    "Gilford the Lightning",
+    1
+   ],
+   [
+    "Total Defense Shogun",
+    1
+   ],
+   [
+    "Jinzo",
+    1
+   ],
+   [
+    "Absolute Crusader",
+    1
+   ],
+   [
+    "Blue Flame Swordsman",
+    1
+   ],
+   [
+    "Valkyrian Knight",
+    1
+   ],
+   [
+    "Penguin Soldier",
+    1
+   ],
+   [
+    "D.D. Warrior",
+    1
+   ],
+   [
+    "Invader of the Throne",
+    1
+   ],
+   [
+    "Command Knight",
+    1
+   ],
+   [
+    "Gearfried the Iron Knight",
+    1
+   ],
+   [
+    "Sol and Luna",
+    1
+   ],
+   [
+    "Fissure",
+    1
+   ],
+   [
+    "Reinforcement of the Army",
+    1
+   ],
+   [
+    "United We Stand",
+    1
+   ],
+   [
+    "Fusion Sword Murasame Blade",
+    1
+   ],
+   [
+    "Trap Hole of Spikes",
+    1
+   ],
+   [
+    "Fairy Box",
+    1
+   ],
+   [
+    "Floodgate Trap Hole",
+    1
+   ],
+   [
+    "Kunai with Chain",
+    1
+   ],
+   [
+    "Blast with Chain",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-bcf-marik",
+  "name": "Yami Marik (Ra)",
+  "sub": "Promo-Deck · Battle City Finals",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-battle-city-finals.html",
+  "main": [
+   [
+    "The Winged Dragon of Ra",
+    1
+   ],
+   [
+    "The Winged Dragon of Ra - Immortal Phoenix",
+    1
+   ],
+   [
+    "The Winged Dragon of Ra - Sphere Mode",
+    1
+   ],
+   [
+    "Holding Arms",
+    1
+   ],
+   [
+    "Makyura the Destructor",
+    1
+   ],
+   [
+    "Lord Poison",
+    1
+   ],
+   [
+    "Lekunga",
+    1
+   ],
+   [
+    "Granadora",
+    1
+   ],
+   [
+    "Lava Golem",
+    1
+   ],
+   [
+    "Revival Jam",
+    1
+   ],
+   [
+    "Reactor Slime",
+    1
+   ],
+   [
+    "Dark Jeroid",
+    1
+   ],
+   [
+    "Newdoria",
+    1
+   ],
+   [
+    "Monster Reborn",
+    1
+   ],
+   [
+    "Millennium Revelation",
+    1
+   ],
+   [
+    "Owner's Seal",
+    1
+   ],
+   [
+    "Remove Trap",
+    1
+   ],
+   [
+    "Malevolent Catastrophe",
+    1
+   ],
+   [
+    "Hidden Soldiers",
+    1
+   ],
+   [
+    "Sakuretsu Armor",
+    1
+   ],
+   [
+    "Nightmare Wheel",
+    1
+   ],
+   [
+    "Metal Reflect Slime",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-bcf-mai",
+  "name": "Mai Valentine (Harpyien)",
+  "sub": "Promo-Deck · Battle City Finals",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-battle-city-finals.html",
+  "main": [
+   [
+    "Harpie's Pet Dragon - Fearsome Fire Blast",
+    1
+   ],
+   [
+    "Harpie Dancer",
+    1
+   ],
+   [
+    "Harpie Queen",
+    1
+   ],
+   [
+    "Harpie Channeler",
+    1
+   ],
+   [
+    "Harpie Lady 1",
+    1
+   ],
+   [
+    "Harpie Lady 2",
+    1
+   ],
+   [
+    "Cyber Harpie Lady",
+    1
+   ],
+   [
+    "Harpie Lady Sisters",
+    1
+   ],
+   [
+    "Amazoness Princess",
+    1
+   ],
+   [
+    "Amazoness Chain Master",
+    1
+   ],
+   [
+    "Amazoness Swords Woman",
+    1
+   ],
+   [
+    "Amazoness Queen",
+    1
+   ],
+   [
+    "Hysteric Sign",
+    1
+   ],
+   [
+    "Elegant Egotist",
+    1
+   ],
+   [
+    "Harpies' Hunting Ground",
+    1
+   ],
+   [
+    "Amazoness Call",
+    1
+   ],
+   [
+    "Amazoness Fighting Spirit",
+    1
+   ],
+   [
+    "Hysteric Party",
+    1
+   ],
+   [
+    "Amazoness Onslaught",
+    1
+   ],
+   [
+    "Mirror Wall",
+    1
+   ],
+   [
+    "Windstorm of Etaqua",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-bcf-bakura",
+  "name": "Yami Bakura (Geister)",
+  "sub": "Promo-Deck · Battle City Finals",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-battle-city-finals.html",
+  "main": [
+   [
+    "Dark Necrofear",
+    1
+   ],
+   [
+    "Dark Ruler Ha Des",
+    1
+   ],
+   [
+    "Invader of Darkness",
+    1
+   ],
+   [
+    "Doomcaliber Knight",
+    1
+   ],
+   [
+    "Snipe Hunter",
+    1
+   ],
+   [
+    "Sangan",
+    1
+   ],
+   [
+    "Fiendish Rhino Warrior",
+    1
+   ],
+   [
+    "Winged Minion",
+    1
+   ],
+   [
+    "Jowls of Dark Demise",
+    1
+   ],
+   [
+    "Doomdog Octhros",
+    1
+   ],
+   [
+    "Fusion Devourer",
+    1
+   ],
+   [
+    "Night Assailant",
+    1
+   ],
+   [
+    "Destiny Board",
+    1
+   ],
+   [
+    "Spirit Message \"I\"",
+    1
+   ],
+   [
+    "Spirit Message \"N\"",
+    1
+   ],
+   [
+    "Spirit Message \"A\"",
+    1
+   ],
+   [
+    "Spirit Message \"L\"",
+    1
+   ],
+   [
+    "Dark Spirit's Mastery",
+    1
+   ],
+   [
+    "Spiritualism",
+    1
+   ],
+   [
+    "Premature Burial",
+    1
+   ],
+   [
+    "Foolish Burial",
+    1
+   ],
+   [
+    "Offerings to the Doomed",
+    1
+   ],
+   [
+    "Sentence of Doom",
+    1
+   ],
+   [
+    "Zoma the Spirit",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-bcf-odion",
+  "name": "Odion (Grabwächter)",
+  "sub": "Promo-Deck · Battle City Finals",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-battle-city-finals.html",
+  "main": [
+   [
+    "Mystical Beast of Serket",
+    1
+   ],
+   [
+    "Guardian Sphinx",
+    1
+   ],
+   [
+    "The End of Anubis",
+    1
+   ],
+   [
+    "Gravekeeper's Guard",
+    1
+   ],
+   [
+    "Swarm of Centipedes",
+    1
+   ],
+   [
+    "Swarm of Scarabs",
+    1
+   ],
+   [
+    "Swarm of Locusts",
+    1
+   ],
+   [
+    "Des Lacooda",
+    1
+   ],
+   [
+    "Mirage of Nightmare",
+    1
+   ],
+   [
+    "Double Snare",
+    1
+   ],
+   [
+    "Swords of Revealing Light",
+    1
+   ],
+   [
+    "Mystical Space Typhoon",
+    1
+   ],
+   [
+    "Book of Moon",
+    1
+   ],
+   [
+    "Embodiment of Apophis",
+    1
+   ],
+   [
+    "Tiki Curse",
+    1
+   ],
+   [
+    "Tiki Soul",
+    1
+   ],
+   [
+    "Ordeal of a Traveler",
+    1
+   ],
+   [
+    "Waboku",
+    1
+   ],
+   [
+    "Judgment of Anubis",
+    1
+   ],
+   [
+    "Curse of Anubis",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-bcf-ishizu",
+  "name": "Ishizu Ishtar (Tarot)",
+  "sub": "Promo-Deck · Battle City Finals",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-battle-city-finals.html",
+  "main": [
+   [
+    "Mudora the Sword Oracle",
+    1
+   ],
+   [
+    "Cataclysmic Crusted Calcifida",
+    1
+   ],
+   [
+    "Agido",
+    1
+   ],
+   [
+    "Kelbek",
+    1
+   ],
+   [
+    "Mudora",
+    1
+   ],
+   [
+    "Keldo",
+    1
+   ],
+   [
+    "Zolga",
+    1
+   ],
+   [
+    "Airknight Parshath",
+    1
+   ],
+   [
+    "Gravekeeper's Commandant",
+    1
+   ],
+   [
+    "Gravekeeper's Spy",
+    1
+   ],
+   [
+    "Gravekeeper's Descendant",
+    1
+   ],
+   [
+    "Gravekeeper's Recruiter",
+    1
+   ],
+   [
+    "Gravekeeper's Oracle",
+    1
+   ],
+   [
+    "Necrovalley",
+    1
+   ],
+   [
+    "Dragged Down into the Grave",
+    1
+   ],
+   [
+    "Bashing Shield",
+    1
+   ],
+   [
+    "Exchange of the Spirit",
+    1
+   ],
+   [
+    "Gravekeeper's Trap",
+    1
+   ],
+   [
+    "Wall of Disruption",
+    1
+   ],
+   [
+    "Rite of Spirit",
+    1
+   ],
+   [
+    "Blast Held by a Tribute",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-sbc-yugi",
+  "name": "Yami Yugi (Dunkler Paladin)",
+  "sub": "Promo-Deck · Streets of Battle City",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-streets-of-battle-city.html",
+  "main": [
+   [
+    "Dark Magician",
+    1
+   ],
+   [
+    "Skilled Dark Magician",
+    1
+   ],
+   [
+    "Alchemist of Black Spells",
+    1
+   ],
+   [
+    "Blast Magician",
+    1
+   ],
+   [
+    "Dark Magician Girl",
+    1
+   ],
+   [
+    "Buster Blader",
+    1
+   ],
+   [
+    "Skilled White Magician",
+    1
+   ],
+   [
+    "Breaker the Magical Warrior",
+    1
+   ],
+   [
+    "Apprentice Magician",
+    1
+   ],
+   [
+    "Magician of Faith",
+    1
+   ],
+   [
+    "Old Vindictive Magician",
+    1
+   ],
+   [
+    "Malice Dispersion",
+    1
+   ],
+   [
+    "Mage Power",
+    1
+   ],
+   [
+    "Solitary Sword of Poison",
+    1
+   ],
+   [
+    "Spell Power Grasp",
+    1
+   ],
+   [
+    "Destruction Swordsman Fusion",
+    1
+   ],
+   [
+    "Miracle Restoring",
+    1
+   ],
+   [
+    "Pitch-Black Power Stone",
+    2
+   ],
+   [
+    "Ready for Intercepting",
+    1
+   ],
+   [
+    "Dark Paladin",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-sbc-joey",
+  "name": "Joey Wheeler (Würfel)",
+  "sub": "Promo-Deck · Streets of Battle City",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-streets-of-battle-city.html",
+  "main": [
+   [
+    "Gearfried the Iron Knight",
+    1
+   ],
+   [
+    "Marauding Captain",
+    1
+   ],
+   [
+    "Time Wizard",
+    1
+   ],
+   [
+    "Rocket Warrior",
+    1
+   ],
+   [
+    "Little-Winguard",
+    1
+   ],
+   [
+    "Command Knight",
+    1
+   ],
+   [
+    "Freed the Matchless General",
+    1
+   ],
+   [
+    "Alligator's Sword",
+    1
+   ],
+   [
+    "Baby Dragon",
+    1
+   ],
+   [
+    "Roulette Spider",
+    1
+   ],
+   [
+    "Dicephoon",
+    1
+   ],
+   [
+    "Graceful Dice",
+    1
+   ],
+   [
+    "Polymerization",
+    1
+   ],
+   [
+    "Reinforcement of the Army",
+    1
+   ],
+   [
+    "Lightning Blade",
+    1
+   ],
+   [
+    "United We Stand",
+    1
+   ],
+   [
+    "Blast with Chain",
+    1
+   ],
+   [
+    "Skull Dice",
+    1
+   ],
+   [
+    "Kunai with Chain",
+    1
+   ],
+   [
+    "Karbonala Warrior",
+    1
+   ],
+   [
+    "Giltia the D. Knight",
+    1
+   ],
+   [
+    "Flame Swordsman",
+    1
+   ],
+   [
+    "Alligator's Sword Dragon",
+    1
+   ],
+   [
+    "Thousand Dragon",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-sbc-mako",
+  "name": "Mako Tsunami (Meer)",
+  "sub": "Promo-Deck · Streets of Battle City",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-streets-of-battle-city.html",
+  "main": [
+   [
+    "The Legendary Fisherman",
+    1
+   ],
+   [
+    "Airorca",
+    1
+   ],
+   [
+    "Flyfang",
+    1
+   ],
+   [
+    "Needle Sunfish",
+    1
+   ],
+   [
+    "Oyster Meister",
+    1
+   ],
+   [
+    "Piercing Moray",
+    1
+   ],
+   [
+    "Maiden of the Aqua",
+    1
+   ],
+   [
+    "Fiend Kraken",
+    1
+   ],
+   [
+    "7 Colored Fish",
+    1
+   ],
+   [
+    "The Legendary Fisherman II",
+    1
+   ],
+   [
+    "Fortress Whale",
+    1
+   ],
+   [
+    "Salvage",
+    1
+   ],
+   [
+    "Umi",
+    1
+   ],
+   [
+    "Water Hazard",
+    1
+   ],
+   [
+    "Big Wave Small Wave",
+    1
+   ],
+   [
+    "Surface",
+    1
+   ],
+   [
+    "Fortress Whale's Oath",
+    1
+   ],
+   [
+    "Tornado Wall",
+    1
+   ],
+   [
+    "Fish Depth Charge",
+    1
+   ],
+   [
+    "Paleozoic Eldonia",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-sbc-weevil",
+  "name": "Weevil Underwood (Königin)",
+  "sub": "Promo-Deck · Streets of Battle City",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-streets-of-battle-city.html",
+  "main": [
+   [
+    "Insect Queen",
+    1
+   ],
+   [
+    "Parasite Paracide",
+    1
+   ],
+   [
+    "Chainsaw Insect",
+    1
+   ],
+   [
+    "Magnetic Mosquito",
+    1
+   ],
+   [
+    "Prickle Fairy",
+    1
+   ],
+   [
+    "Howling Insect",
+    1
+   ],
+   [
+    "Resonance Insect",
+    1
+   ],
+   [
+    "Parasite Paranoid",
+    1
+   ],
+   [
+    "Pinch Hopper",
+    1
+   ],
+   [
+    "Insect Princess",
+    1
+   ],
+   [
+    "Gokibore",
+    1
+   ],
+   [
+    "Metal Armored Bug",
+    1
+   ],
+   [
+    "Multiplication of Ants",
+    1
+   ],
+   [
+    "Insect Barrier",
+    1
+   ],
+   [
+    "Verdant Sanctuary",
+    1
+   ],
+   [
+    "Eradicating Aerosol",
+    1
+   ],
+   [
+    "Spider Egg",
+    1
+   ],
+   [
+    "DNA Surgery",
+    1
+   ],
+   [
+    "Dust Tornado",
+    1
+   ],
+   [
+    "Widespread Ruin",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-sbc-roba",
+  "name": "Espa Roba (Jinzo)",
+  "sub": "Promo-Deck · Streets of Battle City",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-streets-of-battle-city.html",
+  "main": [
+   [
+    "Jinzo",
+    1
+   ],
+   [
+    "Jinzo - Lord",
+    1
+   ],
+   [
+    "Jinzo - Returner",
+    1
+   ],
+   [
+    "Reflect Bounder",
+    1
+   ],
+   [
+    "Destructotron",
+    1
+   ],
+   [
+    "Dr. Frankenderp",
+    1
+   ],
+   [
+    "The Fiend Megacyber",
+    1
+   ],
+   [
+    "Spell Canceller",
+    1
+   ],
+   [
+    "Cyber Raider",
+    1
+   ],
+   [
+    "Golgoil",
+    1
+   ],
+   [
+    "Cyber Energy Shock",
+    1
+   ],
+   [
+    "Cosmos Channelling",
+    1
+   ],
+   [
+    "Gift of the Martyr",
+    1
+   ],
+   [
+    "Amplifier",
+    1
+   ],
+   [
+    "Foolish Burial",
+    1
+   ],
+   [
+    "Cosmic Cyclone",
+    1
+   ],
+   [
+    "Creature Swap",
+    1
+   ],
+   [
+    "Psychic Shockwave",
+    1
+   ],
+   [
+    "Mind Crush",
+    1
+   ],
+   [
+    "Draining Shield",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-sbc-hunter",
+  "name": "Rare Hunter (Seltenheiten)",
+  "sub": "Promo-Deck · Streets of Battle City",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-streets-of-battle-city.html",
+  "main": [
+   [
+    "Red-Eyes Black Dragon",
+    1
+   ],
+   [
+    "Gear Golem the Moving Fortress",
+    1
+   ],
+   [
+    "Voltic Kong",
+    1
+   ],
+   [
+    "Airknight Parshath",
+    1
+   ],
+   [
+    "Dark Red Enchanter",
+    1
+   ],
+   [
+    "Twin-Barrel Dragon",
+    1
+   ],
+   [
+    "Hannibal Necromancer",
+    1
+   ],
+   [
+    "Magician of Faith",
+    1
+   ],
+   [
+    "Mask of Darkness",
+    1
+   ],
+   [
+    "Sphere Kuriboh",
+    1
+   ],
+   [
+    "Ledger of Legerdemain",
+    1
+   ],
+   [
+    "Allure of Darkness",
+    1
+   ],
+   [
+    "Twister",
+    1
+   ],
+   [
+    "Night Beam",
+    1
+   ],
+   [
+    "Nobleman of Crossout",
+    1
+   ],
+   [
+    "Pineapple Blast",
+    1
+   ],
+   [
+    "Metalmorph",
+    1
+   ],
+   [
+    "Michizure",
+    1
+   ],
+   [
+    "The Forceful Checkpoint",
+    1
+   ],
+   [
+    "Floodgate Trap Hole",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-sbc-arkana",
+  "name": "Arkana (Magier)",
+  "sub": "Promo-Deck · Streets of Battle City",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-streets-of-battle-city.html",
+  "main": [
+   [
+    "Dark Magician",
+    2
+   ],
+   [
+    "Chow Sai the Ghost Stopper",
+    1
+   ],
+   [
+    "Chow Len the Prophet",
+    1
+   ],
+   [
+    "Anarchist Monk Ranshin",
+    1
+   ],
+   [
+    "Mei-Kou, Master of Barriers",
+    1
+   ],
+   [
+    "Kycoo the Ghost Destroyer",
+    1
+   ],
+   [
+    "Legion the Fiend Jester",
+    1
+   ],
+   [
+    "Double Coston",
+    1
+   ],
+   [
+    "Sealmaster Meisei",
+    1
+   ],
+   [
+    "Anti-Magic Arrows",
+    1
+   ],
+   [
+    "Talisman of Trap Sealing",
+    1
+   ],
+   [
+    "Dark Magic Curtain",
+    1
+   ],
+   [
+    "Thousand Knives",
+    1
+   ],
+   [
+    "Dark Magic Attack",
+    1
+   ],
+   [
+    "Summoner's Art",
+    1
+   ],
+   [
+    "Talisman of Spell Sealing",
+    1
+   ],
+   [
+    "Birthright",
+    1
+   ],
+   [
+    "Dark Renewal",
+    1
+   ]
+  ],
+  "extra": []
+ },
+ {
+  "id": "speed-sbc-strings",
+  "name": "Strings (Schleim)",
+  "sub": "Promo-Deck · Streets of Battle City",
+  "src": "yugiohcardguide.com/spoilers/speed-duel-streets-of-battle-city.html",
+  "main": [
+   [
+    "Slifer the Sky Dragon",
+    1
+   ],
+   [
+    "Revival Jam",
+    1
+   ],
+   [
+    "Humanoid Slime",
+    1
+   ],
+   [
+    "Worm Drake",
+    1
+   ],
+   [
+    "Reactor Slime",
+    1
+   ],
+   [
+    "Muka Muka",
+    1
+   ],
+   [
+    "Enraged Muka Muka",
+    1
+   ],
+   [
+    "Magical Reflect Slime",
+    1
+   ],
+   [
+    "Sinister Serpent",
+    1
+   ],
+   [
+    "Mother Grizzly",
+    1
+   ],
+   [
+    "Jam Breeding Machine",
+    1
+   ],
+   [
+    "Emergency Provisions",
+    1
+   ],
+   [
+    "Infinite Cards",
+    1
+   ],
+   [
+    "Token Sundae",
+    1
+   ],
+   [
+    "Polymerization",
+    1
+   ],
+   [
+    "Jam Defender",
+    1
+   ],
+   [
+    "Solemn Wishes",
+    1
+   ],
+   [
+    "Token Stampede",
+    1
+   ],
+   [
+    "Humanoid Worm Drake",
+    1
+   ]
+  ],
+  "extra": []
+ }
+]

@@ -26,7 +26,7 @@ export function poolFor(fmtId) {
   const gm = goatMaps(); const out = []; const L = App.lists;
   for (const c of App.cards.values()) {
     if (c.type & 0x4000) continue; const isG = c.code >= 504700000 && c.code < 504800000;
-    if (fmtId === 'goat') { if (!(L.goat.map[c.code] > 0)) continue; if (gm.to.has(c.code)) continue; } else { if (isG || c.alias) continue; }
+    if (fmtId === 'goat') { if (!(L.goat.map[c.code] > 0)) continue; if (gm.to.has(c.code)) continue; } else { if (isG || c.alias) continue; if (fmtId === 'speed' && !(L.speed.map[c.code] > 0)) continue; }
     if (fmtId === 'edison' && (c.type & (0x800000 | 0x4000000 | 0x1000000))) continue;
     if (fmtId === 'genesys' && (c.type & (0x4000000 | 0x1000000))) continue;
     if (!(c.type & 7)) continue;
@@ -53,7 +53,7 @@ screens.workshop = () => {
   paint(); return root;
 };
 function pickFormat(cb) {
-  const m = openModal({ title: 'Für welches Format?', center: true, body: h('div', { class: 'col' }, ['goat', 'edison', 'advanced', 'genesys'].map((f) => h('button', { class: 'btn', style: 'justify-content:flex-start', onclick: () => { m.close(); cb(f); } }, FORMAT_INFO[f].icon + '  ' + FORMAT_INFO[f].title + ' – ' + FORMAT_INFO[f].sub))) });
+  const m = openModal({ title: 'Für welches Format?', center: true, body: h('div', { class: 'col' }, ['goat', 'edison', 'advanced', 'genesys', 'speed'].map((f) => h('button', { class: 'btn', style: 'justify-content:flex-start', onclick: () => { m.close(); cb(f); } }, FORMAT_INFO[f].icon + '  ' + FORMAT_INFO[f].title + ' – ' + FORMAT_INFO[f].sub))) });
 }
 
 // ---- .ydk Import/Export --------------------------------------------------------------------------------------
@@ -93,8 +93,8 @@ screens.editor = (params = {}) => {
   const issues = () => validate({ main: S.main, extra: S.extra, side: S.side }, fmt(), App.cards, App.lists);
   const paintStatus = () => {
     const iss = issues(); const pts = deckPoints(S, App.lists); clear(status);
-    status.append(h('div', { class: 'tabs' }, ['goat', 'edison', 'advanced', 'genesys'].map((f) => h('button', { class: 'chip' + (S.fmt === f ? ' on' : ''), onclick: () => switchFmt(f) }, FORMAT_INFO[f].title)), S.fmt === 'advanced' ? ADV_LISTS.map((l) => h('button', { class: 'chip' + (S.list === l ? ' on' : ''), onclick: () => { S.list = l; S.dirty = true; paint(); } }, LIST_NAME[l])) : null),
-      h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap' }, h('span', { class: 'chip ' + (count(S.main) >= 40 && count(S.main) <= 60 ? 'ok' : 'bad') }, `Haupt ${count(S.main)}`), h('span', { class: 'chip ' + (count(S.extra) <= 15 ? 'ok' : 'bad') }, `Extra ${count(S.extra)}`), h('span', { class: 'chip ' + (count(S.side) <= 15 ? 'ok' : 'bad') }, `Side ${count(S.side)}`), S.fmt === 'genesys' ? h('span', { class: 'chip ' + (pts <= 100 ? 'ok' : 'bad') }, `${pts}/100 Punkte`) : null,
+    status.append(h('div', { class: 'tabs' }, ['goat', 'edison', 'advanced', 'genesys', 'speed'].map((f) => h('button', { class: 'chip' + (S.fmt === f ? ' on' : ''), onclick: () => switchFmt(f) }, FORMAT_INFO[f].title)), S.fmt === 'advanced' ? ADV_LISTS.map((l) => h('button', { class: 'chip' + (S.list === l ? ' on' : ''), onclick: () => { S.list = l; S.dirty = true; paint(); } }, LIST_NAME[l])) : null),
+      h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap' }, h('span', { class: 'chip ' + (count(S.main) >= FORMATS[S.fmt].minMain && count(S.main) <= FORMATS[S.fmt].maxMain ? 'ok' : 'bad') }, `Haupt ${count(S.main)}`), h('span', { class: 'chip ' + (count(S.extra) <= FORMATS[S.fmt].maxExtra ? 'ok' : 'bad') }, `Extra ${count(S.extra)}`), h('span', { class: 'chip ' + (count(S.side) <= FORMATS[S.fmt].maxSide ? 'ok' : 'bad') }, `Side ${count(S.side)}`), S.fmt === 'genesys' ? h('span', { class: 'chip ' + (pts <= 100 ? 'ok' : 'bad') }, `${pts}/100 Punkte`) : null,
         ocgN() ? h('button', { class: 'chip ' + (S.fmt === 'advanced' && S.list === 'tcg' ? 'warn' : ''), onclick: showOcg }, `OCG ${ocgN()}`) : null,
         CONS ? h('button', { class: 'chip ' + CONS.tone, title: 'Konsistenz', onclick: () => showCons() }, '🎯 ' + CONS.score) : null,
         h('button', { class: 'chip ' + (iss.length ? 'warn' : 'ok'), onclick: () => showIssues() }, iss.length ? `⚠ ${iss.length} Hinweis${iss.length > 1 ? 'e' : ''}` : '✓ spielbar'), h('button', { class: 'chip', onclick: () => { split = (split + 1) % 3; split1.className = 'ed-split s' + split; } }, '⇕')));
@@ -150,9 +150,9 @@ screens.editor = (params = {}) => {
   const badSet = () => new Set(issues().filter((i) => i.code).map((i) => i.code));
   const paintDeck = () => {
     const keepTop = deckPane.scrollTop; clear(deckPane); const bad = badSet();
-    for (const [z, label, max] of [['main', 'Hauptdeck', 60], ['extra', 'Extradeck', 15], ['side', 'Sidedeck', 15]]) {
+    for (const [z, label, max] of [['main', 'Hauptdeck', FORMATS[S.fmt].maxMain], ['extra', 'Extradeck', FORMATS[S.fmt].maxExtra], ['side', 'Sidedeck', FORMATS[S.fmt].maxSide]]) {
       const list = sortList(S[z]); const n = count(list);
-      const zone = h('div', { class: 'dz', 'data-zone': z }, h('div', { class: 'dz-h' }, h('b', null, label), h('span', { class: 'muted small' }, `${n}${z === 'main' ? ' / 40–60' : ' / ' + max}`)),
+      const zone = h('div', { class: 'dz', 'data-zone': z }, h('div', { class: 'dz-h' }, h('b', null, label), h('span', { class: 'muted small' }, `${n}${z === 'main' ? ` / ${FORMATS[S.fmt].minMain}–${FORMATS[S.fmt].maxMain}` : ' / ' + max}`)),
         h('div', { class: 'ed-grid' }, list.length ? list.flatMap(([c, k]) => Array.from({ length: k }, () => ecEl(c, z, bad.has(c)))) : h('div', { class: 'dz-empty' }, z === 'main' ? 'Karten hierher ziehen oder unten antippen' : 'leer')));
       deckPane.append(zone);
     }
@@ -204,14 +204,14 @@ screens.editor = (params = {}) => {
     const c = cardOf(code); if (!c) return false; const ex = isExtra(c); if (zone !== 'side') zone = ex ? 'extra' : 'main';
     const l = lim(code); const f = fmt();
     if (totalOf(code) >= l) { toast(l === 0 ? `„${cleanName(c.name)}“ ist in diesem Format verboten.` : `„${cleanName(c.name)}“: höchstens ${l}× erlaubt.`); return false; }
-    const max = zone === 'main' ? 60 : 15; if (count(S[zone]) >= max) { toast(`${zone === 'main' ? 'Hauptdeck' : zone === 'extra' ? 'Extradeck' : 'Sidedeck'} ist voll (${max}).`); return false; }
+    const max = FORMATS[S.fmt][zone === 'main' ? 'maxMain' : zone === 'extra' ? 'maxExtra' : 'maxSide']; if (count(S[zone]) >= max) { toast(`${zone === 'main' ? 'Hauptdeck' : zone === 'extra' ? 'Extradeck' : 'Sidedeck'} ist voll (${max}).`); return false; }
     if (f.cap && deckPoints(S, App.lists) + points(code, App.lists) > f.cap) { toast('Nicht genug Genesys-Punkte (100).'); return false; }
     put(S[zone], code, 1); S.dirty = true; if (!silent) paint(); return true;
   }
   function remove(zone, code) { take(S[zone], code, 1); S.dirty = true; paint(); }
   function move(zone, to, code) {
     const c = cardOf(code); const ex = isExtra(c); if (to !== 'side') to = ex ? 'extra' : 'main'; if (to === zone) return;
-    const max = to === 'main' ? 60 : 15; if (count(S[to]) >= max) { toast('Dieser Bereich ist voll.'); return; }
+    const max = FORMATS[S.fmt][to === 'main' ? 'maxMain' : to === 'extra' ? 'maxExtra' : 'maxSide']; if (count(S[to]) >= max) { toast('Dieser Bereich ist voll.'); return; }
     take(S[zone], code, 1); put(S[to], code, 1); S.dirty = true; paint();
   }
   function paint() { calcCons(); paintStatus(); paintDeck(); refreshPool(); scheduleRec(); if (sel) paintDock(); }

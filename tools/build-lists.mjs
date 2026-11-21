@@ -24,6 +24,13 @@ for (const [k, f] of [['goat', 'GOAT'], ['tcg', '0TCG'], ['ocg', 'OCG']]) {
   }
   out.goat = g; if (missG.length) console.log('Goat-Namen ohne Karte:', missG.slice(0, 20), missG.length);
 }
+// Speed Duell: Positivliste (nur Karten des Speed-Duel-Pools); gleichnamige Karten (andere Codes) gelten mit
+{
+  const sp = parseLflist(`${LFL}Speed.lflist.conf`); const map = {}; const names = new Map();
+  for (const raw of readFileSync(`${LFL}Speed.lflist.conf`, 'utf-8').split(/\r?\n/)) { const m = raw.match(/^(\d+)\s+(\d)\s*--(.*)/); if (m) names.set(Number(m[1]), m[3].split(/\t|\s{3,}/)[0].trim()); }
+  for (const [c, lim] of sp.map) { map[c] = lim; for (const c2 of codesOf(names.get(c) || '')) map[c2] = map[c2] === undefined ? lim : Math.min(map[c2], lim); }
+  out.speed = { name: sp.name, wl: true, map };
+}
 // Edison
 const miss = [];
 const ed = { name: 'Edison (März 2010, TCG)', wl: false, map: {} };

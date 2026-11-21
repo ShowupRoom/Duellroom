@@ -27,12 +27,14 @@ export const MODES = {
   goat: { flags: M.MODE_GOAT, scripts: 'goat', emz: false, pzone: false },
   edison: { flags: M.MODE_MR1, scripts: 'edison', emz: false, pzone: false },
   advanced: { flags: M.MODE_MR5, scripts: 'official', emz: true, pzone: true },
+  speed: { flags: M.MODE_SPEED, scripts: 'official', emz: false, pzone: false, cols3: true, noM2: true, lp: 4000, hand: 4 },
   genesys: { flags: M.MODE_MR5 & ~(M.EMZONE | M.PZONE | M.SEPARATE_PZONE | M.FSX_MMZONE), scripts: 'official', emz: false, pzone: false },
 };
 export const FORMAT_INFO = {
   goat: { title: 'Goat', sub: 'April 2005', blurb: 'Das berühmte „Ziegen“-Format: alte Karten, langsame Duelle, große Zauber wie Heavy Storm und Delinquent Duo. Perfekt, um die Grundlagen zu lernen.', icon: '🐐' },
   edison: { title: 'Edison', sub: 'März 2010', blurb: 'Das klassische Format von 2010: Synchro und Fusion gibt es, aber noch kein Xyz und keine Pendel. Viel Taktik, viele Fallen.', icon: '⚡' },
   advanced: { title: 'Advanced', sub: 'Aktuell · TCG / OCG', blurb: 'Das moderne Spiel mit Link, Pendel und Extra-Monsterzonen und der heutigen Verbotsliste. Schnell, kombo-lastig.', icon: '🌀' },
+  speed: { title: 'Speed Duell', sub: '4000 LP · 3 Zonen', blurb: 'Die schnelle Kurzform: nur 3 Monster- und 3 Zauber-/Fallenzonen, 4000 Lebenspunkte, 4 Handkarten, kleine Decks (20–30 Karten) und keine zweite Main Phase. Duelle dauern wenige Minuten. Karten-Fähigkeiten (Skills) gibt es hier nicht.', icon: '⚡️' },
   genesys: { title: 'Genesys', sub: '100 Punkte', blurb: 'Alle Karten sind erlaubt – aber jede starke Karte kostet Punkte. Du baust ein Deck mit höchstens 100 Punkten.', icon: '🧬' },
 };
 /** Verbotslisten im Advanced-Format (Auswahl) */

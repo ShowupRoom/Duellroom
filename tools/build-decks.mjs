@@ -47,6 +47,19 @@ for (const [fmt, file] of [['goat', 'goat.txt'], ['edison', 'edison.txt'], ['gen
     raw.push({ id: `${fmt}-${slug(name)}`, name, fmt, list: FORMATS[fmt].list, grp: 'Beliebte Decks', sub: '', src: url, main: normalize(parseList(m)), extra: normalize(parseList(e)), side: normalize(parseList(s)) });
   }
 }
+// 3b) Speed Duell: die offiziellen Starter-Decks (data/speed-decks.json, Kartennamen → Codes)
+{
+  const nrm = (n) => n.toLowerCase().replace(/[“”]/g, '"').replace(/’/g, "'").replace(/\s+/g, ' ').trim();
+  const by = new Map(); for (const c of cards.values()) { const k = nrm(c.name); if (!by.has(k)) by.set(k, []); by.get(k).push(c.code); }
+  const sp = lists.speed.map; const miss = [];
+  const pick = (name) => { const cs = (by.get(nrm(name)) || []).filter((c) => c < 100000000 || sp[c] !== undefined); if (!cs.length) return 0; return cs.find((c) => (sp[c] ?? 0) > 0 && c < 100000000) || cs.find((c) => (sp[c] ?? 0) > 0) || cs[0]; };
+  const conv = (l) => l.flatMap(([n, k]) => { const c = pick(n); if (!c) { miss.push(n); return []; } return [[c, k]]; });
+  for (const d of JSON.parse(readFileSync(new URL('../data/speed-decks.json', import.meta.url), 'utf-8'))) {
+    const all = conv([...d.main, ...d.extra]); const isEx = (c) => cards.get(c) && ((cards.get(c).type & 0x40) || (cards.get(c).type & 0x2000) || (cards.get(c).type & 0x800000) || (cards.get(c).type & 0x4000000));
+    raw.push({ id: d.id, name: d.name, fmt: 'speed', list: 'speed', grp: /Promo/.test(d.sub) ? 'Promo-Decks' : 'Starter Decks', sub: d.sub, src: d.src, main: all.filter(([c]) => !isEx(c)), extra: all.filter(([c]) => isEx(c)), side: [] });
+  }
+  if (miss.length) console.log('Speed-Deck-Namen ohne Karte:', miss);
+}
 const out = []; const stat = { ok: 0, repaired: 0, openIssues: 0 };
 for (const r of raw) {
   const fmt = { ...FORMATS[r.fmt], list: r.list };

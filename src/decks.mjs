@@ -8,6 +8,7 @@ export const FORMATS = {
   goat: { id: 'goat', name: 'Goat', sub: 'April 2005', list: 'goat', core: 'MODE_GOAT', minMain: 40, maxMain: 60, maxExtra: 15, maxSide: 15 },
   edison: { id: 'edison', name: 'Edison', sub: 'März 2010', list: 'edison', core: 'MODE_EDISON', minMain: 40, maxMain: 60, maxExtra: 15, maxSide: 15 },
   advanced: { id: 'advanced', name: 'Advanced', sub: 'TCG 10/2026', list: 'tcg', core: 'MODE_MR5', minMain: 40, maxMain: 60, maxExtra: 15, maxSide: 15 },
+  speed: { id: 'speed', name: 'Speed Duell', sub: '4000 LP · 3 Zonen', list: 'speed', core: 'MODE_SPEED', minMain: 20, maxMain: 30, maxExtra: 5, maxSide: 5, lp: 4000, hand: 4 },
   genesys: { id: 'genesys', name: 'Genesys', sub: '100 Punkte', list: 'genesys', core: 'MODE_GENESYS', minMain: 40, maxMain: 60, maxExtra: 15, maxSide: 15, cap: 100, noLink: true, noPendulum: true },
 };
 
