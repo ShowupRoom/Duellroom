@@ -8,7 +8,7 @@ const stub = (re) => ({ name: 'stub', setup(b) { b.onResolve({ filter: re }, (a)
 // Datenblöcke
 for (const [a, b] of [['scripts.gz', 'scripts.dat'], ['cards.gz', 'cards.dat'], ['data.gz', 'decks.dat'], ['de.gz', 'de.dat']]) copyFileSync('app/dist/' + a, OUT + '/data/' + b);
 const hash = createHash('sha1');  for (const f of readdirSync('app/src')) if (f.endsWith('.js')) hash.update(readFileSync('app/src/' + f)); for (const d of ['src', 'app/src/css']) for (const f of readdirSync(d)) if (/\.(mjs|css)$/.test(f)) hash.update(readFileSync(d + '/' + f)); for (const f of readdirSync(OUT + '/data')) hash.update(readFileSync(OUT + '/data/' + f));
-for (const f of readdirSync('app/src/css')) hash.update(readFileSync('app/src/css/' + f));
+for (const f of readdirSync('app/src/css')) hash.update(readFileSync('app/src/css/' + f)); for (const f of readdirSync('app/icons')) hash.update(readFileSync('app/icons/' + f));
 const V = hash.digest('hex').slice(0, 10);
 const common = { bundle: true, write: true, format: 'iife', platform: 'browser', target: ['es2020', 'safari15'], minify: !process.env.DEV, legalComments: 'none', define: { 'process.env.NODE_ENV': '"production"', __VERSION__: JSON.stringify(V) }, logLevel: 'warning' };
 await build({ ...common, entryPoints: ['app/src/main.js'], outfile: OUT + '/app.js', plugins: [stub(/ocgcore\.(sync|jspi)-/)] });
