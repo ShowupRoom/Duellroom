@@ -45,10 +45,12 @@ export function typeText(c) {
   return `${raceName(c.race)} / ${sub.join('/')}`;
 }
 export const levelText = (c) => { if (!c || !(c.type & 1)) return ''; if (c.type & 0x4000000) return `Link ${c.level}`; return `${c.type & 0x800000 ? 'Rang' : 'Stufe'} ${c.level}`; };
+/** Link-Markierungen (Bitmaske des Kerns) als Pfeile, in Leserichtung */
+export const linkArrows = (m) => [[0x40, '↖'], [0x80, '↑'], [0x100, '↗'], [0x8, '←'], [0x20, '→'], [0x1, '↙'], [0x2, '↓'], [0x4, '↘']].filter(([b]) => (m || 0) & b).map(([, a]) => a).join(' ') || '–';
 export const atkText = (v) => (v < 0 ? '?' : String(v));
 export function statsText(c) {
   if (!c || !(c.type & 1)) return '';
-  if (c.type & 0x4000000) return `ATK ${atkText(c.attack)}`;
+  if (c.type & 0x4000000) return `ATK ${atkText(c.attack)} · Pfeile ${linkArrows(c.link_marker)}`;
   return `ATK ${atkText(c.attack)} / VER ${atkText(c.defense)}`;
 }
 export const kind = (c) => { if (!c) return 'x'; const t = c.type; if (t & 2) return 'spell'; if (t & 4) return 'trap'; if (t & 0x4000000) return 'link'; if (t & 0x800000) return 'xyz'; if (t & 0x2000) return 'synchro'; if (t & 0x40) return 'fusion'; if (t & 0x80) return 'ritual'; if (t & 0x4000) return 'token'; if (t & 0x20) return 'effect'; return 'normal'; };

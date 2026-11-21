@@ -3,7 +3,7 @@ import { h, clear, sleep, toast, shuffled, beep, rand32, zkey as key } from './u
 import { App, MODES, FORMATS, fmtById, expand, nameOf, cardOf, cleanName, withTutor, descOf } from './data.js';
 import { DuelAI } from '../../src/ai.mjs';
 import { randomResponse, OcgResponseType as R, OcgMessageType as MSG, SelectIdleCMDAction as IA, SelectBattleCMDAction as BA, LOC, MSG_NAME } from '../../src/core.mjs';
-import { cardEl, fieldEl } from './cards.js';
+import { cardEl, fieldEl, fieldCfg, setFieldFull } from './cards.js';
 import { openModal, confirmBox, cardInfoBody } from './ui.js';
 import { effectView, mergeViews, markNode, revealMark } from './effecttext.js';
 import { screens, back, replace, root as navRoot, setGuard } from './nav.js';
@@ -331,7 +331,7 @@ class Duel {
   cardNode(c) {
     const vis = this.visible(c); const own = c.controller === this.viewer; const def = c.location === LOC.MZONE && !!(c.position & 12); // nur Monster haben eine Kampfposition – verdeckte Zauber/Fallen (Kern: „verdeckt, Verteidigung“) bleiben aufrecht
     const ctr = Object.values(c.counters || {}).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0);
-    return fieldEl(c.code, { back: !vis, peek: own && !(c.position & FACEUP), def, atk: c.attack, defv: c.defense, over: (c.overlayCards || []).length, counters: ctr });
+    return fieldEl(c.code, { back: !vis, peek: own && !(c.position & FACEUP), def, atk: c.attack, defv: c.defense, over: (c.overlayCards || []).length, counters: ctr, lk: c.location === LOC.MZONE, flip: !own });
   }
   pile(p, l, row, col, label) {
     const pl = this.snap.players[p]; const arr = l === LOC.GRAVE ? pl.grave : l === LOC.EXTRA ? pl.extra : l === LOC.REMOVED ? pl.banished : null;
@@ -352,11 +352,11 @@ class Duel {
   }
   renderBoard() {
     const v = this.viewer, o = 1 - v; const b = this.board; clear(b); const c3 = !!this.mode.cols3, NC = c3 ? 5 : 7; b.className = 'bd' + (this.mode.emz ? ' emz' : ' noemz') + (c3 ? ' c3' : ''); // Speed Duell: nur 3 Spalten (Zonen 1–3)
-    const colMe = (s) => s + (c3 ? 1 : 2), colOp = (s) => (c3 ? 5 : 6) - s;
+    const colMe = (s) => s + (c3 ? 1 : 2), colOp = (s) => (c3 ? 5 : 6) - s; const cells = new Map(); // Monsterzonen nach (Zeile,Spalte) – für die Link-Pfeile
     for (const [p, rowM, rowS, col, mir] of [[o, 2, 1, colOp, true], [v, 4, 5, colMe, false]]) {
       for (let s = 0; s < 5; s++) {
         if (c3 && (s === 0 || s === 4)) continue;
-        b.append(this.zone(p, LOC.MZONE, s, rowM, col(s)));
+        const mz = this.zone(p, LOC.MZONE, s, rowM, col(s)); cells.set(`${rowM},${col(s)}`, mz); b.append(mz);
         const pz = this.mode.pzone && (s === 0 || s === 4) ? (s === 0 ? 'pz pz-l' : 'pz pz-r') : '';
         b.append(this.zone(p, LOC.SZONE, s, rowS, col(s), { cls: pz }));
       }
@@ -373,10 +373,24 @@ class Duel {
         const c = own || opp; if (c) z.append(this.cardNode(c)); else z.append(h('span', { class: 'zl' }, 'EMZ'));
         this.mark(z, kk);
         if (this.zoneSel) { if (this.zoneSel.allowed.has(k1) || this.zoneSel.allowed.has(k2)) z.classList.add('zsel'); if (this.zoneSel.chosen.has(k1) || this.zoneSel.chosen.has(k2)) z.classList.add('zchosen'); }
-        b.append(z);
+        b.append(z); cells.set(`3,${col}`, z);
       }
     }
+    this.linkPass(cells);
     b.append(h('div', { class: 'midinfo', style: 'grid-row:3;grid-column:' + (this.mode.emz ? '1 / 3' : '1 / ' + (NC + 1)) }, this.mode.emz ? '' : this.phaseLine()));
+  }
+  /** Link-Pfeile auswerten: Zielzonen einfärben, gegenseitige Verbindung (Co-Link) golden, Pfeile ins Leere blass */
+  linkPass(cells) {
+    const lkOf = (z) => z.querySelector('.lk');
+    for (const [pos, z] of cells) {
+      const lk = lkOf(z); if (!lk) continue; const [r, c] = pos.split(',').map(Number); const mine = lk.classList.contains('me');
+      for (const i of lk.children) {
+        const [dr, dc] = i.dataset.v.split(',').map(Number); const t = cells.get(`${r + dr},${c + dc}`);
+        if (!t) continue;
+        t.classList.add(mine ? 'lkz-me' : 'lkz-op');
+        const tl = lkOf(t); if (tl && [...tl.children].some((j) => j.dataset.v === `${-dr},${-dc}`)) i.classList.add('co');
+      }
+    }
   }
   phaseLine() { return this.turnNo ? `${PHASE[this.phase] || ''}` : ''; }
   renderHand() {
@@ -471,6 +485,7 @@ class Duel {
     const m = openModal({ host: this.root, title: 'Duell', center: true, body: h('div', { class: 'col' },
       h('button', { class: 'btn', onclick: () => { m.close(); this.showLog(); } }, '📜 Verlauf'),
       h('button', { class: 'btn', onclick: () => { const nx = !this.anim ? 'fast' : this.tempo === 'fast' ? 'normal' : 'off'; this.anim = nx !== 'off'; if (nx !== 'off') this.tempo = nx; store.set('anim', this.anim); store.set('tempo', this.tempo); this.root.classList.toggle('fxfast', this.tempo === 'fast'); toast({ fast: 'Effekte: schnell', normal: 'Effekte: normal', off: 'Effekte: aus' }[nx]); m.close(); } }, `✨ Effekte: ${!this.anim ? 'aus' : this.tempo === 'fast' ? 'schnell' : 'normal'}`),
+      h('button', { class: 'btn', onclick: () => { setFieldFull(!fieldCfg.full); m.close(); this.render(); toast(fieldCfg.full ? 'Feldkarten: ganzes Kartenbild' : 'Feldkarten: Kunst mit Rahmen'); } }, `🃏 Feldkarten: ${fieldCfg.full ? 'ganze Karte' : 'Kunst + Rahmen'}`),
       h('button', { class: 'btn', onclick: () => { m.close(); this.surrender(); } }, '🏳 Aufgeben'),
       h('button', { class: 'btn red', onclick: async () => { m.close(); if (this.net) { if (await confirmBox('Duell verlassen?', 'Das Online-Duell wird für beide beendet.', 'Verlassen', 'Weiterspielen', true)) { this.net.send({ t: 'leave' }); this.destroy(); netMenu(); } } else back(); } }, '⟵ Duell verlassen')), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Weiterspielen') });
   }
