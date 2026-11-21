@@ -268,7 +268,7 @@ class Duel {
     this.turnEl.textContent = this.turnNo ? `Zug ${this.turnNo} · ${PHASE[this.phase] || ''} · ${this.pname(tp)}` : 'Duell beginnt …';
     this.chainEl.textContent = this.chain.length ? `⛓ ${this.chain.length}` : ''; this.chainEl.style.display = this.chain.length ? '' : 'none';
     this.tipBtn.style.display = this.conf.tutor && this.conf.human[this.viewer] ? '' : 'none';
-    const cur = PH_PILLS.find((x) => x[2].includes(this.phase)); const po = this.phaseOpts || {}; const can = PH_PILLS.some((x) => po[x[0]]);
+    const cur = PH_PILLS.find((x) => x[2].includes(this.phase)); const po = this.phaseOpts || {}; const can = PH_PILLS.some((x) => po[x[0]]); if (!can) this.closePhMenu();
     this.phaseEl.className = 'd-phases ' + (tp === this.viewer ? 'mine' : 'theirs') + (this.turnNo ? '' : ' idle'); this.wheel.classList.toggle('go', can);
     this.wheel.firstChild.textContent = this.turnNo && cur ? cur[0] : '–'; this.wheel.lastChild.textContent = this.turnNo ? `Zug ${this.turnNo}${can ? ' ▾' : ''}` : '';
     for (const el of this.phaseEl.querySelectorAll('.ph')) { el.classList.toggle('on', !!cur && el.dataset.ph === cur[0]); el.classList.toggle('go', !!po[el.dataset.ph]); }
@@ -276,11 +276,19 @@ class Duel {
   /** Phasen, in die der aktive Spieler jetzt wechseln darf: { BP, M2, EP } → Antwort für den Kern */
   setPhaseOpts(o) { this.phaseOpts = o; this.renderTop(); }
   phasePick(id) { const o = this.phaseOpts; if (o && o[id]) { this.answer(o[id]); return; } this.phaseHelp(); }
-  /** Antippen des Rads: ab der Main Phase 1 die nächste Phase wählen (Kampf, Main Phase 2, End Phase) */
+  /** Antippen des Rads: Aufklappmenü direkt am Rad mit den nächsten möglichen Phasen (Kampf, Main Phase 2, Zugende) */
+  closePhMenu() { if (!this.phMenu) return; this.phMenu.remove(); this.phScrim.remove(); this.phMenu = this.phScrim = null; this.wheel.classList.remove('open'); }
   phaseTap() {
+    if (this.phMenu) { this.closePhMenu(); return; }
     const o = this.phaseOpts; const list = o ? PH_PILLS.filter((x) => o[x[0]]) : []; if (!list.length) { this.phaseHelp(); return; }
-    const lab = { BP: ['⚔ Kampfphase', 'gold'], M2: ['Main Phase 2', 'gold'], EP: ['⏭ End Phase – Zug beenden', 'red'] };
-    const m = openModal({ host: this.root, title: 'Phase wählen', cls: 'peek', body: h('div', { class: 'col' }, list.map((x) => h('button', { class: 'btn ' + lab[x[0]][1], onclick: () => { m.close(); this.answer(o[x[0]]); } }, lab[x[0]][0]))), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Abbrechen') });
+    const lab = { BP: ['⚔ Kampfphase', 'gold'], M2: ['Main Phase 2', 'gold'], EP: ['⏭ Zug beenden', 'red'] };
+    const rr = this.root.getBoundingClientRect(), wr = this.wheel.getBoundingClientRect(); const land = this.root.classList.contains('land');
+    const menu = h('div', { class: 'ph-menu' + (land ? ' land' : '') }, h('div', { class: 'ph-menu-t' }, 'Weiter zu …'),
+      ...list.map((x) => h('button', { class: 'btn ' + lab[x[0]][1], onclick: () => { this.closePhMenu(); this.answer(o[x[0]]); } }, lab[x[0]][0])));
+    const w = land ? Math.min(176, Math.max(140, parseFloat(this.root.style.getPropertyValue('--sidew')) - 12 || 150)) : 210;
+    const cx = wr.left + wr.width / 2 - rr.left; const left = land ? Math.max(4, Math.min(cx - w / 2, rr.width - w - 4)) : Math.max(8, wr.left - rr.left);
+    menu.style.cssText = `width:${w}px;left:${left}px;top:${wr.bottom - rr.top + 8}px`;
+    this.phScrim = h('div', { class: 'ph-scrim', onclick: () => this.closePhMenu() }); this.root.append(this.phScrim, menu); this.phMenu = menu; this.wheel.classList.add('open');
   }
   renderStrips() {
     const s = this.snap; const v = this.viewer, o = 1 - v;
@@ -447,14 +455,14 @@ class Duel {
 
   // ---------------------------------------------------------------- Prompt-Bereich & Antworten
   setBar(text, buttons = [], sub) {
-    this.bar.classList.remove('off'); clear(this.bar); this.bar.append(h('div', { class: 'bar-t' }, h('div', { class: 'bar-m' }, text), sub ? h('div', { class: 'bar-s' }, sub) : null), h('div', { class: 'bar-b' }, buttons.map((b) => h('button', { class: 'btn ' + (b.cls || ''), disabled: b.disabled, onclick: b.onclick }, b.label))));
+    this.bar.classList.remove('off'); this.root.classList.add('baron'); clear(this.bar); this.bar.append(h('div', { class: 'bar-t' }, h('div', { class: 'bar-m' }, text), sub ? h('div', { class: 'bar-s' }, sub) : null), h('div', { class: 'bar-b' }, buttons.map((b) => h('button', { class: 'btn ' + (b.cls || ''), disabled: b.disabled, onclick: b.onclick }, b.label))));
   }
   /** Leiste ausblenden – im Zug steuert das Phasenrad Kampf und Zugende */
-  hideBar() { clear(this.bar); this.bar.classList.add('off'); }
+  hideBar() { clear(this.bar); this.bar.classList.add('off'); this.root.classList.remove('baron'); }
   clearBar() { this.hideBar(); }
   /** wartet auf eine Antwort der Oberfläche */
   wait(kind) { return new Promise((resolve) => { this.pending = { resolve, kind }; }); }
-  answer(resp) { const p = this.pending; if (!p) return; this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
+  answer(resp) { const p = this.pending; if (!p) return; this.closePhMenu(); this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
   setTip(t) { this.tip = t; }
   showTip() {
     this.tipBtn.classList.remove('pulse'); const t = this.tip; if (!t) { toast('Gerade gibt es nichts zu raten.'); return; }

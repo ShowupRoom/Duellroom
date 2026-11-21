@@ -131,3 +131,16 @@
 .duel:not(.land) .d-hand{padding-bottom:calc(6px + var(--safe-b))}
 .duel:not(.land) .d-top .ph-wheel{width:52px;height:52px}.duel:not(.land) .d-top .ph-wheel b{font-size:17px}
 .land .fcard.def{transform:none;inset:19% 0}
+
+/* Phasenrad wie in Master Duel: Rad mittig am rechten Rand, Antippen klappt die nächsten Phasen darunter auf */
+.land .ph-pills{display:none}
+.land .d-r .d-phases{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:0;gap:0}
+.land .d-r .ph-wheel{width:88px;height:88px;border-width:4px}.land .d-r .ph-wheel b{font-size:30px}.land .d-r .ph-wheel small{font-size:11.5px;margin-top:4px}
+.duel.land.baron .d-r .d-phases{flex:none;margin:4px 0}.duel.land.baron .d-r .ph-wheel{width:62px;height:62px;border-width:3px}.duel.land.baron .d-r .ph-wheel b{font-size:21px}
+.land .d-top{justify-content:flex-end}
+.ph-scrim{position:absolute;inset:0;z-index:70}
+.ph-menu{position:absolute;z-index:75;display:flex;flex-direction:column;gap:8px;padding:10px;background:linear-gradient(180deg,#14336f,#091735);border:1px solid var(--line2);border-radius:16px;box-shadow:0 14px 34px rgba(0,0,0,.65);animation:phin .14s ease-out}
+.ph-menu-t{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;padding:0 2px}
+.ph-menu .btn{min-height:46px;width:100%;font-size:14px;padding:0 6px;white-space:nowrap}
+.ph-wheel.open{box-shadow:0 0 0 3px #fff,0 0 22px rgba(255,255,255,.55)}
+@keyframes phin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
