@@ -124,14 +124,14 @@ export function cardEl(code, o = {}) {
   return el;
 }
 /** Karte auf dem Feld (Kunst-Ausschnitt). o: {back, peek, def, atk, defv, over, counters} */
-export const fieldCfg = { full: store.get('fieldfull', false) }; // false = Kunst mit farbigem Rahmen, true = ganzes Kartenbild
+export const fieldCfg = { full: store.get('fieldfull', true) }; // true (Standard) = dieselbe Karte wie in den Fenstern, false = nur Kunst mit farbigem Rahmen
 export const setFieldFull = (v) => { fieldCfg.full = !!v; store.set('fieldfull', !!v); };
 /** Link-Pfeile: Bit des Kerns → Richtung (Zeile, Spalte) aus Sicht des Besitzers */
 const LKV = [[0x1, 1, -1], [0x2, 1, 0], [0x4, 1, 1], [0x8, 0, -1], [0x20, 0, 1], [0x40, -1, -1], [0x80, -1, 0], [0x100, -1, 1]];
 export function fieldEl(code, o = {}) {
   const c = App.cards.get(code); const k = kind(c);
-  const inner = o.back ? h('div', { class: 'fcard back' }) : h('div', { class: `fcard k-${k}` + (fieldCfg.full ? ' full' : '') }, h('div', { class: 'fc-art' }, h('span', { class: 'fc-nm' }, cleanName(c?.name || '').slice(0, 16))));
-  if (!o.back) { const im = h('img', { alt: '', draggable: 'false' }); inner.firstChild.append(im); wantImage(im, fieldCfg.full ? 'small' : 'crop', code); }
+  const inner = o.back ? h('div', { class: 'fcard back' }) : fieldCfg.full ? h('div', { class: `fcard full k-${k}` }, cardEl(code, { cls: 'fld' })) : h('div', { class: `fcard k-${k}` }, h('div', { class: 'fc-art' }, h('span', { class: 'fc-nm' }, cleanName(c?.name || '').slice(0, 16))));
+  if (!o.back && !fieldCfg.full) { const im = h('img', { alt: '', draggable: 'false' }); inner.firstChild.append(im); wantImage(im, 'crop', code); }
   if (o.def) inner.classList.add('def'); if (o.peek) inner.classList.add('peek');
   const w = h('div', { class: 'fwrap' }, inner);
   if (!o.back && c && (c.type & 1) && o.atk != null && !o.peek) w.append(h('div', { class: 'fc-atk' }, fmtv(o.def ? o.defv : o.atk)));

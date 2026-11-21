@@ -20,7 +20,7 @@ export const raceName = (r) => { const b = BigInt(r || 0); return RACE_BITS.filt
 export const attrName = (a) => ATTR_BITS.filter(([v]) => (a || 0) & v).map(([, n]) => n).join('/');
 
 /** Text zu einer Beschreibungsnummer des Kerns (Systemtext oder Kartentext) */
-export function descText(desc, fallbackCode = 0, loc = 0) {
+export function descText(desc, fallbackCode = 0, loc = 0, hide = false) {
   const d = Number(desc || 0); if (!d) return '';
   if (d < 10000) return sys(d);
   const s = descSplit(d); const c = App.cards.get(s.code) || App.cards.get(fallbackCode);
@@ -28,7 +28,8 @@ export function descText(desc, fallbackCode = 0, loc = 0) {
   // Gibt es den Kurztext nur englisch, kommt die deutsche Fassung aus dem deutschen Kartentext (nur für Effekt-Beschriftungen, `loc` gesetzt)
   if (t && c && useDe() && !hasDeStr(c, s.idx)) {
     const k = labelDe(t); if (k === null) return ''; if (k) return k; // Kurztext übersetzt (oder Set-Kürzel ohne Bedeutung)
-    if (loc) { const g = germanLabel(c.code, d, loc); if (g) return g; return ''; } // lieber keine Beschriftung als eine englische
+    if (loc) { const g = germanLabel(c.code, d, loc); if (g) return g; }
+        if (loc || hide) return ''; // lieber keine Beschriftung als eine englische
   }
   return t;
 }

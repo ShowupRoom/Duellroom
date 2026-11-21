@@ -206,8 +206,8 @@ function askOption(D, msg) {
     // Die Karte, zu der die Optionen gehören (aus der Beschreibungsnummer; sonst die zuletzt aktive Kette), zeigen wir mit
     const sp = msg.options.map((o) => descSplit(o)).find((s) => s && App.cards.has(s.code)); const last = D.chain && D.chain.length ? D.chain[D.chain.length - 1].code : 0;
     const code = sp ? sp.code : last; const ccard = code ? cardOf(code) : null;
-    const head = ccard ? h('div', { class: 'opt-h' }, cardEl(code, { cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'opt-n' }, cleanName(ccard.name)), h('div', { class: 'small muted' }, 'Wähle, was passieren soll:'))) : null;
-    const btns = msg.options.map((o, i) => { const t = descText(o, code); return h('button', { class: 'btn opt-b', onclick: () => fin(i) }, h('b', { class: 'opt-i' }, String(i + 1)), h('span', null, t || `Option ${i + 1}`)); });
+    const head = ccard ? h('div', { class: 'opt-h' }, h('button', { class: 'opt-c', title: 'Kartentext lesen', onclick: () => D.info(code) }, cardEl(code, { cls: 'md' })), h('div', { class: 'grow' }, h('div', { class: 'opt-n' }, cleanName(ccard.name)), h('div', { class: 'small muted' }, 'Wähle, was passieren soll:'))) : null;
+    const btns = msg.options.map((o, i) => { const t = descText(o, code, 0, true); return h('button', { class: 'btn opt-b', onclick: () => fin(i) }, h('b', { class: 'opt-i' }, String(i + 1)), h('span', null, t || `Effekt ${i + 1} (Text: Karte antippen)`)); });
     const m = M(D, { title: D.hintText || (head ? 'Wähle einen Effekt' : 'Wähle eine Option'), sticky: true, cls: 'peek', body: h('div', { class: 'col' }, head, ...btns) });
   });
 }

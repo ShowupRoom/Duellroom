@@ -21,7 +21,7 @@
 .fwrap{position:absolute;inset:1px;display:grid;place-items:center}
 .fcard{--fk:#8b93a1;position:absolute;inset:0;border-radius:5px;overflow:hidden;border:max(2px,calc(var(--cw)*.065)) solid var(--fk);box-shadow:0 0 0 1px rgba(255,255,255,.5),0 2px 6px rgba(0,0,0,.6);transition:transform .25s}
 .fcard.k-normal{--fk:#dcac3e}.fcard.k-effect{--fk:#d4792a}.fcard.k-ritual{--fk:#4f88e6}.fcard.k-fusion{--fk:#a766dc}.fcard.k-synchro{--fk:#eeeef4}.fcard.k-xyz{--fk:#23232d}.fcard.k-link{--fk:#2b92e8}.fcard.k-spell{--fk:#20b28f}.fcard.k-trap{--fk:#cc4f9c}.fcard.k-token{--fk:#9aa3ad}
-.fcard.full{border-width:1px}
+.fcard.full{border:0}.fcard.full .card{--w:var(--cw);position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;border:0;border-radius:inherit;box-shadow:none;font-size:calc(var(--cw)*.15)}.fcard.full .card img{object-fit:fill}
 /* Link-Pfeile auf dem Feld (eigene cyan, gegnerische rosa, Co-Link golden, ins Leere zeigend blass) */
 .lk{position:absolute;inset:0;pointer-events:none;z-index:3;--as:calc(var(--cw)*.26);filter:drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 3px rgba(79,211,255,.95))}.lk.op{filter:drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 0 3px rgba(255,110,130,.95))}
 .lk i{position:absolute;width:var(--as);height:var(--as);background:#a6f0ff}.lk.op i{background:#ffb3bd}.lk i.co{background:#ffd76a}
@@ -199,7 +199,7 @@ mark.fx-mark{background:rgba(246,201,107,.2);color:#ffe3a1;border-radius:3px;pad
 .duel.land .d-bar{flex:0 1 auto}
 .duel.land .d-sheet:empty::before{content:"Tippe eine Karte an: Hier bleiben Bild und Text der zuletzt gewählten Karte stehen."}
 /* Optionen-Auswahl: Karte + beschriftete Optionen */
-.opt-h{display:flex;gap:12px;align-items:center;margin-bottom:4px}.opt-n{font-weight:800;font-size:15px;line-height:1.25}
+.opt-h{display:flex;gap:12px;align-items:center;margin-bottom:4px}.opt-c{background:none;border:0;padding:0;flex:none;cursor:pointer}.opt-n{font-weight:800;font-size:15px;line-height:1.25}
 .opt-b{justify-content:flex-start;text-align:left;height:auto;min-height:48px;padding:10px 14px;gap:10px;line-height:1.3;white-space:normal}
 .opt-i{flex:none;width:24px;height:24px;border-radius:50%;background:rgba(79,211,255,.18);border:1px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;font-size:13px}
 .duel.land .modal.peek .opt-b{min-height:44px;font-size:14px}

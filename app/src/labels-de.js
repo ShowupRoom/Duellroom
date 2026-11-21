@@ -6,7 +6,7 @@ const SUMMON = { special: 'Spezialbeschwörung', normal: 'Normalbeschwörung', t
 const PLACE = [
   [/\bfrom (?:your |the )?hand\b|\bfrom hand\b/g, 'aus der Hand'], [/\bfrom (?:your |the )?(?:gy|graveyard)\b/g, 'aus dem Friedhof'], [/\bfrom (?:your |the )?extra deck\b/g, 'aus dem Extradeck'], [/\bfrom (?:your |the )?deck\b/g, 'aus dem Deck'], [/\bfrom (?:your |the )?(?:banished zone|banished)\b/g, 'aus den Verbannten'],
   [/\bin defense position\b/g, 'in Verteidigungsposition'], [/\bin attack position\b/g, 'in Angriffsposition'], [/\b(?:to|into) (?:your |the )?(?:gy|graveyard)\b/g, 'auf den Friedhof'], [/\b(?:to|into) (?:your |the )?deck\b/g, 'ins Deck'], [/\bface-up\b/g, 'offen'], [/\bface-down\b/g, 'verdeckt'],
-  [/\bon the field\b/g, 'auf dem Spielfeld'], [/\byour opponent controls\b/g, 'die dein Gegner kontrolliert'], [/\byou control\b/g, 'die du kontrollierst'],
+  [/\bon the field\b/g, 'auf dem Spielfeld'], [/\bon your (?:side of the )?field\b/g, 'auf dein Spielfeld'], [/\bon your opponent's (?:side of the )?field\b/g, 'auf das gegnerische Spielfeld'], [/\bin your spell & trap zone\b/g, 'in deine Zauber- und Fallenzone'], [/\bin your pendulum zone\b/g, 'in deine Pendelzone'], [/\bin your field zone\b/g, 'in deine Spielfeldzone'], [/\byour opponent controls\b/g, 'die dein Gegner kontrolliert'], [/\byou control\b/g, 'die du kontrollierst'],
 ];
 const EXACT = {
   'special summon this card': 'Diese Karte spezialbeschwören', 'special summon itself': 'Diese Karte spezialbeschwören', 'special summon it': 'Spezialbeschwörung', 'special summon them': 'Spezialbeschwörung',
