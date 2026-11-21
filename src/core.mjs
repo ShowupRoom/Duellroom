@@ -58,6 +58,26 @@ export function shuffleDeck(main, rnd, stack) {
   return a;
 }
 
+/**
+ * Regelkorrekturen an den Kernskripten (Text-Ersetzung beim Laden; fehlt das Muster, bleibt das Skript unverändert).
+ * utility.lua: Zeitweilig verbannte Monster aus einer Extra-Monsterzone kehren in diese Zone zurück (statt in eine Hauptmonsterzone zu wandern),
+ * sofern sie frei ist – so wie es die offizielle Regel vorsieht (z. B. „Blauäugiger ultimativer Toon-Drache“, Dimensionstransporter).
+ */
+const PATCHES = {
+  'utility.lua': [[
+    'local function select_field_return_cards(p,g)\n\tif #g==0 then return end\n',
+    'local function select_field_return_cards(p,g)\n\tif #g==0 then return end\n'
+    + '\tlocal eg=g:Filter(function(c) return c:IsPreviousLocation(LOCATION_MZONE) and c:GetPreviousSequence()>=5 and Duel.CheckLocation(c:GetPreviousControler(),LOCATION_MZONE,c:GetPreviousSequence()) end,nil)\n'
+    + '\tfor tc in eg:Iter() do Duel.ReturnToField(tc,tc:GetPreviousPosition(),1<<tc:GetPreviousSequence()) end\n'
+    + '\tg:Sub(eg)\n\tif #g==0 then return end\n',
+  ]],
+};
+export function patchScript(name, text) {
+  const list = PATCHES[name]; if (!list || !text) return text;
+  for (const [a, b] of list) if (text.includes(a)) text = text.replace(a, b);
+  return text;
+}
+
 export class Game {
   /**
    * @param lib  Kern
@@ -83,12 +103,12 @@ export class Game {
     this.handle = await lib.createDuel({
       flags: opts.flags, seed, team1: team, team2: team,
       cardReader: (c) => this.cards.get(c) ?? null,
-      scriptReader: (s) => { try { return opts.readScript(s) ?? ''; } catch (e) { return ''; } },
+      scriptReader: (s) => { try { return patchScript(s, opts.readScript(s) ?? ''); } catch (e) { return ''; } },
       errorHandler: (t, x) => { this.errors.push(`${t}: ${x}`); },
     });
     if (!this.handle) throw new Error('Duell konnte nicht erzeugt werden');
     for (const f of ['constant.lua', 'utility.lua']) {
-      const ok = await lib.loadScript(this.handle, f, opts.readScript(f));
+      const ok = await lib.loadScript(this.handle, f, patchScript(f, opts.readScript(f)));
       if (!ok) throw new Error('Basisskript fehlt: ' + f);
     }
     // Der Kern mischt nicht selbst: Ohne Mischen wären die Starthände immer die letzten Karten der Deckliste.
@@ -98,6 +118,8 @@ export class Game {
       d.main.forEach((code, i) => lib.duelNewCard(this.handle, { team: t, duelist: 0, code, controller: t, location: LOC.DECK, sequence: i, position: OcgPosition.FACEDOWN_DEFENSE }));
       (d.extra || []).forEach((code, i) => lib.duelNewCard(this.handle, { team: t, duelist: 0, code, controller: t, location: LOC.EXTRA, sequence: i, position: OcgPosition.FACEDOWN_DEFENSE }));
     }
+    // Vorgegebene Aufstellung (Tests/Rätsel): [Besitzer, Code, Ort, Zone, Position]
+    for (const [c, code, loc, seq, pos] of opts.field || []) lib.duelNewCard(this.handle, { team: c, duelist: 0, code, controller: c, location: loc, sequence: seq, position: pos ?? OcgPosition.FACEUP_ATTACK });
     await lib.startDuel(this.handle);
   }
 

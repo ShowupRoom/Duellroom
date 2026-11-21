@@ -91,7 +91,7 @@ class Duel {
       else {
         const mk = (i) => ({ main: expand(conf.players[i].deck.main), extra: expand(conf.players[i].deck.extra) });
         const seed = conf.seed ? conf.seed.map((x) => BigInt(x)) : [BigInt(rand32()), BigInt(rand32()), BigInt(rand32()), BigInt(rand32())]; this.seedUsed = seed.map(Number);
-        this.eng = new LocalEngine(); await this.eng.create({ flags: m.flags, decks: [mk(0), mk(1)], scripts: m.scripts, seed, lp: conf.lp, hand: m.hand, stack: conf.stack });
+        this.eng = new LocalEngine(); await this.eng.create({ flags: m.flags, decks: [mk(0), mk(1)], scripts: m.scripts, seed, lp: conf.lp, hand: m.hand, stack: conf.stack, field: conf.field });
         if (conf.mode === 'net-host') this.host = new HostLink(this.net, 1 - this.viewer);
       }
     } catch (e) { this.fatal(e); return; }

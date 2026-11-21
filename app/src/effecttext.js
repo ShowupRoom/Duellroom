@@ -13,7 +13,7 @@ const OPEN_EN = /^(You can|You may|You must|You cannot|Once per|During|When|Whil
 const STOP_EN = new Set('the this that from your with card cards and for one per turn you can its only using activate affected when will then also each other either both are not has have all any may must into onto'.split(' '));
 const STOP_DE = new Set('die der das den dem des von deiner deinem deinen deine dein dieser diese dieses diesen mit und für eine einen einem einer pro spielzug kannst kann nur auch dann wenn falls aktivieren aktiviert aktiviere'.split(' '));
 const SYN_EN = { search: ['add'], revive: ['special'], recycle: ['shuffle', 'return'], mill: ['send'], summon: ['summon'] };
-const SYN_DE = { such: ['hinzu', 'füge'], suche: ['hinzu', 'füge'], platz: ['lege', 'platz'], aufde: ['aufgedeckt', 'umdreh'], tausc: ['wechs', 'tausch'], ände: ['änder', 'wechs'], zähle: ['zählmarke'] };
+const SYN_DE = { such: ['hinzu', 'füge'], suche: ['hinzu', 'füge'], platz: ['lege', 'platz'], aufde: ['aufgedeckt', 'umdreh'], tausc: ['wechs', 'tausch'], ände: ['änder', 'wechs'], zähle: ['zählmarke'], zurück: ['hinzu', 'füge', 'hand', 'friedhof'], holen: ['hinzu', 'füge', 'hand'] };
 
 const clean = (t) => (t || '').replace(/\r/g, '');
 
