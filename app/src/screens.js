@@ -1,13 +1,14 @@
 // Start, Formatwahl, Spieler-Setup, Deckauswahl mit Tutor, Lernen, Einstellungen
 import { h, $, clear, toast, uid, shuffled, rand32, sound } from './util.js';
 import { App, FORMAT_INFO, FORMATS, allDecks, fmtOf, fmtById, nameOf, withTutor, expand, count, cardOf, cleanName, customDecks, deleteCustom } from './data.js';
-import { cardEl, cfg as imgCfg, setImages, preload, idbCount } from './cards.js';
+import { cardEl, cfg as imgCfg, setImages, preload, idbCount, isOcg, ocgTag } from './cards.js';
 import { openModal, confirmBox, showCard } from './ui.js';
 import { go, back, screens } from './nav.js';
 import { store } from './store.js';
 import { ROLE_DE, roleOf } from '../../src/tutor.mjs';
 import { validate, deckPoints, isExtra } from '../../src/decks.mjs';
 import { kind, KIND_DE } from './strings.js';
+import { AI_LEVELS } from '../../src/ai.mjs';
 
 const hdr = (title, sub, right) => h('div', { class: 'hd' }, h('button', { class: 'ibtn', onclick: () => back(), 'aria-label': 'Zurück' }, '←'), h('h2', null, title, sub ? h('div', { class: 'sub' }, sub) : null), right || null);
 
@@ -59,20 +60,21 @@ screens.formats = () => h('div', { class: 'screen' }, hdr('Format wählen', 'Wel
 // ---- Spieler-Setup ------------------------------------------------------------
 const MODES = [
   { id: 'hot', t: 'Zu zweit am Gerät', d: 'Ihr spielt abwechselnd; bei jedem Wechsel wird das Gerät übergeben, die Hand bleibt geheim.' },
+  { id: 'ai', t: 'Gegen die KI', d: 'Die KI spielt wie ein Mensch: Sie beschwört, aktiviert Karten, greift an und antwortet auf deine Züge.' },
   { id: 'solo', t: 'Allein üben', d: 'Der Gegner steht still. Ideal, um die eigene Combo zu lernen.' },
-  { id: 'bot', t: 'Gegen den Zufalls-Bot', d: 'Der Gegner spielt irgendwelche erlaubten Züge – gut zum Üben von Antworten.' },
 ];
 screens.setup = ({ fmt }) => {
   const saved = store.get('setup.' + fmt, {}); const info = FORMAT_INFO[fmt];
-  let st = { mode: saved.mode || 'hot', names: saved.names || settings.names, decks: saved.decks || [null, null], list: saved.list || 'tcg', first: saved.first || 'random' };
+  let st = { mode: saved.mode === 'bot' ? 'ai' : (saved.mode || 'hot'), level: saved.level || 'normal', names: saved.names || settings.names, decks: saved.decks || [null, null], list: saved.list || 'tcg', first: saved.first || 'random' };
   const pool = () => allDecks(fmt).filter((d) => d.status !== 'entwurf' && (fmt !== 'advanced' || d.list === st.list || d.custom));
   const byId = (id) => id && allDecks(fmt).find((d) => d.id === id);
   const start = () => {
     const ds = st.decks.map(byId); const pl = [0, 1].map((i) => ({ name: (st.names[i] || 'Spieler ' + (i + 1)).trim(), deck: withTutor(ds[i]) }));
+    if (st.mode === 'ai' && (!st.names[1] || st.names[1] === 'Spieler 2')) pl[1].name = 'KI · ' + AI_LEVELS[st.level].name;
     const first = st.first === 'random' ? (rand32() & 1) : +st.first;
     if (first === 1) { pl.reverse(); }
     const human = st.mode === 'hot' ? [true, true] : (first === 1 ? [false, true] : [true, false]);
-    const conf = { fmt, list: st.list, mode: st.mode, players: pl, human, lp: settings.lp, tutor: settings.tutor };
+    const conf = { fmt, list: st.list, mode: st.mode, level: st.level, players: pl, human, lp: settings.lp, tutor: settings.tutor };
     store.set('last', { ...conf, players: pl.map((p) => ({ name: p.name, deck: p.deck.id })) });
     go('duel', conf);
   };
@@ -81,16 +83,18 @@ screens.setup = ({ fmt }) => {
   const save = () => { store.set('setup.' + fmt, st); settings.names = st.names; };
   const render = () => {
     clear(body); clear(foot);
+    if (st.mode === 'ai' && !byId(st.decks[1])) { const p = pool(); if (p.length) { st.decks[1] = p[rand32() % p.length].id; save(); } }
     const dsel = st.decks.map(byId);
     body.append(h('div', { class: 'wrap col' },
       h('div', { class: 'seg' }, MODES.map((m) => h('button', { class: 'seg-b' + (st.mode === m.id ? ' on' : ''), onclick: () => { st.mode = m.id; save(); render(); } }, m.t))),
       h('div', { class: 'muted small', style: 'margin:-2px 2px 4px' }, MODES.find((m) => m.id === st.mode).d),
+      st.mode === 'ai' ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('span', { class: 'muted small' }, 'Stärke der KI:'), Object.entries(AI_LEVELS).map(([id, l]) => h('button', { class: 'chip' + (st.level === id ? ' on' : ''), onclick: () => { st.level = id; save(); render(); } }, l.name))) : null,
       fmt === 'advanced' ? h('div', { class: 'row' }, h('span', { class: 'muted small' }, 'Verbotsliste:'), ['tcg', 'ocg'].map((l) => h('button', { class: 'chip' + (st.list === l ? ' on' : ''), onclick: () => { st.list = l; st.decks = [null, null]; save(); render(); } }, l.toUpperCase()))) : null,
       h('div', { class: 'pl-grid' }, [0, 1].map((i) => {
         const d = dsel[i]; const dis = i === 1 && st.mode !== 'hot';
         return h('div', { class: 'panel pl' },
           h('div', { class: 'row' }, h('div', { class: 'pl-num' }, i + 1), h('input', { class: 'input grow', value: st.names[i], maxlength: 18, placeholder: 'Name', oninput: (e) => { st.names[i] = e.target.value; save(); } })),
-          h('div', { class: 'muted small', style: 'margin-top:6px' }, i === 1 && st.mode === 'solo' ? 'Übungsgegner (macht nichts)' : i === 1 && st.mode === 'bot' ? 'Zufalls-Bot' : 'Spielt mit:'),
+          h('div', { class: 'muted small', style: 'margin-top:6px' }, i === 1 && st.mode === 'solo' ? 'Übungsgegner (macht nichts)' : i === 1 && st.mode === 'ai' ? 'KI-Gegner · ' + AI_LEVELS[st.level].name : 'Spielt mit:'),
           d ? deckMini(d) : h('div', { class: 'deck-empty' }, 'Noch kein Deck gewählt'),
           h('div', { class: 'row', style: 'margin-top:8px' },
             h('button', { class: 'btn grow ' + (d ? '' : 'pri'), onclick: () => go('decks', { fmt, list: st.list, title: `Deck für ${st.names[i] || 'Spieler ' + (i + 1)}`, onPick: (dk) => { st.decks[i] = dk.id; save(); } }) }, d ? 'Anderes Deck' : 'Deck wählen'),
@@ -157,13 +161,20 @@ export function deckDetail(deck, { edit } = {}) {
   root.append(h('div', { class: 'tutor panel' }, h('div', { class: 'tut-h' }, h('span', { class: 'tut-ic' }, '🎓'), h('b', null, 'Tutor: Das Ziel dieses Decks')),
     h('p', { class: 'tut-g' }, t.goal), t.plan?.length ? h('ol', { class: 'tut-p' }, t.plan.map((s) => h('li', null, s))) : null,
     t.hint ? h('p', { class: 'small' }, h('b', null, 'Tipp: '), t.hint) : null, t.weak ? h('p', { class: 'small' }, h('b', null, 'Achtung: '), t.weak) : null));
+  if (t.engines && t.engines.length) {
+    const ER = [['st', 'Starter', 'starter'], ['ex', 'Verlängerer', 'extender'], ['bo', 'Boss', 'boss'], ['su', 'Support', 'removal']];
+    root.append(h('div', { class: 'panel engines' }, h('div', { class: 'tut-h' }, h('span', { class: 'tut-ic' }, '⚙'), h('b', null, t.engines.length > 1 ? `Engines in diesem Deck (${t.engines.length})` : 'Engine in diesem Deck')),
+      t.engines.map((e, i) => h('div', { class: 'eng' }, h('div', { class: 'eng-n' }, `„${e.n}“`, e.k ? h('span', { class: 'chip' }, e.k) : null, i === 0 && t.engines.length > 1 ? h('span', { class: 'chip on' }, 'Hauptengine') : null),
+        h('div', { class: 'keycards' }, ER.flatMap(([k, label, role]) => (e[k] || []).slice(0, 3).map((c) => h('button', { class: 'keyc', onclick: () => showCard(c) }, cardEl(c, { cls: 'md' }), h('span', { class: 'role ' + role }, label))))))),
+      t.bridges && t.bridges.length ? h('div', { class: 'eng bridges' }, h('div', { class: 'eng-n' }, '🔗 Brücken'), h('div', { class: 'keycards' }, t.bridges.map((b) => h('button', { class: 'keyc', onclick: () => showCard(b.c) }, cardEl(b.c, { cls: 'md' }), h('span', { class: 'role bridge' }, 'Brücke')))), h('ul', { class: 'small muted' }, t.bridges.map((b) => h('li', null, h('b', null, nameOf(b.c)), ': ' + b.w)))) : null));
+  }
   const keys = t.keys || {}; const rows = [['starters', 'Starter – bringen die Combo ins Rollen', 'starter'], ['extenders', 'Verlängerer – bringen mehr Monster ins Spiel', 'extender'], ['bosses', 'Bosse – dein Endziel', 'boss'], ['handtraps', 'Handtraps – nur im Zug des Gegners', 'handtrap'], ['removal', 'Entferner & Fallen – räumen Hindernisse', 'removal']];
   for (const [k, label, role] of rows) if (keys[k]?.length) root.append(h('div', { class: 'keyrow' }, h('div', { class: 'small muted' }, label), h('div', { class: 'keycards' }, keys[k].slice(0, 6).map((c) => h('button', { class: 'keyc', onclick: () => showCard(c) }, cardEl(c, { cls: 'md' }), h('span', { class: 'role ' + role }, ROLE_DE[role] || role))))));
   const sec = [['main', 'Hauptdeck'], ['extra', 'Extradeck'], ['side', 'Sidedeck']];
   for (const [k, label] of sec) if (deck[k]?.length) {
     root.append(h('h4', { class: 'dsec' }, `${label} (${count(deck[k])})`));
     const sorted = [...deck[k]].sort((a, b) => { const A = cardOf(a[0]), B = cardOf(b[0]); const ka = ['normal', 'effect', 'ritual', 'fusion', 'synchro', 'xyz', 'link', 'token', 'spell', 'trap'].indexOf(kind(A)), kb = ['normal', 'effect', 'ritual', 'fusion', 'synchro', 'xyz', 'link', 'token', 'spell', 'trap'].indexOf(kind(B)); return ka - kb || (A?.name || '').localeCompare(B?.name || ''); });
-    root.append(h('div', { class: 'dgrid' }, sorted.map(([c, n]) => h('button', { class: 'dg-c', onclick: () => showCard(c) }, cardEl(c, { cls: 'sm' }), n > 1 ? h('span', { class: 'cnt' }, '×' + n) : null))));
+    root.append(h('div', { class: 'dgrid' }, sorted.flatMap(([c, n]) => Array.from({ length: n }, () => h('button', { class: 'dg-c', onclick: () => showCard(c) }, cardEl(c, { cls: 'sm' }), isOcg(cardOf(c)) ? ocgTag() : null)))));
   }
   if (deck.repairs?.length) root.append(h('details', { class: 'panel', style: 'margin-top:10px' }, h('summary', null, 'Was wurde angepasst? (' + deck.repairs.length + ')'), h('ul', { class: 'small muted' }, deck.repairs.map((r) => h('li', null, r)))));
   root.append(h('div', { class: 'row', style: 'margin-top:12px;flex-wrap:wrap' },

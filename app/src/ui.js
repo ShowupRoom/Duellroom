@@ -1,7 +1,7 @@
 // Gemeinsame Oberflächen-Bausteine: Fenster, Kartenansicht
 import { h, $ } from './util.js';
 import { App } from './data.js';
-import { cardEl } from './cards.js';
+import { cardEl, isOcg, ocgTag } from './cards.js';
 import { typeText, levelText, attrName, statsText, kind } from './strings.js';
 import { cleanName } from './data.js';
 
@@ -27,7 +27,7 @@ export function cardInfoBody(code, extra) {
       h('div', { class: 'grow' }, h('div', { class: 'cinfo-n' }, cleanName(c.name)), h('div', { class: 'muted small' }, typeText(c)),
         (c.type & 1) ? h('div', { class: 'small', style: 'margin-top:4px' }, [at, lv].filter(Boolean).join(' · ')) : null,
         (c.type & 1) ? h('div', { class: 'small gold' }, statsText(c)) : null,
-        (c.type & 0x1000000) ? h('div', { class: 'small muted' }, `Pendel-Skala ${c.lscale} / ${c.rscale}`) : null, extra || null)),
+        (c.type & 0x1000000) ? h('div', { class: 'small muted' }, `Pendel-Skala ${c.lscale} / ${c.rscale}`) : null, isOcg(c) ? h('div', { class: 'small', style: 'margin-top:4px' }, ocgTag(), ' nur im OCG erschienen') : null, extra || null)),
     h('div', { class: 'cinfo-t' }, (c.desc || '').replace(/\r/g, '')));
 }
 export function showCard(code, footer) {

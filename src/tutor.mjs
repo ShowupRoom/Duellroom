@@ -1,5 +1,6 @@
 // „KI-Tutor“ (offline): erkennt die Rolle jeder Karte im Deck und erklärt das Ziel in einfachen Worten.
 import { isExtra, T } from './decks.mjs';
+import { engineReport, goalText } from './goals.mjs';
 
 const lc = (s) => s.toLowerCase();
 const HANDTRAPS = new Set(['ash blossom & joyous spring', 'maxx "c"', 'nibiru, the primal being', 'effect veiler', 'droll & lock bird', 'ghost ogre & snow rabbit', 'ghost belle & haunted mansion', 'ghost mourner & moonlit chill', 'ghost sister & spooky dogwood', 'mulcharmy fuwalos', 'mulcharmy meowls', 'mulcharmy purulia', 'infinite impermanence', 'called by the grave', 'crossout designator', 'forbidden droplet', 'd.d. crow', 'retaliating "c"', 'flying "c"', 'kuriboh', 'winged kuriboh', 'winged kuriboh lv10', 'gorgonic guardian', 'artifact lancea', 'bystial magnamhut', 'bystial saronir', 'bystial dis pater', 'bystial druiswurm', 'bystial baldrake', 'evenly matched', 'solemn strike', 'solemn warning', 'solemn judgment', 'ghost belle & haunted mansion']);
@@ -38,7 +39,7 @@ const names = (codes, cards, k = 3) => codes.slice(0, k).map((c) => cards.get(c)
 const list = (a) => (a.length <= 1 ? a.join('') : a.slice(0, -1).join(', ') + ' und ' + a[a.length - 1]);
 
 /** Deck analysieren: Rollen + Stil + automatischer Text (handgeschriebene Texte überschreiben `goal`/`plan`) */
-export function analyze(deck, cards) {
+export function analyze(deck, cards, setnames) {
   const all = [...deck.main, ...deck.extra].map(([c, n]) => ({ code: c, n, card: cards.get(c) })).filter((x) => x.card);
   const roles = {}; for (const x of all) roles[x.code] = roleOf(x.card);
   const by = (r, extraOnly) => all.filter((x) => roles[x.code] === r && (extraOnly === undefined || isExtra(x.card) === extraOnly)).sort((a, b) => b.n - a.n || (b.card.attack || 0) - (a.card.attack || 0)).map((x) => x.code);
@@ -72,5 +73,14 @@ export function analyze(deck, cards) {
     case 'Ritual': { const rs = names(all.filter((x) => (x.card.type & T.RITUAL) && (x.card.type & T.SPELL)).map((x) => x.code), cards, 2); goal = `Dein Ziel: Ritualmonster (${list(B) || 'deine Ritualmonster'}) beschwören. Dafür brauchst du einen Ritualzauber${rs.length ? ` (${list(rs)})` : ''} und Monster als Material, deren Stufen zusammen reichen.${hs}`; plan = ['Suche den passenden Ritualzauber und das Ritualmonster.', 'Lege Monster mit genügend Stufen als Material bereit (Hand oder Feld).', 'Spiele den Ritualzauber und beschwöre das Ritualmonster.', H.length ? `Halte ${list(H)} für den Zug des Gegners zurück.` : 'Setze eine Falle als Schutz.']; break; }
     default: goal = `Dein Ziel: Spiele mit einem Starter (${list(S) || 'deinen Suchkarten'}) deine Combo an, rufe damit ${extraBosses.length ? 'Extradeck-Monster' : 'starke Monster'} (${list(B) || 'deine Bosse'}) und baue ein starkes Endboard auf.${hs}`; plan = [`Start: Suche in der Starthand einen Starter (${list(S) || 'Suchkarte'}). Er holt die nächsten Teile deiner Combo.`, `Aufbau: Beschwöre ${extraBosses.length ? 'über ' + style.split('-')[0] + ' ' : ''}${list(B) || 'deine Bosse'}.`, E.length ? `Verlängern: ${list(E)} hilft dir, mehr Monster auf das Feld zu bringen.` : 'Verlängern: Nutze Effekte deiner Monster, um zusätzlich Monster zu rufen.', H.length ? `Schutz: Halte ${list(H)} zurück und nutze sie im Zug des Gegners.` : 'Schutz: Halte eine Fallen- oder Quick-Effekt-Karte für den Gegnerzug bereit.']; break;
   }
-  return { style, goal, plan, roles, keys: { starters: starters.slice(0, 6), extenders: extenders.slice(0, 6), bosses: bosses.slice(0, 6), handtraps: handtraps.slice(0, 6), removal: removal.slice(0, 6) } };
+  // Engines, Brücken und Bosse aus den gespielten Karten (überschreibt die allgemeinen Texte, wenn eine Engine erkannt wurde)
+  let engines = [], bridges = [];
+  try {
+    const rep = engineReport(deck, cards, setnames, roleOf); const nmOf = (c) => ({ name: cards.get(c)?.name.replace(/\s*\((GOAT|Pre-Errata)\)$/i, '') || String(c) });
+    const inEng = new Set(rep.engines.flatMap((g) => g.all.map((e) => e.code))); const gt = rep.engines.length ? goalText(rep, { handtraps: handtraps.map(nmOf), removal: removal.filter((c) => !inEng.has(c)).map(nmOf) }) : null;
+    if (gt && style !== 'Exodia' && style !== 'Burn') { goal = gt.goal; plan = gt.plan; }
+    engines = rep.engines.map((g) => ({ n: g.name, k: g.kind, c: g.copies, st: g.starters.map((e) => e.code), ex: g.extenders.map((e) => e.code), bo: g.bosses.map((e) => e.code), su: g.support.map((e) => e.code) }));
+    bridges = rep.bridges.map((b) => ({ c: b.code, w: b.why }));
+  } catch (e) { /* allgemeiner Text bleibt */ }
+  return { style, goal, plan, roles, engines, bridges, keys: { starters: starters.slice(0, 6), extenders: extenders.slice(0, 6), bosses: bosses.slice(0, 6), handtraps: handtraps.slice(0, 6), removal: removal.slice(0, 6) } };
 }

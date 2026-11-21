@@ -64,6 +64,9 @@ export async function preload(codes, onProgress = () => {}) {
 }
 
 // ---- Elemente -------------------------------------------------------------
+/** nur im OCG erschienen (noch nicht im TCG) */
+export const isOcg = (c) => !!c && (c.ot & 1) === 1 && (c.ot & 2) === 0;
+export const ocgTag = (cls = '') => h('span', { class: 'ocg ' + cls, title: 'OCG-Karte – im TCG nicht erschienen' }, 'OCG');
 const LV = (c) => (c && c.type & 1 ? (c.type & 0x4000000 ? 'L' + c.level : '★' + c.level) : '');
 /** Vollständige Karte (Hand, Listen, Auswahl). o: {back, cls, atk} */
 export function cardEl(code, o = {}) {

@@ -1,8 +1,9 @@
 // Sammelt alle Decks (Vorlagen, .ydk-Repo, Goat/Edison/Genesys von ygoprodeck), prüft/repariert sie und schreibt data/decks.json
 import { readFileSync, writeFileSync } from 'node:fs';
-import { loadCards, goatMap, FET } from '../test/lib.mjs';
+import { existsSync, readdirSync } from 'node:fs';
+import { loadCards, goatMap, FET, SRC } from '../test/lib.mjs';
 import { FORMATS, validate, repair, count } from '../src/decks.mjs';
-import { group, canon } from './ydk.mjs';
+import { group, canon, parseYdk } from './ydk.mjs';
 const cards = loadCards(); const GM = goatMap(cards);
 const lists = JSON.parse(readFileSync(new URL('../data/lists.json', import.meta.url), 'utf-8'));
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -20,6 +21,23 @@ for (const p of JSON.parse(readFileSync(new URL('../data/presets.json', import.m
 for (const d of JSON.parse(readFileSync(new URL('../data/decks-ydk.json', import.meta.url), 'utf-8'))) {
   if (d.dupOf) continue;
   raw.push({ id: d.id, name: d.name, fmt: 'advanced', list: 'tcg', grp: d.grp === 'todo' ? 'Entwürfe' : d.grp, sub: d.sub, src: d.src, main: d.main, extra: d.extra, side: d.side });
+}
+// 2b) EDOPro-KI-Decks (ProjectIgnis/windbot): aktuelle, gut spielbare Archetyp-Decks → „Beliebte Decks“ (Advanced)
+const WB = SRC + '/windbot/Decks';
+if (existsSync(WB)) {
+  const known = new Set(raw.map((d) => JSON.stringify([d.main.slice().sort(), d.extra.slice().sort()])));
+  const pretty = (f) => f.replace(/^AI_/, '').replace(/\.ydk$/i, '').replace(/[\[\]]/g, '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').replace(/(\d{4})/, ' $1').replace(/\s+/g, ' ').trim();
+  let n = 0;
+  for (const f of readdirSync(WB).filter((x) => /\.ydk$/i.test(x)).sort()) {
+    const r = parseYdk(readFileSync(WB + '/' + f, 'utf-8'));
+    const d = { main: group(r.main, cards), extra: group(r.extra, cards), side: group(r.side, cards) };
+    if (r.main.length < 30 || r.main.filter((c) => cards.has(c)).length < Math.min(35, r.main.length - 2)) continue; // zu viele Karten, die es nicht in der Datenbank gibt (Custom-Karten)
+    const key = JSON.stringify([d.main.slice().sort(), d.extra.slice().sort()]); if (known.has(key)) continue; known.add(key);
+    const okIn = (l) => !validate(d, { ...FORMATS.advanced, list: l }, cards, lists).length;
+    const list = okIn('tcg') ? 'tcg' : okIn('ocg') ? 'ocg' : 'tcg';
+    raw.push({ id: 'wb-' + slug(f.replace(/\.ydk$/i, '')), name: pretty(f), fmt: 'advanced', list, grp: 'Beliebte Decks', sub: '', src: 'EDOPro (ProjectIgnis/windbot)', main: d.main, extra: d.extra, side: d.side }); n++;
+  }
+  console.log('EDOPro-KI-Decks übernommen:', n);
 }
 // 3) Goat / Edison / Genesys
 for (const [fmt, file] of [['goat', 'goat.txt'], ['edison', 'edison.txt'], ['genesys', 'genesys.txt']]) {

@@ -30,7 +30,7 @@ console.log('Skripte', Object.keys(index).length, 'roh', (rawTotal / 1e6).toFixe
 
 // Karten
 const cards = loadCards(); const rows = [];
-for (const c of cards.values()) rows.push([c.code, c.alias, c.setcodes, c.type, c.level, c.attribute, String(c.race), c.attack, c.defense, c.lscale, c.rscale, c.name, c.desc, c.strs.filter(Boolean).length ? c.strs : 0]);
+for (const c of cards.values()) rows.push([c.code, c.alias, c.setcodes, c.type, c.level, c.attribute, String(c.race), c.attack, c.defense, c.lscale, c.rscale, c.name, c.desc, c.strs.filter(Boolean).length ? c.strs : 0, c.ot || 0]);
 const cj = gzipSync(Buffer.from(JSON.stringify(rows)), { level: 9 });
 writeFileSync('app/dist/cards.gz', cj);
 console.log('Karten', rows.length, 'gz', (cj.length / 1e6).toFixed(2), 'MB');

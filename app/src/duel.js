@@ -1,6 +1,7 @@
 // Duell-Oberfläche: Spielfeld, Hand, Ereignisse, Übergabe zwischen den Spielern
 import { h, clear, sleep, toast, shuffled, beep, rand32, zkey as key } from './util.js';
 import { App, MODES, fmtById, expand, nameOf, cardOf, cleanName, withTutor } from './data.js';
+import { DuelAI } from '../../src/ai.mjs';
 import { randomResponse, OcgResponseType as R, OcgMessageType as MSG, SelectIdleCMDAction as IA, SelectBattleCMDAction as BA, LOC, MSG_NAME } from '../../src/core.mjs';
 import { cardEl, fieldEl } from './cards.js';
 import { openModal, confirmBox, cardInfoBody } from './ui.js';
@@ -54,6 +55,7 @@ class Duel {
     setGuard(async () => { const ok = await confirmBox('Duell verlassen?', this.net ? 'Das Online-Duell wird für beide beendet.' : 'Der Spielstand geht verloren.', 'Verlassen', 'Weiterspielen', true); if (ok) { if (this.net) this.net.send({ t: 'leave' }); this.destroy(); } return ok; });
     this.fit();
     const { conf } = this; const m = this.mode;
+    if (conf.mode === 'ai' || conf.mode === 'bot') this.ai = new DuelAI(App.cards, conf.level || 'normal');
     if (this.net) this.netSetup();
     try {
       if (conf.mode === 'net-guest') this.eng = conf.remote;
@@ -117,16 +119,17 @@ class Duel {
         if (this.stopped) return;
       } else {
         this.render();
-        resp = this.botResponse(msg); if (this.conf.mode === 'bot') await sleep(this.anim ? 200 : 0);
+        resp = this.botResponse(msg, st.evs, r.retry); if (this.ai && this.anim && (msg.type === MSG.SELECT_IDLECMD || msg.type === MSG.SELECT_BATTLECMD)) await sleep(240);
       }
     }
   }
-  botResponse(msg) {
+  botResponse(msg, evs, retry) {
     if (this.conf.mode === 'solo') {
       if (msg.type === MSG.SELECT_IDLECMD) return { type: R.SELECT_IDLECMD, action: msg.to_ep ? IA.TO_EP : IA.TO_BP, index: null };
       if (msg.type === MSG.SELECT_BATTLECMD) return { type: R.SELECT_BATTLECMD, action: msg.to_ep ? BA.TO_EP : BA.TO_M2, index: null };
       if (msg.type === MSG.SELECT_CHAIN) return msg.forced ? { type: R.SELECT_CHAIN, index: 0 } : { type: R.SELECT_CHAIN, index: null };
     }
+    if (this.ai) return this.ai.respond(msg, { snap: this.snap, evs, retry });
     return randomResponse(msg, Math.random, { cards: App.cards });
   }
   collectHints(evs) {

@@ -4,7 +4,7 @@ const { Database } = pkg;
 
 export function readCdb(path, into = new Map()) {
   const db = new Database(path, { readOnly: true });
-  const rows = db.all('select d.id,d.alias,d.setcode,d.type,d.atk,d.def,d.level,d.race,d.attribute,t.name,t.desc,t.str1,t.str2,t.str3,t.str4,t.str5,t.str6,t.str7,t.str8,t.str9,t.str10,t.str11,t.str12,t.str13,t.str14,t.str15,t.str16 from datas d join texts t on t.id=d.id');
+  const rows = db.all('select d.id,d.ot,d.alias,d.setcode,d.type,d.atk,d.def,d.level,d.race,d.attribute,t.name,t.desc,t.str1,t.str2,t.str3,t.str4,t.str5,t.str6,t.str7,t.str8,t.str9,t.str10,t.str11,t.str12,t.str13,t.str14,t.str15,t.str16 from datas d join texts t on t.id=d.id');
   for (const r of rows) into.set(r.id, rowToCard(r));
   db.close();
   return into;
@@ -19,6 +19,6 @@ export function rowToCard(r) {
   return {
     code: r.id, alias: r.alias, setcodes: sc, type: r.type, level: lv, attribute: r.attribute, race: BigInt(r.race),
     attack: r.atk, defense: r.def, lscale: ls, rscale: rs, link_marker: (r.type & 0x4000000) ? r.def : 0,
-    name: r.name, desc: r.desc, strs,
+    name: r.name, desc: r.desc, strs, ot: r.ot || 0,
   };
 }

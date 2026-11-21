@@ -45,7 +45,7 @@ export function saveCustom(deck) {
   store.set('decks', all); return rec;
 }
 export function deleteCustom(id) { store.set('decks', customDecks().filter((d) => d.id !== id)); }
-export function withTutor(d) { if (!d.tutor || !d.tutor.goal) { d.tutor = { ...analyze(d, App.cards), ...(d.tutor || {}) }; } return d; }
+export function withTutor(d) { if (!d.tutor || !d.tutor.goal) { d.tutor = { ...analyze(d, App.cards, App.strings && App.strings.setname), ...(d.tutor || {}) }; } return d; }
 export function allDecks(fmt) {
   const mine = customDecks().filter((d) => !fmt || d.fmt === fmt).map((d) => ({ ...d, grp: 'Meine Decks', sub: '', status: d.status || 'ok', repairs: d.repairs || [] }));
   return [...mine, ...App.decks.filter((d) => !fmt || d.fmt === fmt)];

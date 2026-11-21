@@ -1,7 +1,7 @@
 // Deck-Werkstatt: eigene Decks bauen, Ziehen & Ablegen aus allen Karten, Prüfung je Format
 import { h, $, clear, toast, uid } from './util.js';
 import { App, FORMAT_INFO, FORMATS, fmtById, allDecks, customDecks, saveCustom, deleteCustom, withTutor, nameOf, cardOf, cleanName, count, expand, toFmtCode, toPlainCode, goatMaps } from './data.js';
-import { cardEl } from './cards.js';
+import { cardEl, isOcg, ocgTag } from './cards.js';
 import { openModal, confirmBox, cardInfoBody } from './ui.js';
 import { go, back, replace, screens, setGuard, setParams } from './nav.js';
 import { store } from './store.js';
@@ -76,7 +76,7 @@ function importDialog(fmtId, done) {
 screens.editor = (params = {}) => {
   const src = params.deck || {}; const S = { id: src.id || 'my-' + uid(), saved: !!src.id && customDecks().some((d) => d.id === src.id), name: src.name || 'Mein Deck', fmt: src.fmt || params.fmt || 'advanced', list: src.list || 'tcg', main: clone(src.main), extra: clone(src.extra), side: clone(src.side), dirty: params.dirty ?? !src.id };
   if (S.fmt === 'goat') { for (const k of ['main', 'extra', 'side']) S[k] = S[k].map(([c, n]) => [toFmtCode(c, 'goat'), n]); }
-  const F = { q: '', type: 'all', attr: 0, lvl: 'all', sub: 'all', legal: true, more: false }; let split = 1; let sel = null;
+  const F = { q: '', type: 'all', attr: 0, lvl: 'all', sub: 'all', legal: true, more: false, ocg: 'all' }; let split = 1; let sel = null;
   const fmt = () => fmtById(S.fmt, S.fmt === 'advanced' ? S.list : undefined);
   const lim = (code) => allowed(code, fmt(), App.lists);
   const totalOf = (code) => num(S.main, code) + num(S.extra, code) + num(S.side, code);
@@ -92,8 +92,14 @@ screens.editor = (params = {}) => {
     const iss = issues(); const pts = deckPoints(S, App.lists); clear(status);
     status.append(h('div', { class: 'tabs' }, ['goat', 'edison', 'advanced', 'genesys'].map((f) => h('button', { class: 'chip' + (S.fmt === f ? ' on' : ''), onclick: () => switchFmt(f) }, FORMAT_INFO[f].title)), S.fmt === 'advanced' ? ['tcg', 'ocg'].map((l) => h('button', { class: 'chip' + (S.list === l ? ' on' : ''), onclick: () => { S.list = l; S.dirty = true; paint(); } }, l.toUpperCase())) : null),
       h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap' }, h('span', { class: 'chip ' + (count(S.main) >= 40 && count(S.main) <= 60 ? 'ok' : 'bad') }, `Haupt ${count(S.main)}`), h('span', { class: 'chip ' + (count(S.extra) <= 15 ? 'ok' : 'bad') }, `Extra ${count(S.extra)}`), h('span', { class: 'chip ' + (count(S.side) <= 15 ? 'ok' : 'bad') }, `Side ${count(S.side)}`), S.fmt === 'genesys' ? h('span', { class: 'chip ' + (pts <= 100 ? 'ok' : 'bad') }, `${pts}/100 Punkte`) : null,
+        ocgN() ? h('button', { class: 'chip ' + (S.fmt === 'advanced' && S.list === 'tcg' ? 'warn' : ''), onclick: showOcg }, `OCG ${ocgN()}`) : null,
         h('button', { class: 'chip ' + (iss.length ? 'warn' : 'ok'), onclick: () => showIssues() }, iss.length ? `⚠ ${iss.length} Hinweis${iss.length > 1 ? 'e' : ''}` : '✓ spielbar'), h('button', { class: 'chip', onclick: () => { split = (split + 1) % 3; split1.className = 'ed-split s' + split; } }, '⇕')));
   };
+  const ocgCodes = () => [...new Set(['main', 'extra', 'side'].flatMap((z) => S[z].map((e) => e[0])))].filter((c) => isOcg(cardOf(c)));
+  const ocgN = () => ocgCodes().reduce((n, c) => n + totalOf(c), 0);
+  function showOcg() {
+    const tcg = S.fmt === 'advanced' && S.list === 'tcg'; const m = openModal({ title: 'OCG-Karten in diesem Deck', center: true, body: h('div', null, h('p', { class: 'small' }, tcg ? 'Diese Karten sind bisher nur im OCG (Japan/Asien) erschienen. Im TCG gibt es sie noch nicht – für ein echtes TCG-Deck solltest du sie ersetzen.' : 'Diese Karten sind bisher nur im OCG erschienen.'), h('ul', { class: 'small' }, ocgCodes().map((c) => h('li', null, `${totalOf(c)}× ${cleanName(cardOf(c).name)}`)))), footer: h('button', { class: 'btn pri', onclick: () => m.close() }, 'OK') });
+  }
   function showIssues() {
     const iss = issues(); const m = openModal({ title: iss.length ? 'Das stimmt noch nicht' : 'Alles in Ordnung', center: true, body: iss.length ? h('ul', { class: 'small' }, iss.map((i) => h('li', null, i.msg))) : h('p', null, 'Dieses Deck ist für das Format regelkonform und spielbar.'), footer: iss.length ? [h('button', { class: 'btn ghost', onclick: () => m.close() }, 'Selbst beheben'), h('button', { class: 'btn pri', onclick: () => { m.close(); autoFix(); } }, '🛠 Automatisch reparieren')] : h('button', { class: 'btn pri', onclick: () => m.close() }, 'OK') });
   }
@@ -110,15 +116,16 @@ screens.editor = (params = {}) => {
   // ---- Deckansicht
   const badSet = () => new Set(issues().filter((i) => i.code).map((i) => i.code));
   const paintDeck = () => {
-    clear(deckPane); const bad = badSet();
+    const keepTop = deckPane.scrollTop; clear(deckPane); const bad = badSet();
     for (const [z, label, max] of [['main', 'Hauptdeck', 60], ['extra', 'Extradeck', 15], ['side', 'Sidedeck', 15]]) {
       const list = sortList(S[z]); const n = count(list);
       const zone = h('div', { class: 'dz', 'data-zone': z }, h('div', { class: 'dz-h' }, h('b', null, label), h('span', { class: 'muted small' }, `${n}${z === 'main' ? ' / 40–60' : ' / ' + max}`)),
-        h('div', { class: 'ed-grid' }, list.length ? list.map(([c, k]) => ecEl(c, k, z, bad.has(c))) : h('div', { class: 'dz-empty' }, z === 'main' ? 'Karten hierher ziehen oder unten antippen' : 'leer')));
+        h('div', { class: 'ed-grid' }, list.length ? list.flatMap(([c, k]) => Array.from({ length: k }, () => ecEl(c, z, bad.has(c)))) : h('div', { class: 'dz-empty' }, z === 'main' ? 'Karten hierher ziehen oder unten antippen' : 'leer')));
       deckPane.append(zone);
     }
+    deckPane.scrollTop = keepTop;
   };
-  const ecEl = (c, k, z, bad) => { const e = h('div', { class: 'ec' + (bad ? ' bad' : ''), 'data-code': c, 'data-src': z }, cardEl(c, { cls: 'ed' }), k > 1 ? h('span', { class: 'cnt' }, '×' + k) : null); if (S.fmt === 'genesys' && points(c, App.lists)) e.append(h('span', { class: 'pt' }, points(c, App.lists))); return e; };
+  const ecEl = (c, z, bad) => { const e = h('div', { class: 'ec' + (bad ? ' bad' : ''), 'data-code': c, 'data-src': z }, cardEl(c, { cls: 'ed' }), isOcg(cardOf(c)) ? ocgTag() : null); if (S.fmt === 'genesys' && points(c, App.lists)) e.append(h('span', { class: 'pt' }, points(c, App.lists))); return e; };
 
   // ---- Kartenvorrat
   let filtered = []; let shown = 0; const CH = 72;
@@ -131,13 +138,14 @@ screens.editor = (params = {}) => {
       if (F.lvl !== 'all' && (c.type & 1)) { const l = c.level & 0xff; if (F.lvl === 'low' && l > 4) return false; if (F.lvl === 'mid' && (l < 5 || l > 6)) return false; if (F.lvl === 'high' && l < 7) return false; } else if (F.lvl !== 'all') return false;
       if (F.sub !== 'all') { const mk = subMasks[F.sub]; if (!(c.type & mk)) return false; }
       if (F.legal && lim(c.code) === 0) return false;
+      if (F.ocg === 'only' && !isOcg(c)) return false; if (F.ocg === 'none' && isOcg(c)) return false;
       if (q && !(ln.includes(q) || (q.length > 3 && c.desc && c.desc.toLowerCase().includes(q)))) return false;
       return true;
     });
     if (q) { const nm = []; const ds = []; for (const e of filtered) (e.ln.includes(q) ? nm : ds).push(e); filtered = nm.concat(ds); }
     shown = 0; clear(poolList); poolList.scrollTop = 0; more();
   };
-  const pcEl = (c) => { const code = c.code; const l = lim(code); const e = h('div', { class: 'pc' + (l === 0 ? ' ban' : ''), 'data-code': code, 'data-src': 'pool' }, cardEl(code, { cls: 'ed' }), l < 3 ? h('span', { class: 'lim l' + l }, l === 0 ? '✕' : l) : null, S.fmt === 'genesys' && points(code, App.lists) ? h('span', { class: 'pt' }, points(code, App.lists)) : null, h('span', { class: 'inn' }, totalOf(code) ? '×' + totalOf(code) : '')); return e; };
+  const pcEl = (c) => { const code = c.code; const l = lim(code); const e = h('div', { class: 'pc' + (l === 0 ? ' ban' : ''), 'data-code': code, 'data-src': 'pool' }, cardEl(code, { cls: 'ed' }), isOcg(c) ? ocgTag() : null, l < 3 ? h('span', { class: 'lim l' + l }, l === 0 ? '✕' : l) : null, S.fmt === 'genesys' && points(code, App.lists) ? h('span', { class: 'pt' }, points(code, App.lists)) : null, h('span', { class: 'inn' }, totalOf(code) ? '×' + totalOf(code) : '')); return e; };
   const more = () => { const end = Math.min(filtered.length, shown + CH); const frag = document.createDocumentFragment(); for (let i = shown; i < end; i++) frag.append(pcEl(filtered[i].c)); shown = end; poolList.append(frag); if (!filtered.length) poolList.append(h('div', { class: 'dz-empty' }, 'Keine Karte gefunden')); countEl.textContent = `${filtered.length.toLocaleString('de-DE')} Karten`; };
   const refreshPool = () => { for (const e of poolList.querySelectorAll('.pc')) { const code = +e.dataset.code; const n = totalOf(code); const i = e.querySelector('.inn'); if (i) i.textContent = n ? '×' + n : ''; } };
   poolList.addEventListener('scroll', () => { if (poolList.scrollTop + poolList.clientHeight > poolList.scrollHeight - 400 && shown < filtered.length) more(); });
@@ -146,7 +154,7 @@ screens.editor = (params = {}) => {
   const chip = (label, active, fn) => h('button', { class: 'chip' + (active ? ' on' : ''), onclick: fn }, label);
   const paintFilters = () => {
     clear(filterBar);
-    filterBar.append(h('div', { class: 'tabs' }, [['all', 'Alle'], ['monster', 'Monster'], ['spell', 'Zauber'], ['trap', 'Fallen'], ['extra', 'Extra']].map(([k, t]) => chip(t, F.type === k, () => { F.type = k; paintFilters(); applyFilter(); })), chip(F.more ? '▲ Filter' : '▼ Filter', F.more, () => { F.more = !F.more; paintFilters(); }), chip('nur erlaubte', F.legal, () => { F.legal = !F.legal; paintFilters(); applyFilter(); }), countEl));
+    filterBar.append(h('div', { class: 'tabs' }, [['all', 'Alle'], ['monster', 'Monster'], ['spell', 'Zauber'], ['trap', 'Fallen'], ['extra', 'Extra']].map(([k, t]) => chip(t, F.type === k, () => { F.type = k; paintFilters(); applyFilter(); })), chip(F.more ? '▲ Filter' : '▼ Filter', F.more, () => { F.more = !F.more; paintFilters(); }), chip('nur erlaubte', F.legal, () => { F.legal = !F.legal; paintFilters(); applyFilter(); }), chip(F.ocg === 'all' ? 'OCG: alle' : F.ocg === 'only' ? 'nur OCG' : 'ohne OCG', F.ocg !== 'all', () => { F.ocg = F.ocg === 'all' ? 'only' : F.ocg === 'only' ? 'none' : 'all'; paintFilters(); applyFilter(); }), countEl));
     if (F.more) filterBar.append(h('div', { class: 'tabs' }, chip('alle Attribute', !F.attr, () => { F.attr = 0; paintFilters(); applyFilter(); }), ATTR_BITS.slice(0, 6).map(([v, n]) => chip(n[0] + n.slice(1).toLowerCase(), F.attr === v, () => { F.attr = v; paintFilters(); applyFilter(); }))),
       h('div', { class: 'tabs' }, [['all', 'jede Stufe'], ['low', '1–4'], ['mid', '5–6'], ['high', '7+']].map(([k, t]) => chip(t, F.lvl === k, () => { F.lvl = k; paintFilters(); applyFilter(); }))),
       h('div', { class: 'tabs' }, [['all', 'jede Art'], ['normal', 'Normal'], ['effect', 'Effekt'], ['fusion', 'Fusion'], ['ritual', 'Ritual'], ['synchro', 'Synchro'], ['xyz', 'Xyz'], ['link', 'Link'], ['pendulum', 'Pendel'], ['tuner', 'Empfänger']].map(([k, t]) => chip(t, F.sub === k, () => { F.sub = k; paintFilters(); applyFilter(); }))));
@@ -178,6 +186,7 @@ screens.editor = (params = {}) => {
     const btns = z === 'pool' ? [h('button', { class: 'btn pri', onclick: () => { add(ex ? 'extra' : 'main', code); } }, ex ? '＋ Extradeck' : '＋ Hauptdeck'), h('button', { class: 'btn', onclick: () => add('side', code) }, '＋ Side'), h('button', { class: 'btn ghost', onclick: () => remove(num(S.main, code) ? 'main' : num(S.extra, code) ? 'extra' : 'side', code) , disabled: !inDeck }, '−')]
       : [h('button', { class: 'btn red', onclick: () => { remove(z, code); if (!num(S[z], code)) closeDock(); } }, '− Entfernen'), h('button', { class: 'btn', onclick: () => add(z, code) }, '＋ Kopie'), z === 'side' ? h('button', { class: 'btn', onclick: () => { move('side', ex ? 'extra' : 'main', code); if (!num(S.side, code)) closeDock(); } }, '→ Deck') : h('button', { class: 'btn', onclick: () => { move(z, 'side', code); if (!num(S[z], code)) closeDock(); } }, '→ Side')];
     dock.append(h('button', { class: 'sh-x', onclick: closeDock }, '✕'), h('div', { class: 'sh-top' }, cardEl(code, { cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'sh-n' }, cleanName(c.name)), h('div', { class: 'small muted' }, typeText(c)), (c.type & 1) ? h('div', { class: 'small' }, [attrName(c.attribute), levelText(c)].filter(Boolean).join(' · ')) : null, (c.type & 1) ? h('div', { class: 'small gold' }, statsText(c)) : null,
+      isOcg(c) ? h('div', { class: 'small', style: 'margin-top:4px' }, ocgTag(), ' nur im OCG erschienen') : null,
       h('div', { class: 'small', style: 'margin-top:4px' }, `Im Deck: ${inDeck}× · erlaubt: ${lim(code)}×` + (S.fmt === 'genesys' ? ` · ${points(code, App.lists)} Punkte` : '')))),
       h('div', { class: 'sh-t' }, (c.desc || '').replace(/\r/g, '')), h('div', { class: 'row', style: 'margin-top:8px' }, btns));
   }

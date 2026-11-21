@@ -21,7 +21,7 @@ export async function openScripts(gz) {
 /** Karten-Zeilen → Map wie vom Kern erwartet */
 export async function openCards(gz) {
   const rows = JSON.parse(new TextDecoder().decode(await gunzip(gz))); const m = new Map();
-  for (const r of rows) m.set(r[0], { code: r[0], alias: r[1], setcodes: r[2], type: r[3], level: r[4], attribute: r[5], race: BigInt(r[6]), attack: r[7], defense: r[8], lscale: r[9], rscale: r[10], link_marker: (r[3] & 0x4000000) ? r[8] : 0, name: r[11], desc: r[12], strs: r[13] || [] });
+  for (const r of rows) m.set(r[0], { code: r[0], alias: r[1], setcodes: r[2], type: r[3], level: r[4], attribute: r[5], race: BigInt(r[6]), attack: r[7], defense: r[8], lscale: r[9], rscale: r[10], link_marker: (r[3] & 0x4000000) ? r[8] : 0, name: r[11], desc: r[12], strs: r[13] || [], ot: r[14] || 0 });
   return m;
 }
 export async function openData(gz) { return JSON.parse(new TextDecoder().decode(await gunzip(gz))); }
