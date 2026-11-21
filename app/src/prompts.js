@@ -1,6 +1,6 @@
 // Auswahlfenster zu allen Entscheidungen, die der Spielkern verlangt
 import { h, clear, toast, zkey as key } from './util.js';
-import { App, nameOf, cardOf, cleanName, searchName } from './data.js';
+import { App, nameOf, cardOf, cleanName, searchName, descSplit } from './data.js';
 import { OcgResponseType as R, OcgMessageType as MSG, SelectIdleCMDAction as IA, SelectBattleCMDAction as BA, LOC, OcgPosition as POS, placesFromMask, sumSelectionValid } from '../../src/core.mjs';
 import { cardMatchesOpcode } from 'ocgcore-wasm';
 import { cardEl } from './cards.js';
@@ -57,7 +57,7 @@ function askIdle(D, msg) {
   msg.pos_changes.forEach((c, i) => { const cur = D.cardAt(c.controller, c.location, c.sequence); const down = cur && !(cur.position & 5); register(D, c, 'pos', down ? 'Flipbeschwörung' : 'Kampfposition ändern', r(IA.SELECT_POS_CHANGE, i)); }); // verdecktes Monster aufdecken = Flipbeschwörung
   msg.monster_sets.forEach((c, i) => register(D, c, 'set', sys(1153, 'Setzen'), r(IA.SELECT_MONSTER_SET, i)));
   msg.spell_sets.forEach((c, i) => register(D, c, 'spellset', sys(1153, 'Setzen'), r(IA.SELECT_SPELL_SET, i)));
-  msg.activates.forEach((c, i) => { const d = descText(c.description, c.code); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n ? ': ' + d.replace(/\s+/g, ' ').slice(0, 90) : ''), r(IA.SELECT_ACTIVATE, i), true); });
+  msg.activates.forEach((c, i) => { const d = descText(c.description, c.code); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n && d.trim() !== 'Aktivieren' ? ': ' + d.replace(/\s+/g, ' ').slice(0, 90) : ''), r(IA.SELECT_ACTIVATE, i), true); });
   const n = D.actList.length;
   D.setTip(D.conf.tutor ? idleTip(D, msg) : null); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
   // Kampfphase nur, wenn der Kern sie erlaubt (nicht im ersten Zug) UND ein Monster in Angriffsposition angreifen kann – wie in Master Duel
@@ -70,7 +70,7 @@ function askBattle(D, msg) {
   D.acts = new Map(); D.actList = [];
   const r = (action, index) => ({ type: R.SELECT_BATTLECMD, action, index });
   msg.attacks.forEach((c, i) => register(D, c, 'attack', 'Angreifen' + (c.can_direct ? ' (direkt möglich)' : ''), r(BA.SELECT_BATTLE, i), true));
-  msg.chains.forEach((c, i) => { const d = descText(c.description, c.code); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n ? ': ' + d.slice(0, 90) : ''), r(BA.SELECT_CHAIN, i), true); });
+  msg.chains.forEach((c, i) => { const d = descText(c.description, c.code); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n && d.trim() !== 'Aktivieren' ? ': ' + d.slice(0, 90) : ''), r(BA.SELECT_CHAIN, i), true); });
   D.setTip(D.conf.tutor ? battleTip(D, msg) : null); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
   D.phaseOpts = { M2: msg.to_m2 ? r(BA.TO_M2, null) : null, EP: msg.to_ep ? r(BA.TO_EP, null) : null };
   D.hideBar();
@@ -197,7 +197,12 @@ function askYesNo(D, msg) {
 function askOption(D, msg) {
   return new Promise((resolve) => {
     const fin = (i) => { m.close(); resolve({ type: R.SELECT_OPTION, index: i }); };
-    const m = M(D, { title: D.hintText || 'Wähle eine Option', sticky: true, cls: 'peek', body: h('div', { class: 'col' }, msg.options.map((o, i) => h('button', { class: 'btn', style: 'justify-content:flex-start;text-align:left;height:auto;padding:10px 14px', onclick: () => fin(i) }, descText(o) || `Option ${i + 1}`))) });
+    // Die Karte, zu der die Optionen gehören (aus der Beschreibungsnummer; sonst die zuletzt aktive Kette), zeigen wir mit
+    const sp = msg.options.map((o) => descSplit(o)).find((s) => s && App.cards.has(s.code)); const last = D.chain && D.chain.length ? D.chain[D.chain.length - 1].code : 0;
+    const code = sp ? sp.code : last; const ccard = code ? cardOf(code) : null;
+    const head = ccard ? h('div', { class: 'opt-h' }, cardEl(code, { cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'opt-n' }, cleanName(ccard.name)), h('div', { class: 'small muted' }, 'Wähle, was passieren soll:'))) : null;
+    const btns = msg.options.map((o, i) => { const t = descText(o, code); return h('button', { class: 'btn opt-b', onclick: () => fin(i) }, h('b', { class: 'opt-i' }, String(i + 1)), h('span', null, t || `Option ${i + 1}`)); });
+    const m = M(D, { title: D.hintText || (head ? 'Wähle einen Effekt' : 'Wähle eine Option'), sticky: true, cls: 'peek', body: h('div', { class: 'col' }, head, ...btns) });
   });
 }
 

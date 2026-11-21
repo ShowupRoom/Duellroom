@@ -83,6 +83,12 @@ export const nameOf = (code) => cleanName(App.cards.get(code)?.name || String(co
 /** Kartentext in der gewählten Sprache */
 export const descOf = (c) => { if (!c) return ''; if (useDe()) { const t = App.de.get(c.code); if (t && t[1]) return t[1]; } return c.desc || ''; };
 /** Effekttext (strN) einer Karte in der gewählten Sprache */
+/** Beschreibungsnummer des Kerns zerlegen: < 10000 = Systemtext, sonst Kartencode << 20 | Nr. (ältere Skripte: Code * 16 + Nr.) */
+export function descSplit(desc) {
+  const d = Number(desc || 0); if (d < 10000) return null;
+  const hi = Math.floor(d / 1048576); if (App.cards.has(hi)) return { code: hi, idx: d % 1048576 };
+  return { code: Math.floor(d / 16), idx: d % 16 };
+}
 export const strOf = (c, i) => { if (!c) return ''; if (useDe()) { const t = App.de.get(c.code); if (t && t[2] && t[2][i]) return t[2][i]; } return (c.strs && c.strs[i]) || ''; };
 /** Englische Namen in „…“ / «…» eines Textes durch die deutschen ersetzen (Tutor-Texte entstehen mit englischen Namen) */
 export const loc = (t) => { if (!t || !useDe() || typeof t !== 'string') return t; return t.replace(/([„«])([^“»]{2,80})([“»])/g, (m, a, n, z) => { const g = App.deName.get(n); return g ? a + g + z : m; }); };

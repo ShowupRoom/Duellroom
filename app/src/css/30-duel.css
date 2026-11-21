@@ -73,8 +73,8 @@
 .duel.land{flex-direction:row;padding-top:var(--safe-t);align-items:stretch}
 .duel.land .d-col{display:flex;flex-direction:column;min-height:0;min-width:0}
 .duel.land .d-col>*{order:0}
-.land .d-l{flex:0 0 var(--sidew);width:var(--sidew);padding:8px 4px 8px 6px;gap:6px}
-.land .d-r{flex:0 0 var(--sidew);width:var(--sidew);padding:8px 6px calc(8px + var(--safe-b)) 4px;gap:6px}
+.land .d-l{flex:0 0 var(--sidel,var(--sidew));width:var(--sidel,var(--sidew));padding:8px 4px 8px 6px;gap:6px}
+.land .d-r{flex:0 0 var(--sider,var(--sidew));width:var(--sider,var(--sidew));padding:8px 6px calc(8px + var(--safe-b)) 4px;gap:6px}
 .land .d-c{flex:1 1 0;position:relative;align-items:center;justify-content:center;padding:var(--opk) 6px calc(var(--hpk) + var(--safe-b))}
 .land .d-board{flex:1;min-height:0;width:100%;padding:0}
 .land .d-ohand{display:flex;position:absolute;top:calc(var(--opk)*-1);left:50%;transform:translateX(-50%);height:var(--opk);overflow:hidden;pointer-events:none;z-index:2}
@@ -83,15 +83,15 @@
 /* LP-Felder */
 .land .d-strip{flex:none;flex-direction:column;align-items:stretch;gap:3px;padding:6px 10px;border:1px solid var(--line2);border-radius:12px;background:linear-gradient(180deg,rgba(14,36,86,.85),rgba(6,16,40,.85))}
 .land .d-strip.opp{border-color:rgba(255,120,130,.5)}.land .d-strip.me{border-color:rgba(79,211,255,.6)}
-.land .st-n{max-width:none;font-size:13px}
-.land .lpw{height:auto;flex-direction:column-reverse;align-items:stretch;gap:3px;min-width:0}
-.land .lpn{font-size:26px;line-height:1;text-align:left;min-width:0}
+.land .st-n{max-width:none;font-size:12.5px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.land .lpw{height:auto;flex-direction:column-reverse;align-items:stretch;gap:2px;min-width:0}
+.land .lpn{font-size:24px;line-height:1;text-align:left;min-width:0}
 .land .lpbar{height:7px;flex:none}.land .hbacks{display:none}.land .st-c{flex-wrap:wrap;gap:4px}.land .lpf{right:12px;top:6px}
 /* Karteninfo (früher das Blatt von unten) */
 .duel.land .d-sheet{position:static;flex:1 1 0;min-height:0;max-height:none;width:auto;transform:none;visibility:visible;pointer-events:auto;overflow:auto;border-radius:12px;border:1px solid var(--line);box-shadow:none;padding:8px;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(14,36,86,.6),rgba(6,16,40,.6))}
 .duel.land .d-sheet:empty::before{content:"Tippe eine Karte an – hier erscheinen Bild, Text und mögliche Aktionen.";color:var(--mut);font-size:12px;line-height:1.35;padding:4px}
-.land .d-sheet .sh-top{order:0;margin-bottom:6px;gap:8px;padding-right:26px}.land .d-sheet .sh-acts{order:1;margin:0 0 6px}.land .d-sheet .sh-t{order:2;max-height:none;font-size:12px;line-height:1.4}.land .d-sheet .btn.ghost{order:3}
-.land .d-sheet .card.md{--w:56px}.land .d-sheet .sh-n{font-size:14px}.land .d-sheet .sh-acts .btn{min-height:38px;padding:6px 10px;font-size:13px}.land .d-sheet .sh-x{right:6px;top:6px;width:26px;height:26px}
+.land .d-sheet .sh-top{flex:none;margin:0 0 6px;gap:8px;padding-right:0}.land .d-sheet .sh-t{flex:1 1 0;min-height:0;max-height:none;overflow:auto;-webkit-overflow-scrolling:touch;font-size:13px;line-height:1.45;padding:7px 9px;border-radius:8px}.land .d-sheet .btn.ghost{display:none}
+.land .d-sheet .card.md{--w:58px}.land .d-sheet .sh-n{font-size:14px;line-height:1.25}.land .d-sheet .sh-x{display:none}
 /* Kopfzeile + Phasenleiste */
 .land .d-top{flex:none;flex-wrap:wrap;padding:0;gap:6px;background:none}.land .d-top .ibtn{width:34px;height:34px;font-size:16px}
 .land .d-turnb{display:none;order:9;flex:1 0 100%;text-align:left;padding:5px 9px;border:1px solid var(--line);border-radius:10px;background:rgba(6,16,40,.6)}.land .d-turn{white-space:normal;font-size:12px;line-height:1.25}
@@ -134,10 +134,11 @@
 
 /* Phasenrad wie in Master Duel: Rad mittig am rechten Rand, Antippen klappt die nächsten Phasen darunter auf */
 .land .ph-pills{display:none}
-.land .d-r .d-phases{flex:1 1 auto;display:flex;align-items:center;justify-content:center;min-height:0;gap:0}
-.land .d-r .ph-wheel{width:88px;height:88px;border-width:4px}.land .d-r .ph-wheel b{font-size:30px}.land .d-r .ph-wheel small{font-size:11.5px;margin-top:4px}
+.land .d-r .d-phases{flex:none;display:flex;align-items:center;justify-content:center;min-height:0;gap:0;margin:2px 0}
+.land .d-r .ph-wheel{width:84px;height:84px;border-width:4px}.land .d-r .ph-wheel b{font-size:28px}.land .d-r .ph-wheel small{font-size:11px;margin-top:3px}
 .duel.land.baron .d-r .d-phases{flex:none;margin:4px 0}.duel.land.baron .d-r .ph-wheel{width:62px;height:62px;border-width:3px}.duel.land.baron .d-r .ph-wheel b{font-size:21px}
-.land .d-top{justify-content:flex-end}
+.land .d-top{justify-content:center;flex-wrap:nowrap}
+.land .d-top .ibtn{flex:none;width:32px;height:32px;font-size:15px}
 .ph-scrim{position:absolute;inset:0;z-index:70}
 .ph-menu{position:absolute;z-index:75;display:flex;flex-direction:column;gap:8px;padding:10px;background:linear-gradient(180deg,#14336f,#091735);border:1px solid var(--line2);border-radius:16px;box-shadow:0 14px 34px rgba(0,0,0,.65);animation:phin .14s ease-out}
 .ph-menu-t{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;padding:0 2px}
@@ -158,13 +159,6 @@ mark.fx-mark{background:rgba(246,201,107,.2);color:#ffe3a1;border-radius:3px;pad
 .duel.land .fx-full{display:block;margin-top:6px;max-height:9.4em;overflow:auto;white-space:pre-line;font-size:13px;line-height:1.5;color:#cfdcff;background:rgba(0,0,0,.28);border-radius:8px;padding:6px 8px;-webkit-overflow-scrolling:touch}
 .duel.land .fx-ex{display:none}
 .duel.land .fx-full mark.fx-mark{color:#ffe9b8}
-.duel.land .d-sheet.open{position:absolute;left:var(--safe-l);top:0;bottom:0;width:min(66%,560px);z-index:65;max-height:none;border-radius:0 18px 18px 0;padding:12px 14px calc(12px + var(--safe-b));overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) 188px;grid-template-rows:auto minmax(0,1fr);column-gap:12px;row-gap:8px;background:linear-gradient(180deg,#112b60,#091735);border:1px solid var(--line2);border-left:0;box-shadow:10px 0 40px rgba(0,0,0,.6)}
-.land .d-sheet.open .sh-top{grid-column:1;grid-row:1;margin:0;gap:12px;padding-right:0}
-.land .d-sheet.open .sh-t{grid-column:1;grid-row:2;min-height:0;max-height:none;overflow:auto;font-size:14px;line-height:1.5;padding:9px 11px;-webkit-overflow-scrolling:touch}
-.land .d-sheet.open .sh-acts{grid-column:2;grid-row:1 / span 2;margin:0;padding-top:42px;display:flex;flex-direction:column;justify-content:center;gap:8px;overflow:auto}
-.land .d-sheet.open .sh-acts .btn{min-height:46px;font-size:14px;line-height:1.25;padding:8px 10px;height:auto;white-space:normal;text-align:center}
-.land .d-sheet.open .btn.ghost{display:none}
-.land .d-sheet.open .card.md{--w:70px}.land .d-sheet.open .sh-n{font-size:16px;line-height:1.25}.land .d-sheet.open .sh-x{right:10px;top:10px;width:34px;height:34px}
 .duel.land .modal.peek{justify-content:flex-start;align-items:stretch;padding:0 0 0 var(--safe-l)}
 .duel.land .modal.peek>.box{width:min(56%,480px);height:100%;max-height:100%;margin:0;border-radius:0 18px 18px 0}
 .duel.land .modal.peek .mh h3{font-size:16px}.duel.land .modal.peek .mh{padding:12px 14px 6px}
@@ -180,3 +174,26 @@ mark.fx-mark{background:rgba(246,201,107,.2);color:#ffe3a1;border-radius:3px;pad
 .duel.land .modal.peek .ch-row{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 12px;align-items:start;padding:8px 0}
 .duel.land .modal.peek .ch-row>button:first-child{grid-row:1 / span 2;grid-column:1}
 .duel.land .modal.peek .ch-row>.grow{grid-column:2}.duel.land .modal.peek .ch-row>.btn{grid-column:2;width:100%;flex:none}
+
+/* Querformat: Aktionen der gewählten Karte unter dem Phasenrad */
+.duel:not(.land) .d-acts{display:none}
+.duel.land .d-acts{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:6px;overflow:auto;-webkit-overflow-scrolling:touch;padding:2px 0}
+.duel.land .d-acts:empty{display:none}
+.duel.land .d-acts .btn{flex:none;height:auto;min-height:40px;padding:7px 8px;font-size:12.5px;line-height:1.25;white-space:normal;text-align:center;justify-content:center}
+.duel.land .d-acts .ac-h{flex:none;text-align:center;letter-spacing:.4px;text-transform:uppercase;font-size:10.5px}
+.duel.land .d-bar:empty{display:none}
+.duel.land .d-bar{flex:0 1 auto}
+.duel.land .d-sheet:empty::before{content:"Tippe eine Karte an: Hier bleiben Bild und Text der zuletzt gewählten Karte stehen."}
+/* Optionen-Auswahl: Karte + beschriftete Optionen */
+.opt-h{display:flex;gap:12px;align-items:center;margin-bottom:4px}.opt-n{font-weight:800;font-size:15px;line-height:1.25}
+.opt-b{justify-content:flex-start;text-align:left;height:auto;min-height:48px;padding:10px 14px;gap:10px;line-height:1.3;white-space:normal}
+.opt-i{flex:none;width:24px;height:24px;border-radius:50%;background:rgba(79,211,255,.18);border:1px solid var(--line2);display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+.duel.land .modal.peek .opt-b{min-height:44px;font-size:14px}
+/* Effekte schnell */
+.fxfast .fx-b{animation-duration:.14s}.fxfast .fx-b.out{transition-duration:.1s}.fxfast .lpf{animation-duration:.9s}.fxfast .coin{animation-duration:.5s}
+.duel.land .d-acts .ac-r{flex:none;display:flex;align-items:baseline;gap:8px;padding:5px 9px;border:1px solid var(--line);border-radius:9px;background:rgba(6,16,40,.55);font-size:12.5px}.duel.land .d-acts .ac-r b{font-size:17px;color:var(--gold);min-width:16px;text-align:center}
+.duel.land .d-acts .ac-none{margin-top:2px;line-height:1.35;text-align:center;font-size:11.5px}
+.duel.land .d-acts .ac-h{color:var(--mut)}
+.sh-top .grow{min-width:0}.sh-n{overflow-wrap:anywhere;hyphens:auto}
+.duel.land .opt-h .card.md{--w:58px}.duel.land .modal.peek .opt-h{gap:10px}
+.land .d-top{gap:4px}.land .d-top .ibtn{flex:1 1 0;min-width:0;max-width:34px;width:auto;height:32px;padding:0}

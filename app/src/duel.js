@@ -25,15 +25,15 @@ class Duel {
     this.conf = conf; this.mode = MODES[conf.fmt]; if (this.mode.lp) conf.lp = this.mode.lp; // Speed Duell: fest 4000 LP this.fmtDef = fmtById(conf.fmt, conf.list);
     this.net = conf.mode === 'net-host' || conf.mode === 'net-guest' ? session : null; this.viewer = this.net ? conf.seat : (conf.human[0] ? 0 : 1); this.snap = null; this.logLines = []; this.chain = []; this.stopped = false; this.turnNo = 0; this.phase = 0; this.turnPlayer = 0;
     this.actList = []; this.acts = new Map(); this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.tip = null; this.tipKeys = new Set(); this.pending = null; this.hintText = ''; this.introShown = [false, false];
-    this.lpShown = [conf.lp, conf.lp]; this.floats = []; this.prevHand = [0, 0]; this.newHand = 0; this.anim = store.get('anim', true);
-    this.build(); window.__duel = this;
+    this.lpShown = [conf.lp, conf.lp]; this.floats = []; this.prevHand = [0, 0]; this.newHand = 0; this.anim = store.get('anim', true); this.tempo = store.get('tempo', 'fast'); // Effekt-Tempo: schnell (Standard) oder normal
+    this.build(); window.__duel = this; this.ask = (m) => ask(this, m); // (Prüfhaken für Tests)
   }
   deckOf(p) { return this.conf.players[p].deck; }
   pname(p) { return this.conf.players[p].name; }
 
   // ---------------------------------------------------------------- Aufbau
   build() {
-    const r = this.root = h('div', { class: 'screen duel' + (this.mode.emz ? ' has-emz' : '') });
+    const r = this.root = h('div', { class: 'screen duel' + (this.mode.emz ? ' has-emz' : '') + (this.tempo === 'fast' ? ' fxfast' : '') });
     this.turnEl = h('div', { class: 'd-turn' }); this.chainEl = h('button', { class: 'd-chainb', onclick: () => this.showChain() });
     this.tipBtn = h('button', { class: 'ibtn tipb', title: 'Tutor-Tipp', onclick: () => this.showTip() }, '💡');
     this.top = h('div', { class: 'd-top' }, h('button', { class: 'ibtn', onclick: () => this.menu() }, '☰'), h('button', { class: 'd-turnb', onclick: () => this.phaseHelp() }, this.turnEl), this.chainEl, this.tipBtn, h('button', { class: 'ibtn', onclick: () => this.showLog() }, '📜'));
@@ -43,13 +43,13 @@ class Duel {
     this.phaseEl = h('div', { class: 'd-phases' }, this.wheel, h('div', { class: 'ph-pills' }, PH_PILLS.filter((x) => !(this.mode.noM2 && x[0] === 'M2')).map((x) => h('button', { class: 'ph', 'data-ph': x[0], title: x[1], onclick: () => this.phasePick(x[0]) }, x[0]))));
     this.board.addEventListener('click', (e) => { const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); });
     this.handEl = h('div', { class: 'd-hand' }); this.handEl.addEventListener('click', (e) => { const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); }); this.bar = h('div', { class: 'd-bar' });
-    this.sheet = h('div', { class: 'd-sheet' }); this.fx = h('div', { class: 'd-fx' });
+    this.sheet = h('div', { class: 'd-sheet' }); this.actsEl = h('div', { class: 'd-acts' }); this.fx = h('div', { class: 'd-fx' });
     this.over = h('div', { class: 'd-over' });
     this.testBar = this.conf.test ? this.buildTestBar() : null;
     // Hochformat: Spalten lösen sich auf (display:contents) und werden untereinander gestapelt.
     // Querformat (wie Master Duel): links Gegner/Karteninfo/Du, Mitte Feld mit Hand unten, rechts Phasen und Aktionen.
     const col = (c, ...kids) => h('div', { class: 'd-col ' + c }, ...kids);
-    this.colR = col('d-r', this.top, this.testBar, this.phaseEl, this.bar);
+    this.colR = col('d-r', this.top, this.testBar, this.phaseEl, this.actsEl, this.bar);
     r.append(col('d-l', this.oppBar, this.sheet, this.meBar), col('d-c', this.boardWrap, this.handEl), this.colR, this.fx, this.over);
     this.probe = h('div', { class: 'd-probe' }); r.append(this.probe);
     this.ro = new ResizeObserver(() => this.fit()); this.ro.observe(this.boardWrap); this.ro.observe(this.bar); this.ro.observe(r);
@@ -65,12 +65,15 @@ class Duel {
       // Querformat: die Kartengröße richtet sich nach der Höhe (5 Reihen + herausschauende Hand + Gegnerhand)
       const sp = this.safe(); const RH = 1.1; // Querformat: Zonen fast quadratisch (Kartenausschnitt) – so wird das Feld größer
       const rowsH = this.mode.emz ? 5 * RH : 4 * RH + 0.32; const gaps = 4 * 3 + 6; R.style.setProperty('--rh', RH);
-      const cwH = (H - sp.t - sp.b - gaps - 4) / (rowsH + 0.34 + 1.0); const cwW = (W - sp.l - sp.r - 2 * 140 - 18 - 12) / (this.mode.cols3 ? 5 : 7);
+      const SIDER = 138, MINL = 190; // rechts nur Phasenrad und Aktionen, links bekommt den Rest für die Karteninfo
+      const cwH = (H - sp.t - sp.b - gaps - 4) / (rowsH + 0.34 + 1.0); const cwW = (W - sp.l - sp.r - SIDER - MINL - 18 - 12 - 16) / (this.mode.cols3 ? 5 : 7);
       const cw = Math.max(30, Math.min(cwH, cwW, 112)); const boardW = cw * (this.mode.cols3 ? 5 : 7) + 18 + 12;
       const st = R.style; st.setProperty('--cw', cw.toFixed(1) + 'px'); st.setProperty('--hpk', (cw * 1.0).toFixed(1) + 'px'); st.setProperty('--opk', (cw * 0.34).toFixed(1) + 'px');
-      st.setProperty('--sidew', Math.max(140, (W - sp.l - sp.r - boardW) / 2 - 6).toFixed(0) + 'px'); st.setProperty('--barh', '0px'); return;
+      const sidel = Math.max(MINL, W - sp.l - sp.r - boardW - SIDER - 16); st.setProperty('--sidel', sidel.toFixed(0) + 'px'); st.setProperty('--sider', SIDER + 'px'); st.setProperty('--sidew', sidel.toFixed(0) + 'px'); st.setProperty('--barh', '0px');
+      if (this._land !== true) { this._land = true; this.sheet.classList.remove('open'); this._sheetSig = null; this.renderSheet(true); } return;
     }
     R.style.setProperty('--rh', '1.42');
+    if (this._land !== false) { this._land = false; clear(this.actsEl); clear(this.sheet); this.sheet.classList.remove('open'); this._sheetSig = null; }
     const b = this.boardWrap.getBoundingClientRect(); if (!b.width || !b.height) return;
     const rows = this.mode.emz ? 5 : 4.35; const cw = Math.max(30, Math.min((b.width - 22) / (this.mode.cols3 ? 5 : 7), b.height / (rows * 1.42 + 0.35), 96));
     R.style.setProperty('--cw', cw.toFixed(1) + 'px'); R.style.setProperty('--barh', this.bar.offsetHeight + 'px'); R.style.setProperty('--sidew', '100%');
@@ -112,8 +115,8 @@ class Duel {
   async coin() {
     const f = this.conf.human[0] && !this.conf.human[1] ? 0 : 0; void f;
     const n = this.pname(0); const el = h('div', { class: 'coin-ov' }, h('div', { class: 'coin' }, '☯'), h('div', { class: 'coin-t' }, 'Wer beginnt?'));
-    this.root.append(el); await sleep(this.anim ? 700 : 100);
-    el.querySelector('.coin-t').textContent = `${n} beginnt!`; beep('ok'); await sleep(this.anim ? 650 : 150); el.remove();
+    this.root.append(el); await sleep(this.anim ? 700 * this.fxs() : 100);
+    el.querySelector('.coin-t').textContent = `${n} beginnt!`; beep('ok'); await sleep(this.anim ? 650 * this.fxs() : 150); el.remove();
   }
   async loop() {
     let resp;
@@ -146,7 +149,7 @@ class Duel {
         if (this.stopped) return;
       } else {
         this.render();
-        resp = this.botResponse(msg, st.evs, r.retry); if (this.ai && this.anim && (msg.type === MSG.SELECT_IDLECMD || msg.type === MSG.SELECT_BATTLECMD)) await sleep(240);
+        resp = this.botResponse(msg, st.evs, r.retry); if (this.ai && this.anim && (msg.type === MSG.SELECT_IDLECMD || msg.type === MSG.SELECT_BATTLECMD)) await sleep(240 * this.fxs());
       }
     }
   }
@@ -191,11 +194,13 @@ class Duel {
   // ---------------------------------------------------------------- Ereignisse
   txt(p) { return this.conf.human[p] || this.conf.mode !== 'hot' ? this.pname(p) : this.pname(p); }
   addLog(s) { this.logLines.push(s); if (this.logLines.length > 400) this.logLines.shift(); }
+  /** Faktor für alle Wartezeiten der Effekte: schnell = knapp die Hälfte */
+  fxs() { return this.tempo === 'fast' ? 0.42 : 1; }
   async banner(o) {
     if (!this.anim) return;
     const el = h('div', { class: 'fx-b ' + (o.cls || '') }, o.code ? cardEl(o.code, { cls: 'md' }) : null, o.back ? cardEl(0, { back: true, cls: 'md' }) : null, h('div', { class: 'fx-bt' }, h('div', { class: 'fx-h' }, o.title), o.sub ? h('div', { class: 'fx-s' }, o.sub) : null, o.mark ? h('div', { class: 'fx-tx' }, o.mark) : null));
     this.fx.append(el); if (o.mark) revealMark(el.querySelector('.fx-tx')); let done; const p = new Promise((r) => { done = r; }); el.addEventListener('pointerdown', () => done());
-    await Promise.race([sleep((o.ms || 750) * 0.7), p]); el.classList.add('out'); setTimeout(() => el.remove(), 200);
+    await Promise.race([sleep((o.ms || 750) * 0.7 * (o.mark && this.tempo === 'fast' ? 0.6 : this.fxs())), p]); el.classList.add('out'); setTimeout(() => el.remove(), this.tempo === 'fast' ? 110 : 200);
   }
   seeCard(code, ctrl, pos) { return ctrl === this.viewer || (pos & FACEUP) || pos === undefined; }
   async present(evs) {
@@ -213,7 +218,8 @@ class Duel {
         case MSG.CHAINING: {
           this.chain.push({ code: m.code, p: m.controller }); this.addLog(`Kette ${this.chain.length}: «${nameOf(m.code)}» (${this.pname(m.controller)})`); this.renderTop(); beep('chain');
           const vw = effectView(m.code, m.description, m.triggering_location != null ? m.triggering_location : m.location); const has = !!(vw.ranges && vw.ranges.length);
-          await this.banner({ title: `Kette ${this.chain.length}`, sub: nameOf(m.code), code: m.code, cls: 'chain', ms: has ? 1100 + Math.min(2400, vw.text.length * 8) : 800, mark: has ? markNode(vw) : null }); break; }
+          await this.banner({ title: `Kette ${this.chain.length}`, sub: nameOf(m.code), code: m.code, cls: 'chain', ms: has ? 1100 + Math.min(2400, vw.text.length * 8) : 800, // (Tippen überspringt)
+             mark: has ? markNode(vw) : null }); break; }
         case MSG.CHAIN_NEGATED: case MSG.CHAIN_DISABLED: this.addLog('Der Effekt wurde negiert'); await this.banner({ title: 'Negiert!', cls: 'neg', ms: 500 }); break;
         case MSG.CHAIN_END: this.chain = []; this.renderTop(); break;
         case MSG.ATTACK: {
@@ -264,7 +270,7 @@ class Duel {
   visible(c) { return c && (c.controller === this.viewer || (c.position & FACEUP) > 0); }
   /** Ist eine in einer Auswahl genannte Karte für den Betrachter sichtbar? */
   selVisible(s) { if (s.controller === this.viewer) return true; const c = this.cardAt(s.controller, s.location, s.sequence); if (c) return (c.position & FACEUP) > 0; return s.position !== undefined ? (s.position & FACEUP) > 0 : false; }
-  render() { if (!this.snap) return; this.renderTop(); this.renderStrips(); this.renderBoard(); this.renderHand(); }
+  render() { if (!this.snap) return; this.renderTop(); this.renderStrips(); this.renderBoard(); this.renderHand(); this.renderSheet(); this.renderActs(); }
   renderTop() {
     const tp = this.turnPlayer;
     this.turnEl.textContent = this.turnNo ? `Zug ${this.turnNo} · ${PHASE[this.phase] || ''} · ${this.pname(tp)}` : 'Duell beginnt …';
@@ -302,10 +308,10 @@ class Duel {
         h('div', { class: 'st-c' }, p === o ? h('span', { class: 'hbacks' }, Array.from({ length: Math.min(pl.hand.length, 12) }, () => h('i'))) : null, h('span', { class: 'chip' }, `🂠 ${pl.deck}`), p === o ? h('span', { class: 'chip' }, `✋ ${pl.hand.length}`) : null));
       if (p === o) { clear(this.ohand); for (let i = 0; i < Math.min(pl.hand.length, 14); i++) this.ohand.append(h('i')); }
       this.tweenLp(p, num, cur, lp); this.lpShown[p] = lp;
-      for (const f of fl) { const e = h('div', { class: 'lpf ' + (f.d < 0 ? 'neg' : 'pos') }, (f.d > 0 ? '+' : '') + f.d); bar.append(e); setTimeout(() => e.remove(), 1600); }
+      for (const f of fl) { const e = h('div', { class: 'lpf ' + (f.d < 0 ? 'neg' : 'pos') }, (f.d > 0 ? '+' : '') + f.d); bar.append(e); setTimeout(() => e.remove(), this.tempo === 'fast' ? 900 : 1600); }
     }
   }
-  tweenLp(p, el, from, to) { if (from === to || !this.anim) { el.textContent = String(to); return; } const t0 = performance.now(); const dur = 700; const step = (t) => { const k = Math.min(1, (t - t0) / dur); el.textContent = String(Math.round(from + (to - from) * k)); if (k < 1 && el.isConnected) requestAnimationFrame(step); }; requestAnimationFrame(step); }
+  tweenLp(p, el, from, to) { if (from === to || !this.anim) { el.textContent = String(to); return; } const t0 = performance.now(); const dur = 700 * this.fxs(); const step = (t) => { const k = Math.min(1, (t - t0) / dur); el.textContent = String(Math.round(from + (to - from) * k)); if (k < 1 && el.isConnected) requestAnimationFrame(step); }; requestAnimationFrame(step); }
 
   zone(p, l, s, row, col, opt = {}) {
     const k = key(p, l, s); const c = this.cardAt(p, l, s);
@@ -396,21 +402,60 @@ class Duel {
     const m = openModal({ host: this.root, title, body, footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Schließen') });
   }
   info(code, mk) { const m = openModal({ host: this.root, title: null, body: cardInfoBody(code, null, mk), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Schließen') }); const t = mk && mk.ranges && mk.ranges.length ? m.el.querySelector('mark.fx-mark') : null; if (t && t.scrollIntoView) setTimeout(() => t.scrollIntoView({ block: 'center' }), 30); return m; }
+  /** Karte antippen: Hochformat = Blatt von unten; Querformat = Karteninfo links bleibt stehen (zuletzt gewählte Karte), Aktionen rechts unter dem Phasenrad */
   openSheet(c, k) {
-    this.selKey = k; this.render();
-    const vis = this.visible(c); clear(this.sheet); this.sheet.classList.add('open');
-    const acts = this.acts.get(k) || [];
-    const own = c.controller === this.viewer; const card = cardOf(c.code);
+    this.selKey = k; this.lastSel = { c: { ...c }, k }; this._sheetSig = null;
+    if (!this.root.classList.contains('land')) this.sheet.classList.add('open');
+    this.render(); this.renderSheet(true);
+  }
+  renderSheet(reveal = false) {
+    const ls = this.lastSel; if (!ls) return; const land = this.root.classList.contains('land');
+    if (!land && !this.sheet.classList.contains('open')) return;
+    const cur = this.cardAt(ls.c.controller, ls.c.location, ls.c.sequence); const same = !!cur && cur.code === ls.c.code; if (same) ls.c = cur;
+    const c = ls.c; const k = ls.k; const acts = this.selKey === k && same ? (this.acts.get(k) || []) : [];
+    const sig = [k, c.code, c.attack, c.defense, c.position, acts.map((a) => a.label).join('|'), this.pending && this.pending.kind, land ? 'L' : 'P', this.selKey === k].join('~');
+    if (!reveal && sig === this._sheetSig) return; this._sheetSig = sig;
+    const keepTop = (this.sheet.querySelector('.sh-t') || {}).scrollTop || 0;
+    const vis = this.visible(c); const own = c.controller === this.viewer; const card = cardOf(c.code);
+    clear(this.sheet);
     const head = vis ? h('div', { class: 'sh-top' }, cardEl(c.code, { cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'sh-n' }, cleanName(c.name)), h('div', { class: 'small muted' }, typeText(card)), (card.type & 1) ? h('div', { class: 'small' }, [attrName(card.attribute), levelText(card)].filter(Boolean).join(' · ')) : null, (card.type & 1) ? h('div', { class: 'small gold' }, statsText({ ...card, attack: c.attack, defense: c.defense }) + (c.attack !== card.attack || c.defense !== card.defense ? ' (aktuell)' : '')) : null))
       : h('div', { class: 'sh-top' }, cardEl(0, { back: true, cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'sh-n' }, 'Verdeckte Karte'), h('div', { class: 'small muted' }, `von ${this.pname(c.controller)}`)));
-    this.sheet.append(h('button', { class: 'sh-x', onclick: () => this.closeSheet() }, '✕'), head, vis ? h('div', { class: 'sh-t' }, (() => { const mv = mergeViews(acts.filter((a) => a.kind === 'activate' && a.c).map((a) => effectView(a.code, a.c.description, a.c.location))); return mv && mv.ranges.length ? markNode(mv) : descOf(card).replace(/\r/g, ''); })()) : null);
-    if (acts.length) this.sheet.append(h('div', { class: 'sh-acts' }, acts.map((a) => h('button', { class: 'btn ' + (a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, a.label))));
-    else if (own && this.pending && this.pending.kind === 'idle') this.sheet.append(h('div', { class: 'small muted', style: 'margin-top:6px' }, 'Mit dieser Karte ist gerade keine Aktion möglich.'));
-    this.sheet.append(h('button', { class: 'btn ghost sm', style: 'margin-top:8px', onclick: () => this.info(c.code) }, 'Ganzen Text'));
-    if (!vis) this.sheet.lastChild.remove();
-    setTimeout(() => revealMark(this.sheet.querySelector('.sh-t')), 40); // markierte Effektstelle ins Bild scrollen
+    const txt = vis ? h('div', { class: 'sh-t' }, (() => { const mv = mergeViews(acts.filter((a) => a.kind === 'activate' && a.c).map((a) => effectView(a.code, a.c.description, a.c.location))); return mv && mv.ranges.length ? markNode(mv) : descOf(card).replace(/\r/g, ''); })()) : null;
+    const actBtns = acts.map((a) => h('button', { class: 'btn ' + (a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, a.label));
+    const none = !acts.length && own && this.selKey === k && this.pending && this.pending.kind === 'idle' ? h('div', { class: 'small muted', style: 'margin-top:6px' }, 'Mit dieser Karte ist gerade keine Aktion möglich.') : null;
+    if (land) {
+      this.sheet.append(head, txt || h('div', { class: 'sh-t muted' }, 'Der Gegner hat diese Karte verdeckt gelegt.'));
+    } else {
+      this.sheet.append(h('button', { class: 'sh-x', onclick: () => this.closeSheet() }, '✕'), head, txt);
+      if (actBtns.length) this.sheet.append(h('div', { class: 'sh-acts' }, actBtns)); else if (none) this.sheet.append(none);
+      if (vis) this.sheet.append(h('button', { class: 'btn ghost sm', style: 'margin-top:8px', onclick: () => this.info(c.code) }, 'Ganzen Text'));
+    }
+    const box = this.sheet.querySelector('.sh-t');
+    if (box) { if (reveal) setTimeout(() => revealMark(box), 40); else box.scrollTop = keepTop; }
   }
-  closeSheet() { const had = this.selKey; this.selKey = null; this.sheet.classList.remove('open'); clear(this.sheet); if (had && this.snap) this.render(); }
+  /** Querformat, rechte Spalte: Aktionen der gewählten Karte – ohne Auswahl eine Übersicht, was in dieser Phase möglich ist */
+  renderActs() {
+    const el = this.actsEl; clear(el); if (!this.root.classList.contains('land') || !this.snap) return;
+    const ls = this.lastSel; const cur = ls && this.cardAt(ls.c.controller, ls.c.location, ls.c.sequence);
+    if (this.selKey && ls && ls.k === this.selKey && cur && cur.code === ls.c.code) {
+      const acts = this.acts.get(ls.k) || []; const own = ls.c.controller === this.viewer;
+      el.append(h('div', { class: 'ac-h' }, 'Aktionen'));
+      if (acts.length) el.append(...acts.map((a) => h('button', { class: 'btn ' + (a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, a.label)));
+      else el.append(h('div', { class: 'small muted ac-none' }, own && this.pending && this.pending.kind === 'idle' ? 'Mit dieser Karte ist gerade keine Aktion möglich.' : 'Hier gibt es gerade nichts zu tun.'));
+      return;
+    }
+    if (this.pending && this.pending.kind === 'idle' && this.actList && this.actList.length) {
+      const LBL = { summon: 'Normal beschwören', special: 'Spezial beschwören', pos: 'Position ändern', set: 'Setzen', spellset: 'Setzen', activate: 'Aktivieren' }; const n = {};
+      for (const a of this.actList) { if (!LBL[a.kind] || !a.c) continue; (n[LBL[a.kind]] = n[LBL[a.kind]] || new Set()).add(a.c.location + ':' + a.c.sequence); }
+      const rows = Object.entries(n); if (!rows.length) return;
+      el.append(h('div', { class: 'ac-h' }, 'Jetzt möglich'), ...rows.map(([l, s]) => h('div', { class: 'ac-r' }, h('b', null, String(s.size)), h('span', null, l))), h('div', { class: 'small muted ac-none' }, 'Karte antippen für Text und Aktionen.'));
+    }
+  }
+  closeSheet() {
+    const had = this.selKey; this.selKey = null;
+    if (this.root.classList.contains('land')) { this._sheetSig = null; if (this.snap) this.render(); else clear(this.actsEl); return; } // Querformat: die Karteninfo bleibt stehen
+    this.sheet.classList.remove('open'); clear(this.sheet); if (had && this.snap) this.render();
+  }
   phaseHelp() { const t = PHASE_HELP[this.phase === 16 || this.phase === 32 || this.phase === 64 || this.phase === 128 ? 8 : this.phase]; if (t) toast(t, 5000); }
   showChain() {
     if (!this.chain.length) return;
@@ -420,7 +465,7 @@ class Duel {
   menu() {
     const m = openModal({ host: this.root, title: 'Duell', center: true, body: h('div', { class: 'col' },
       h('button', { class: 'btn', onclick: () => { m.close(); this.showLog(); } }, '📜 Verlauf'),
-      h('button', { class: 'btn', onclick: () => { this.anim = !this.anim; store.set('anim', this.anim); toast(this.anim ? 'Animationen an' : 'Animationen aus (schneller)'); m.close(); } }, `✨ Animationen: ${this.anim ? 'an' : 'aus'}`),
+      h('button', { class: 'btn', onclick: () => { const nx = !this.anim ? 'fast' : this.tempo === 'fast' ? 'normal' : 'off'; this.anim = nx !== 'off'; if (nx !== 'off') this.tempo = nx; store.set('anim', this.anim); store.set('tempo', this.tempo); this.root.classList.toggle('fxfast', this.tempo === 'fast'); toast({ fast: 'Effekte: schnell', normal: 'Effekte: normal', off: 'Effekte: aus' }[nx]); m.close(); } }, `✨ Effekte: ${!this.anim ? 'aus' : this.tempo === 'fast' ? 'schnell' : 'normal'}`),
       h('button', { class: 'btn', onclick: () => { m.close(); this.surrender(); } }, '🏳 Aufgeben'),
       h('button', { class: 'btn red', onclick: async () => { m.close(); if (this.net) { if (await confirmBox('Duell verlassen?', 'Das Online-Duell wird für beide beendet.', 'Verlassen', 'Weiterspielen', true)) { this.net.send({ t: 'leave' }); this.destroy(); netMenu(); } } else back(); } }, '⟵ Duell verlassen')), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Weiterspielen') });
   }

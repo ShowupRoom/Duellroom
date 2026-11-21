@@ -1,6 +1,6 @@
 // Findet im Kartentext die Stelle, die zu einem aktivierten Effekt gehört, und markiert sie.
 // Ablauf: Text in Effekt-Abschnitte teilen → mit Effekt-Kurztext (strN), Herkunftsort und Kartenart vergleichen → nur bei klarem Ergebnis markieren.
-import { App, useDe, descOf } from './data.js';
+import { App, useDe, descOf, descSplit } from './data.js';
 import { LOC } from '../../src/core.mjs';
 import { h } from './util.js';
 
@@ -105,7 +105,7 @@ const NORMALISH = (type) => type === 2 || type === 4 || type === 0x10002 || type
 
 /**
  * Effekt-Ansicht: { text, ranges } – ranges = markierte Bereiche im (bereinigten) Anzeigetext, leer wenn unsicher.
- * desc: Beschreibungsnummer des Kerns (Karten-Code*16 + Nr.), loc: Ort, von dem aus aktiviert wird
+ * desc: Beschreibungsnummer des Kerns (Kartencode << 20 | Nr.), loc: Ort, von dem aus aktiviert wird
  */
 export function effectView(code, desc, loc) {
   const c = App.cards.get(code); if (!c) return { text: '', ranges: [] };
@@ -116,7 +116,7 @@ export function effectView(code, desc, loc) {
   // Kurztexte des Effekts (strN), deutsch und englisch
   const d = Number(desc || 0); const lab = { en: '', de: '' };
   if (d >= 10000) {
-    const sc = App.cards.get(Math.floor(d / 16)) || c; const idx = d % 16; const sd = useDe() ? App.de.get(sc.code) : null;
+    const sp = descSplit(d); const sc = App.cards.get(sp.code) || c; const idx = sp.idx; const sd = useDe() ? App.de.get(sc.code) : null;
     lab.en = (sc.strs && sc.strs[idx]) || ''; lab.de = (sd && sd[2] && sd[2][idx]) || '';
   }
   const pend = !!(c.type & 0x1000000);
