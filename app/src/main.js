@@ -9,13 +9,12 @@ import { prewarm } from './engine.js';
 import { myName } from './net.js';
 import { expand, MODES } from './data.js';
 import * as fx from './effecttext.js';
-import { gate } from './lock.js';
 
 const set = (t, p) => { const s = document.getElementById('boot-s'), i = document.getElementById('boot-i'); if (s) s.textContent = t; if (i) i.style.width = Math.round(p * 100) + '%'; };
 addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__bip = e; });
 (async () => {
   try {
-    await Promise.all([boot(set), gate()]); // Sperrbildschirm erscheint sofort, während im Hintergrund geladen wird
+    await boot(set);
     window.__app = App; window.__fx = fx; window.__nav = { root, go, back, screens };
     initNav(); root('home'); document.body.dataset.done = 'ready';
     const upd = () => { if (document.querySelector('.upd') || (window.__duel && !window.__duel.stopped)) return; const b = document.createElement('div'); b.className = 'upd'; b.innerHTML = '<span style="flex:1">✨ Neue Version verfügbar</span><button class="btn pri sm">Jetzt laden</button><button class="btn ghost sm">Später</button>'; b.children[1].onclick = () => { window.__swReload = true; window.__swWaiting && window.__swWaiting.postMessage('skip'); }; b.children[2].onclick = () => b.remove(); document.body.append(b); };
