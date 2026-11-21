@@ -49,6 +49,10 @@ function register(D, c, kind, label, resp, pri) {
   const k = key(c.controller, c.location, c.sequence); const rec = { kind, code: c.code, key: k, label, resp, pri, c };
   if (!D.acts.has(k)) D.acts.set(k, []); D.acts.get(k).push(rec); D.actList.push(rec); return rec;
 }
+/** Mehrere Aktivierungen derselben Karte mit gleicher Beschriftung unterscheidbar machen */
+function numberDupes(D) {
+  for (const recs of D.acts.values()) { const by = new Map(); for (const a of recs) if (a.kind === 'activate') by.set(a.label, (by.get(a.label) || []).concat(a)); for (const g of by.values()) if (g.length > 1) g.forEach((a, i) => { a.label += ` (Effekt ${i + 1})`; }); }
+}
 function askIdle(D, msg) {
   D.acts = new Map(); D.actList = [];
   const r = (action, index) => ({ type: R.SELECT_IDLECMD, action, index });
@@ -57,7 +61,8 @@ function askIdle(D, msg) {
   msg.pos_changes.forEach((c, i) => { const cur = D.cardAt(c.controller, c.location, c.sequence); const down = cur && !(cur.position & 5); register(D, c, 'pos', down ? 'Flipbeschwörung' : 'Kampfposition ändern', r(IA.SELECT_POS_CHANGE, i)); }); // verdecktes Monster aufdecken = Flipbeschwörung
   msg.monster_sets.forEach((c, i) => register(D, c, 'set', sys(1153, 'Setzen'), r(IA.SELECT_MONSTER_SET, i)));
   msg.spell_sets.forEach((c, i) => register(D, c, 'spellset', sys(1153, 'Setzen'), r(IA.SELECT_SPELL_SET, i)));
-  msg.activates.forEach((c, i) => { const d = descText(c.description, c.code); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n && d.trim() !== 'Aktivieren' ? ': ' + d.replace(/\s+/g, ' ').slice(0, 90) : ''), r(IA.SELECT_ACTIVATE, i), true); });
+  msg.activates.forEach((c, i) => { const d = descText(c.description, c.code, c.location); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n && d.trim() !== 'Aktivieren' ? ': ' + d.replace(/\s+/g, ' ').slice(0, 90) : ''), r(IA.SELECT_ACTIVATE, i), true); });
+  numberDupes(D);
   const n = D.actList.length;
   D.setTip(D.conf.tutor ? idleTip(D, msg) : null); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
   // Kampfphase nur, wenn der Kern sie erlaubt (nicht im ersten Zug) UND ein Monster in Angriffsposition angreifen kann – wie in Master Duel
@@ -70,7 +75,8 @@ function askBattle(D, msg) {
   D.acts = new Map(); D.actList = [];
   const r = (action, index) => ({ type: R.SELECT_BATTLECMD, action, index });
   msg.attacks.forEach((c, i) => register(D, c, 'attack', 'Angreifen' + (c.can_direct ? ' (direkt möglich)' : ''), r(BA.SELECT_BATTLE, i), true));
-  msg.chains.forEach((c, i) => { const d = descText(c.description, c.code); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n && d.trim() !== 'Aktivieren' ? ': ' + d.slice(0, 90) : ''), r(BA.SELECT_CHAIN, i), true); });
+  msg.chains.forEach((c, i) => { const d = descText(c.description, c.code, c.location); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n && d.trim() !== 'Aktivieren' ? ': ' + d.slice(0, 90) : ''), r(BA.SELECT_CHAIN, i), true); });
+  numberDupes(D);
   D.setTip(D.conf.tutor ? battleTip(D, msg) : null); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
   D.phaseOpts = { M2: msg.to_m2 ? r(BA.TO_M2, null) : null, EP: msg.to_ep ? r(BA.TO_EP, null) : null };
   D.hideBar();
@@ -172,7 +178,7 @@ function askChain(D, msg) {
   return new Promise((resolve) => {
     const tip = D.conf.tutor ? chainTip(D, msg) : null;
     const fin = (i) => { m.close(); resolve({ type: R.SELECT_CHAIN, index: i }); };
-    const rows = msg.selects.map((s, i) => { const d = descText(s.description, s.code); const vw = effectView(s.code, s.description, s.location); const ex = excerptNode(vw, 170); return h('div', { class: 'ch-row' }, h('button', { onclick: () => D.info(s.code, vw) }, cardEl(s.code, { cls: 'sm' })), h('div', { class: 'grow' }, h('b', null, cleanName(nameOf(s.code)), tip && tip.pick === i ? h('span', { class: 'chip ok', style: 'margin-left:6px' }, '★ jetzt') : null), ex ? h('div', { class: 'small fx-ex' }, ex) : h('div', { class: 'small muted' }, (d && s.description > 0n ? d : 'Effekt aktivieren').slice(0, 130)), fullNode(vw)), h('button', { class: 'btn sm ' + (tip && tip.pick === i ? 'gold' : 'pri'), onclick: () => fin(i) }, 'Aktivieren')); });
+    const rows = msg.selects.map((s, i) => { const d = descText(s.description, s.code, s.location); const vw = effectView(s.code, s.description, s.location); const ex = excerptNode(vw, 170); return h('div', { class: 'ch-row' }, h('button', { onclick: () => D.info(s.code, vw) }, cardEl(s.code, { cls: 'sm' })), h('div', { class: 'grow' }, h('b', null, cleanName(nameOf(s.code)), tip && tip.pick === i ? h('span', { class: 'chip ok', style: 'margin-left:6px' }, '★ jetzt') : null), ex ? h('div', { class: 'small fx-ex' }, ex) : h('div', { class: 'small muted' }, (d && s.description > 0n ? d : 'Effekt aktivieren').slice(0, 130)), fullNode(vw)), h('button', { class: 'btn sm ' + (tip && tip.pick === i ? 'gold' : 'pri'), onclick: () => fin(i) }, 'Aktivieren')); });
     const body = h('div', { class: 'col' }, ctxLines(D), rows, tip ? h('div', { class: 'tutor panel small' }, '💡 ' + tip.text) : null);
     const m = M(D, { title: msg.forced ? 'Ein Effekt löst aus' : 'Möchtest du antworten?', sticky: true, cls: 'peek', body, footer: msg.forced ? null : h('button', { class: 'btn', onclick: () => fin(null) }, 'Nein, weiter') });
     setTimeout(() => m.el.querySelectorAll('.fx-full').forEach(revealMark), 40);
@@ -180,7 +186,7 @@ function askChain(D, msg) {
 }
 function askEffectYN(D, msg) {
   return new Promise((resolve) => {
-    const name = cleanName(nameOf(msg.code)); const d = descText(msg.description, msg.code);
+    const name = cleanName(nameOf(msg.code)); const d = descText(msg.description, msg.code, msg.location);
     const text = d ? fill(d, name, name) : `Möchtest du den Effekt von «${name}» aktivieren?`;
     const vw = effectView(msg.code, msg.description, msg.location); const ex = excerptNode(vw, 190);
     const fin = (y) => { m.close(); resolve({ type: R.SELECT_EFFECTYN, yes: y }); };

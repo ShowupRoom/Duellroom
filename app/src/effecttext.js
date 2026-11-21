@@ -112,7 +112,7 @@ export function effectView(code, desc, loc) {
   const text = clean(descOf(c)); const view = { text, ranges: [], why: '' };
   if (!text || (c.type & 1 && !(c.type & 0x1000000) && !/[:;]/.test(text) && text.length < 90)) return view; // Normalmonster / Flavortext
   const de = useDe() ? App.de.get(code) : null; const deOk = !!(de && de[1]);
-  const dispLang = deOk ? 'de' : 'en';
+  const dispLang = deOk ? 'de' : 'en'; view.lang = dispLang;
   // Kurztexte des Effekts (strN), deutsch und englisch
   const d = Number(desc || 0); const lab = { en: '', de: '' };
   if (d >= 10000) {
@@ -161,6 +161,23 @@ export function effectView(code, desc, loc) {
   const cov = ranges.reduce((n, [a, b]) => n + (b - a), 0);
   if (cov / body > 0.85 && !(elig.length === 1 && pend)) { view.why = 'ganzer Text'; return view; }
   view.ranges = ranges.sort((a, b) => a[0] - b[0]); return view;
+}
+
+/** Deutsche Kurzbeschreibung eines Effekts aus dem deutschen Kartentext (für Karten, zu denen es nur einen englischen Kurztext gibt); '' wenn die Stelle nicht sicher zu finden ist */
+const _gl = new Map();
+export function germanLabel(code, desc, loc) {
+  const key = code + ':' + desc + ':' + (loc || 0); if (_gl.has(key)) return _gl.get(key);
+  let out = ''; try {
+    const v = effectView(code, desc, loc);
+    if (v && v.lang === 'de' && v.ranges && v.ranges.length) {
+      let t = v.text.slice(v.ranges[0][0], v.ranges[0][1]).replace(/\s+/g, ' ').replace(/^[●•]\s*/, '').trim();
+      const i = t.indexOf(':'); if (i > 0 && i < t.length - 12) t = t.slice(i + 1).trim(); // Bedingung vor dem Doppelpunkt weglassen
+      t = t.replace(/^Du kannst\s+/, ''); t = t.charAt(0).toUpperCase() + t.slice(1);
+      if (t.length > 80) t = t.slice(0, 79).replace(/[\s,;]+\S*$/, '') + ' …';
+      out = t;
+    }
+  } catch (e) { out = ''; }
+  _gl.set(key, out); return out;
 }
 
 /** Mehrere Ansichten derselben Karte (z. B. zwei mögliche Aktivierungen) zusammenfassen */

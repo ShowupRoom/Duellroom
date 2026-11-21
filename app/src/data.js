@@ -89,6 +89,8 @@ export function descSplit(desc) {
   const hi = Math.floor(d / 1048576); if (App.cards.has(hi)) return { code: hi, idx: d % 1048576 };
   return { code: Math.floor(d / 16), idx: d % 16 };
 }
+/** Gibt es zu diesem Effekt-Kurztext (strN) eine deutsche Fassung? */
+export const hasDeStr = (c, i) => { const t = c && App.de && App.de.get(c.code); return !!(t && t[2] && t[2][i]); };
 export const strOf = (c, i) => { if (!c) return ''; if (useDe()) { const t = App.de.get(c.code); if (t && t[2] && t[2][i]) return t[2][i]; } return (c.strs && c.strs[i]) || ''; };
 /** Englische Namen in „…“ / «…» eines Textes durch die deutschen ersetzen (Tutor-Texte entstehen mit englischen Namen) */
 export const loc = (t) => { if (!t || !useDe() || typeof t !== 'string') return t; return t.replace(/([„«])([^“»]{2,80})([“»])/g, (m, a, n, z) => { const g = App.deName.get(n); return g ? a + g + z : m; }); };

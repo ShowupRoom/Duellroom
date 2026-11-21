@@ -1,5 +1,7 @@
 // Texte: Systemtexte des Kerns, Kartenbeschreibungen, Namen
-import { App, cleanName, strOf, descSplit } from './data.js';
+import { App, cleanName, strOf, descSplit, hasDeStr, useDe } from './data.js';
+import { germanLabel } from './effecttext.js';
+import { labelDe } from './labels-de.js';
 
 export const sys = (id, fb = '') => App.strings.system[Number(id)] ?? fb;
 export const PHASE = { 1: 'Ziehphase', 2: 'Standby-Phase', 4: 'Main Phase 1', 8: 'Kampfphase', 16: 'Kampfphase', 32: 'Kampfphase', 64: 'Kampfphase', 128: 'Kampfphase', 256: 'Main Phase 2', 512: 'End Phase' };
@@ -18,11 +20,17 @@ export const raceName = (r) => { const b = BigInt(r || 0); return RACE_BITS.filt
 export const attrName = (a) => ATTR_BITS.filter(([v]) => (a || 0) & v).map(([, n]) => n).join('/');
 
 /** Text zu einer Beschreibungsnummer des Kerns (Systemtext oder Kartentext) */
-export function descText(desc, fallbackCode = 0) {
+export function descText(desc, fallbackCode = 0, loc = 0) {
   const d = Number(desc || 0); if (!d) return '';
   if (d < 10000) return sys(d);
   const s = descSplit(d); const c = App.cards.get(s.code) || App.cards.get(fallbackCode);
-  return strOf(c, s.idx);
+  const t = strOf(c, s.idx);
+  // Gibt es den Kurztext nur englisch, kommt die deutsche Fassung aus dem deutschen Kartentext (nur für Effekt-Beschriftungen, `loc` gesetzt)
+  if (t && c && useDe() && !hasDeStr(c, s.idx)) {
+    const k = labelDe(t); if (k === null) return ''; if (k) return k; // Kurztext übersetzt (oder Set-Kürzel ohne Bedeutung)
+    if (loc) { const g = germanLabel(c.code, d, loc); if (g) return g; return ''; } // lieber keine Beschriftung als eine englische
+  }
+  return t;
 }
 export const victoryText = (r) => App.strings.victory[r] || (r === 1 ? 'LP haben 0 erreicht' : 'Spielende');
 export const counterText = (t) => App.strings.counter[t] || 'Zählmarke';
