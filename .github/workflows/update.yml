@@ -40,8 +40,9 @@ jobs:
         run: |
           git config user.name "duellraum-bot"
           git config user.email "duellraum-bot@users.noreply.github.com"
-          git add data/lists.json data/decks.json data/decks-raw.json data/strings.json sources
-          git diff --cached --quiet || (git commit -m "Automatische Aktualisierung der Kartenlisten $(date -u +%F)" && git push)
+          date -u +%F > sources/stand.txt   # Herzschlag: hält den 3-Tage-Zeitplan bei GitHub aktiv
+          git add sources/stand.txt data/lists.json data/decks.json data/decks-raw.json data/strings.json sources
+          git diff --cached --quiet || (git commit -m "Automatische Aktualisierung $(date -u +%F)" && git push)
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
