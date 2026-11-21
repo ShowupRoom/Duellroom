@@ -20,6 +20,7 @@ And the Band Played On: 100
 Angel O7: 100
 Angelechy Castellan: 20
 Angelechy Destrier: 1
+Animimicat: 11
 Anti-Spell Fragrance: 100
 Appointer of the Red Lotus: 50
 Arcana Force XXI - The World: 100
@@ -57,13 +58,14 @@ Beelze of the Diabolic Dragons: 100
 Big Welcome Labrynth: 15
 Black Chaos: 20
 Black Garden: 51
-Blackwing - Zephyros the Elite: 1
 Black-Winged Assault Dragon: 1
+Blackwing - Zephyros the Elite: 1
 Blaze Fenix, the Burning Bombardment Bird: 70
 Blazing Cartesia, the Virtuous: 5
 Blitzclique - Breakaway: 3
 Blitzclique Overvolt: 5
 Block Dragon: 33
+Blue-Eyes Toon Ultimate Dragon: 20
 Bonfire: 15
 Book of Eclipse: 4
 Book of Moon: 1
@@ -114,6 +116,7 @@ Cosmic Cyclone: 1
 Crackle Blitzclique: 6
 Creature Swap: 1
 Crimson Blade Dragon: 10
+Crimson Dragon Quetzalcoatl: 20
 Crimson Dragon: 80
 Crossout Designator: 20
 Crystron Inclusion: 20
@@ -146,6 +149,7 @@ Dark Hole: 1
 Dark Magical Curtain: 30
 Dark Magician Girl the Magician's Apprentice: 15
 Dark Magician of Destruction: 40
+Dark Rebellion Xyz Dragon, Four Heavenly Dragons: 80
 Dark Ruler No More: 2
 Dark Time Wizard: 5
 Dark World Archives: 5
@@ -156,8 +160,10 @@ Darktellarknight Batlamyus: 1
 Deception of the Sinful Spoils: 20
 Deck Lockdown: 100
 Deep Sea Aria: 12
+Deep-Eyes White Dragon, the Blue Abyss: 15
 Delinquent Duo: 50
 Demise of the Land: 1
+Demiurge Ema: 33
 Denglong, First of the Yang Zing: 10
 Denko Sekka: 20
 Destiny HERO - Dark Angel: 100
@@ -231,7 +237,7 @@ Exosister Betrayal: 18
 Exosister Mikailis: 11
 Exosister Pax: 7
 Expurrely Noir: 51
-Exstellarknight Constellar Ptolemy O7: 5
+Exstellarknight Constellar Ptolemy Ω7: 5
 Ext Ryzeal: 25
 F.A. Dawn Dragster: 22
 Fabled Levilazebul: 5
@@ -250,8 +256,8 @@ Floowandereeze & Robina: 7
 Floowandereeze and the Advent of Adventure: 11
 Floowandereeze and the Magnificent Map: 20
 Flying "C": 7
-Foolish Burial: 15
 Foolish Burial Goods: 11
+Foolish Burial: 15
 Forbidden Chalice: 1
 Forbidden Crown: 10
 Forbidden Droplet: 10
@@ -259,10 +265,12 @@ Forbidden Lance: 1
 Fossil Dig: 18
 Fossil Dyna Pachycephalo: 100
 Frightfur Patchwork: 15
+Funny Dark Rabbit: 11
 Fusion Destiny: 3
 Fydraulis Harmonia: 50
 Gagaga Magician - Gagaga Magic: 6
 Gagagaga Girl: 15
+Galaxy Defense Robot Orbital 7: 20
 Galaxy Photon Dragon: 15
 Galaxy-Eyes Tachyon Primal: 33
 Gallant Granite: 25
@@ -270,9 +278,10 @@ Gameciel, the Sea Turtle Kaiju: 3
 Garunix Eternity, Hyang of the Fire Kings: 3
 Garura, Wings of Resonant Life: 4
 Gateway of the Six: 100
+Gatling Ogre: 51
 Gem-Knight Lady Lapis Lazuli: 51
-Gem-Knight Master Diamond: 66
 Gem-Knight Master Diamond Dispersion: 80
+Gem-Knight Master Diamond: 66
 Ghost Belle & Haunted Mansion: 6
 Ghost Meets Girl - A Masterful Mayakashi Shiranui Saga: 100
 Ghost Mourner & Moonlit Chill: 5
@@ -316,6 +325,7 @@ Hey, Space Trunade!: 11
 Hideout in the Sky, Coulomb: 8
 Hot Red Dragon Archfiend Abyss: 33
 Hot Red Dragon Archfiend King Calamity: 21
+Hyper Rank-Up-Magic Ultimate Force: 1
 Hyper Rank-Up-Magic Utopiforce: 1
 Hyperinvoked Aeon: 20
 Ice Ryzeal: 20
@@ -382,6 +392,7 @@ Life Equalizer: 100
 Light and Darkness Dragonlord: 20
 Light and Darkness Ritual: 5
 Light Barrier: 1
+Lightning Crash: 20
 Lightning Rod Lord: 1
 Lightning Storm: 10
 Lightsworn Dragonling: 5
@@ -389,6 +400,7 @@ Lose 1 Turn: 100
 Lubellion the Searing Dragon: 10
 Lunalight Liger Dancer: 51
 Lyrilusc - Independent Nightingale: 1
+M-X-Saber Invoker: 33
 Magical Explosion: 100
 Magical Mallet: 3
 Magical Mid-Breaker Field: 20
@@ -424,6 +436,7 @@ Mikumari the Banisher Ashtra: 5
 Millennium Ankh: 3
 Mimighoul Dungeon: 5
 Mind Drain: 100
+Mind Scan: 50
 Mind Shuffle: 40
 Miracle Ejector: 5
 Mirrorjade the Iceblade Dragon: 10
@@ -444,7 +457,6 @@ Mulcharmy Fuwalos: 8
 Mulcharmy Meowls: 2
 Mulcharmy Purulia: 9
 Multi-Universe: 3
-M-X-Saber Invoker: 33
 Mystic Mine: 100
 N.As.H. Knight: 10
 Nadir Servant: 16
@@ -452,6 +464,7 @@ Naturia Beast: 100
 Naturia Exterio: 100
 Necrovalley: 10
 Nekroz of Brionac: 7
+Neo Galaxy-Eyes Photon Dragon - Photon Howling: 20
 Neptabyss, the Atlantean Prince: 20
 Nerva the Power Patron of Creation: 15
 Nibiru, the Primal Being: 8
@@ -502,6 +515,7 @@ Outer Entity Azathot: 100
 Over Tuning: 10
 P.U.N.K. JAM Dragon Drive: 13
 Painful Choice: 100
+Perfect Toon World: 15
 Phantom Fortress Enterblathnir: 13
 Phantom Knights' Rank-Up-Magic Force: 1
 Phantom of Yubel: 100
@@ -516,9 +530,9 @@ Pot of Prosperity: 25
 Pot of Sloth: 10
 Power Vice Dragon: 5
 Powersink Stone: 100
+Pre-Preparation of Rites: 10
 Premature Burial: 1
 Preparation of Rites: 5
-Pre-Preparation of Rites: 10
 Pressured Planet Wraitsoth: 13
 Primathmech Alembertian: 20
 Primeval Planet Perlereino: 13
@@ -526,17 +540,18 @@ Primite Lordly Lode: 13
 Prohibition: 100
 Pseudo Space: 3
 Psi-Blocker: 100
-Psychic End Punisher: 15
 PSY-Framegear Delta: 7
 PSY-Framegear Epsilon: 7
 PSY-Framegear Gamma: 15
 PSY-Framelord Omega: 100
-Purrely: 3
+Psychic End Punisher: 15
 Purrely Happy Memory: 1
 Purrely Sleepy Memory: 5
+Purrely: 3
 QQ Enneagon: 1
 Question: 11
 Quick Launch: 25
+Ra's Disciple: 1
 Radiant Typhoon Chant: 7
 Radiant Typhoon Eldam: 7
 Radiant Typhoon Krosea: 20
@@ -564,17 +579,18 @@ Rank-Up-Magic Revolution Force: 1
 Rank-Up-Magic Skip Force: 5
 Rank-Up-Magic Soul Shave Force: 5
 Rank-Up-Magic Zexal Force: 1
-Ra's Disciple: 1
 Reasoning: 15
+Red Nova Dragon - Burning Soul: 20
 Red Reboot: 50
 Red-Eyes Black Fullmetal Dragon: 33
 Red-Eyes Dark Dragoon: 100
 Red-Eyes Flare Metal Dragon: 1
-Regenesis: 10
 Regenesis Archfiend: 10
 Regenesis Code: 10
 Regenesis Sage: 7
 Regenesis Warrior: 3
+Regenesis: 10
+Reincarnation of the Unchained: 7
 Reinforcement of the Army: 18
 Rescue-ACE Impulse: 1
 Rescue-ACE Preventer: 3
@@ -639,7 +655,7 @@ Spright Starter: 11
 Stardust Dragon - Victim Sanctuary: 15
 Stardust Sifr Divine Dragon: 21
 Starjunk Synchron: 1
-Stellarnova Binding: 3
+Stellarnova Bonds: 3
 Stray Purrely Street: 5
 Subspace Battle: 5
 Substitoad: 51
@@ -693,8 +709,8 @@ The Three Champions of Swordsoul: 10
 The Tyrant Neptune: 100
 The Unstoppable Exodia Incarnate: 20
 The Zombie Vampire: 40
-Theorealize: 7
 Theorealize Past Lull: 7
+Theorealize: 7
 Theorealized Medius: 80
 There Can Be Only One: 100
 Therion "King" Regulus: 33
@@ -711,6 +727,7 @@ Trap Holic: 7
 Trap Trick: 3
 Traptrix Rafflesia: 20
 Tri-Brigade Mercourier: 5
+Triple Borrel Launch: 15
 Triple Tactics Talent: 40
 Triple Tactics Thrust: 11
 Trishula, Dragon of the Ice Barrier: 13
@@ -718,6 +735,7 @@ True King of All Calamities: 100
 Tyrant's Tirade: 100
 Ultimate Slayer: 1
 Ultimaya Tzolkin: 100
+Unchained Oni of Shyma: 10
 Upstart Goblin: 10
 Uzuhime the Manifested Mikanko: 18
 V Umbral Horror: 7
@@ -739,6 +757,11 @@ Wind-Up Hunter: 86
 Winged Kuriboh Sabatiel LV10: 7
 Wishes for Eyes of Blue: 18
 Witch of the White Forest: 33
+Witchcrafter Celebration: 5
+Witchcrafter Distortion: 7
+Witchcrafter Marka: 10
+Witchcrafter Pupils: 15
+Witchcrafter Walpurgis: 8
 Witness of the Ancient: 33
 World Legacy Monstrosity: 1
 XX-Saber Gottoms: 100
