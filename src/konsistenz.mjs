@@ -3,6 +3,7 @@
 import { isExtra } from './decks.mjs';
 import { roleOf, HANDTRAPS } from './tutor.mjs';
 import { engineReport, blurb, matches } from './goals.mjs';
+import { handtrapInfo, TIER_TEXT } from './handtraps.mjs';
 
 const clean = (n) => (n || '').replace(/\s*\((goat|pre-errata)\)$/i, '');
 const lcName = (c) => clean(c.name).toLowerCase();
@@ -133,9 +134,10 @@ export function suggest(deck, cards, setnames, o = {}) {
   const cands = []; const seenName = new Set();
   for (const { c, ln } of pool) {
     if (!c || isExtra(c)) continue; const eng = engs.length && (c.setcodes || []).some((s) => engs.some((g) => matches(s, g.code)));
-    const nmL = clean(ln || c.name).toLowerCase(); const generic = SAFE_DRAW.has(nmL) || HANDTRAPS.has(nmL);
+    const nmL = lcName(c); // (nicht „ln“: dort steht seit der deutschen Anzeige „englisch|deutsch“)
+    const hiC = handtrapInfo(c, o.fmtId); const isHT = !!(hiC && hiC.curated); const generic = SAFE_DRAW.has(nmL) || HANDTRAPS.has(nmL) || isHT;
     if (!(eng || have.has(c.code) || generic)) continue;
-    const k = cls(c); if (!'SDEH'.includes(k) || k === 'X') continue;
+    const k = isHT ? 'H' : cls(c); if (!'SDEH'.includes(k) || k === 'X') continue;
     if (k === 'E' && !eng && !have.has(c.code)) continue; // Allzweck-Verlängerer nur, wenn schon im Deck
     if (!can(c.code)) continue; const key = lcName(c); if (seenName.has(key)) continue; seenName.add(key); cands.push({ c, k, eng: !!eng, have: have.get(c.code) });
   }
@@ -170,7 +172,11 @@ export function suggest(deck, cards, setnames, o = {}) {
   const cut = cutsPool.map((e) => { const pS = plus(minus(p0, e, e.n === 1), 'S', true, true, e.code, limOf); return { code: e.code, k: e.k, gain: rate(pS).raw - r0.raw, why: cutWhy(e) }; }).filter((x) => x.gain >= 1.5).sort((a, b) => b.gain - a.gain).slice(0, 4);
   // Schutz: Handtraps, wenn weniger als 3
   const prot = [];
-  if (p0.c.H < 3) for (const cd of cands) { if (cd.k !== 'H') continue; const bl = blurb(cd.c); prot.push({ code: cd.c.code, why: `Handtrap – schützt dich im Zug des Gegners${bl ? ' (' + bl.replace(/^Handtrap: /, '') + ')' : ''}.`, syn: 0 }); if (prot.length >= 12) break; }
+  if (p0.c.H < 3) {
+    // nur echte Handtraps (Rangliste), die besten zuerst; Karten wie „Called by the Grave“ sind Schutz, aber keine Handtrap
+    const hts = cands.filter((cd) => cd.k === 'H').map((cd) => ({ cd, hi: handtrapInfo(cd.c, o.fmtId) })).filter((x) => x.hi && x.hi.curated).sort((a, b) => b.hi.score - a.hi.score || lcName(a.cd.c).localeCompare(lcName(b.cd.c)));
+    for (const { cd, hi } of hts) { const bl = hi.note || (blurb(cd.c) || '').replace(/^Handtrap: /, ''); prot.push({ code: cd.c.code, why: `Handtrap Stufe ${hi.tier} (${TIER_TEXT[hi.tier]})${bl ? ' – ' + bl : ''}`, syn: 0 }); if (prot.length >= 12) break; }
+  }
   const protTop = prot.slice(0, 3);
   return { score: r0.score, base: r0.raw, add, cut, prot: protTop, codes: [...add.map((a) => a.code), ...protTop.map((a) => a.code)] };
 }

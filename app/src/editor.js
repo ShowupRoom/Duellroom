@@ -1,7 +1,10 @@
 // Deck-Werkstatt: eigene Decks bauen, Ziehen & Ablegen aus allen Karten, Prüfung je Format
 import { h, $, clear, toast, uid } from './util.js';
-import { App, FORMAT_INFO, FORMATS, fmtById, allDecks, customDecks, saveCustom, deleteCustom, withTutor, nameOf, cardOf, cleanName, count, expand, toFmtCode, toPlainCode, goatMaps, consOf, limitOf, ADV_LISTS, LIST_NAME, descOf, searchName } from './data.js';
-import { suggest } from '../../src/konsistenz.mjs';
+import { App, FORMAT_INFO, FORMATS, fmtById, allDecks, customDecks, saveCustom, deleteCustom, withTutor, nameOf, cardOf, cleanName, count, expand, toFmtCode, toPlainCode, goatMaps, consOf, limitOf, ADV_LISTS, LIST_NAME, descOf, searchName, useDe } from './data.js';
+import { suggest, profile } from '../../src/konsistenz.mjs';
+import { handtrapInfo, TIER_TEXT, TIER_SHORT } from '../../src/handtraps.mjs';
+import { roleOf, ROLE_DE } from '../../src/tutor.mjs';
+import { matches } from '../../src/goals.mjs';
 import { consBlock } from './cons.js';
 import { cardEl, isOcg, ocgTag } from './cards.js';
 import { openModal, confirmBox, cardInfoBody } from './ui.js';
@@ -26,7 +29,7 @@ export function poolFor(fmtId) {
   const gm = goatMaps(); const out = []; const L = App.lists;
   for (const c of App.cards.values()) {
     if (c.type & 0x4000) continue; const isG = c.code >= 504700000 && c.code < 504800000;
-    if (fmtId === 'goat') { if (!(L.goat.map[c.code] > 0)) continue; if (gm.to.has(c.code)) continue; } else { if (isG || c.alias) continue; if (fmtId === 'speed' && !(L.speed.map[c.code] > 0)) continue; }
+    if (fmtId === 'goat') { if (!(L.goat.map[c.code] > 0)) continue; if (gm.to.has(c.code)) continue; if (!isG && c.alias) continue; /* Alternativ-Artwork derselben Karte nicht doppelt zeigen */ } else { if (isG || c.alias) continue; if (fmtId === 'speed' && !(L.speed.map[c.code] > 0)) continue; }
     if (fmtId === 'edison' && (c.type & (0x800000 | 0x4000000 | 0x1000000))) continue;
     if (fmtId === 'genesys' && (c.type & (0x4000000 | 0x1000000))) continue;
     if (!(c.type & 7)) continue;
@@ -78,7 +81,7 @@ function importDialog(fmtId, done) {
 screens.editor = (params = {}) => {
   const src = params.deck || {}; const S = { id: src.id || 'my-' + uid(), saved: !!src.id && customDecks().some((d) => d.id === src.id), name: src.name || 'Mein Deck', fmt: src.fmt || params.fmt || 'advanced', list: src.list || 'tcg', main: clone(src.main), extra: clone(src.extra), side: clone(src.side), dirty: params.dirty ?? !src.id };
   if (S.fmt === 'goat') { for (const k of ['main', 'extra', 'side']) S[k] = S[k].map(([c, n]) => [toFmtCode(c, 'goat'), n]); }
-  const F = { q: '', type: 'all', attr: 0, lvl: 'all', sub: 'all', legal: true, more: false, ocg: 'all', rec: false }; let split = 1; let sel = null;
+  const F = { q: '', type: 'all', attr: 0, lvl: 'all', sub: 'all', legal: true, more: false, ocg: 'all', rec: false, ht: 0, eng: null }; let split = 1; let sel = null;
   let CONS = null, REC = null, recSet = new Set(), recT = 0;
   const fmt = () => fmtById(S.fmt, S.fmt === 'advanced' ? S.list : undefined);
   const lim = (code) => allowed(code, fmt(), App.lists);
@@ -107,7 +110,7 @@ screens.editor = (params = {}) => {
   const markRec = () => { for (const e of poolList.querySelectorAll('.pc')) e.classList.toggle('rec', recSet.has(+e.dataset.code)); };
   const recalcNow = () => {
     clearTimeout(recT);
-    try { REC = count(S.main) >= 10 ? suggest(deckObj(), App.cards, App.strings && App.strings.setname, { limOf: limitOf(deckObj()), can: (c) => totalOf(c) < lim(c), pool: poolFor(S.fmt), max: 6 }) : null; } catch (e) { REC = null; }
+    try { REC = count(S.main) >= 10 ? suggest(deckObj(), App.cards, App.strings && App.strings.setname, { limOf: limitOf(deckObj()), can: (c) => totalOf(c) < lim(c), pool: poolFor(S.fmt), max: 6, fmtId: S.fmt }) : null; } catch (e) { REC = null; }
     recSet = new Set(REC ? REC.codes : []); markRec();
   };
   const scheduleRec = () => { clearTimeout(recT); recT = setTimeout(() => { if (document.body.classList.contains('dragging')) { scheduleRec(); return; } recalcNow(); }, 450); };
@@ -176,14 +179,18 @@ screens.editor = (params = {}) => {
       if (F.sub !== 'all') { const mk = subMasks[F.sub]; if (!(c.type & mk)) return false; }
       if (F.legal && lim(c.code) === 0) return false;
       if (F.ocg === 'only' && !isOcg(c)) return false; if (F.ocg === 'none' && isOcg(c)) return false;
+      if (F.ht) { const hi = handtrapInfo(c, S.fmt); if (!hi || (F.ht === 'best' && !hi.curated)) return false; }
+      if (F.eng && !(c.setcodes || []).some((s) => matches(s, F.eng.code))) return false;
       if (q && !(ln.includes(q) || (q.length > 3 && descOf(c).toLowerCase().includes(q)))) return false;
       return true;
     });
     if (q) { const nm = []; const ds = []; for (const e of filtered) (e.ln.includes(q) ? nm : ds).push(e); filtered = nm.concat(ds); }
-    shown = 0; clear(poolList); poolList.scrollTop = 0; more();
+    if (F.ht) filtered = filtered.map((e) => ({ e, s: handtrapInfo(e.c, S.fmt).score })).sort((a, b) => b.s - a.s || a.e.sk.localeCompare(b.e.sk)).map((x) => x.e); // beste Handtraps zuerst
+    else if (F.eng && !q) filtered = filtered.map((e) => ({ e, r: ROLE_ORDER[roleOf(e.c)] ?? 9 })).sort((a, b) => a.r - b.r || a.e.sk.localeCompare(b.e.sk)).map((x) => x.e); // Starter zuerst
+    shown = 0; clear(poolList); poolList.scrollTop = 0; more(); paintSummary();
   };
-  const pcEl = (c) => { const code = c.code; const l = lim(code); const e = h('div', { class: 'pc' + (l === 0 ? ' ban' : '') + (recSet.has(code) ? ' rec' : ''), 'data-code': code, 'data-src': 'pool' }, cardEl(code, { cls: 'ed' }), isOcg(c) && S.list !== 'none' && S.list !== 'ocg' ? ocgTag() : null, l < 3 ? h('span', { class: 'lim l' + l }, l === 0 ? '✕' : l) : null, S.fmt === 'genesys' && points(code, App.lists) ? h('span', { class: 'pt' }, points(code, App.lists)) : null, h('span', { class: 'inn' }, totalOf(code) ? '×' + totalOf(code) : '')); return e; };
-  const more = () => { const end = Math.min(filtered.length, shown + CH); const frag = document.createDocumentFragment(); for (let i = shown; i < end; i++) frag.append(pcEl(filtered[i].c)); shown = end; poolList.append(frag); if (!filtered.length) poolList.append(h('div', { class: 'dz-empty' }, F.rec ? (count(S.main) < 10 ? 'Lege erst ein paar Karten ins Deck – dann gibt es Empfehlungen.' : 'Keine Empfehlung – dein Deck ist in dieser Hinsicht gut aufgestellt.') : 'Keine Karte gefunden')); countEl.textContent = `${filtered.length.toLocaleString('de-DE')} Karten`; };
+  const pcEl = (c) => { const code = c.code; const l = lim(code); const e = h('div', { class: 'pc' + (l === 0 ? ' ban' : '') + (recSet.has(code) ? ' rec' : ''), 'data-code': code, 'data-src': 'pool' }, cardEl(code, { cls: 'ed' }), poolBadge(c), isOcg(c) && S.list !== 'none' && S.list !== 'ocg' ? ocgTag() : null, l < 3 ? h('span', { class: 'lim l' + l }, l === 0 ? '✕' : l) : null, S.fmt === 'genesys' && points(code, App.lists) ? h('span', { class: 'pt' }, points(code, App.lists)) : null, h('span', { class: 'inn' }, totalOf(code) ? '×' + totalOf(code) : '')); return e; };
+  const more = () => { const end = Math.min(filtered.length, shown + CH); const frag = document.createDocumentFragment(); for (let i = shown; i < end; i++) frag.append(pcEl(filtered[i].c)); shown = end; poolList.append(frag); if (!filtered.length) poolList.append(h('div', { class: 'dz-empty' }, F.rec ? (count(S.main) < 10 ? 'Lege erst ein paar Karten ins Deck – dann gibt es Empfehlungen.' : 'Keine Empfehlung – dein Deck ist in dieser Hinsicht gut aufgestellt.') : (F.ht && F.eng ? 'Diese Engine hat keine Handtraps im Format. Hebe einen der beiden Filter auf.' : F.ht ? 'Keine Handtraps gefunden – prüfe „nur erlaubte“ oder die Verbotsliste.' : 'Keine Karte gefunden'))); countEl.textContent = `${filtered.length.toLocaleString('de-DE')} Karten`; };
   const refreshPool = () => { for (const e of poolList.querySelectorAll('.pc')) { const code = +e.dataset.code; const n = totalOf(code); e.classList.toggle('rec', recSet.has(code)); const i = e.querySelector('.inn'); if (i) i.textContent = n ? '×' + n : ''; } };
   poolList.addEventListener('scroll', () => { if (poolList.scrollTop + poolList.clientHeight > poolList.scrollHeight - 400 && shown < filtered.length) more(); });
   const countEl = h('span', { class: 'muted small' });
@@ -191,13 +198,50 @@ screens.editor = (params = {}) => {
   const chip = (label, active, fn) => h('button', { class: 'chip' + (active ? ' on' : ''), onclick: fn }, label);
   const paintFilters = () => {
     clear(filterBar);
-    filterBar.append(h('div', { class: 'tabs' }, chip(F.rec ? '★ Empfohlen' : '☆ Empfohlen', F.rec, () => { F.rec = !F.rec; if (F.rec) recalcNow(); paintFilters(); applyFilter(); }), [['all', 'Alle'], ['monster', 'Monster'], ['spell', 'Zauber'], ['trap', 'Fallen'], ['extra', 'Extra']].map(([k, t]) => chip(t, F.type === k, () => { F.type = k; paintFilters(); applyFilter(); })), chip(F.more ? '▲ Filter' : '▼ Filter', F.more, () => { F.more = !F.more; paintFilters(); }), chip('nur erlaubte', F.legal, () => { F.legal = !F.legal; paintFilters(); applyFilter(); }), chip(F.ocg === 'all' ? 'OCG: alle' : F.ocg === 'only' ? 'nur OCG' : 'ohne OCG', F.ocg !== 'all', () => { F.ocg = F.ocg === 'all' ? 'only' : F.ocg === 'only' ? 'none' : 'all'; paintFilters(); applyFilter(); }), countEl));
+    filterBar.append(h('div', { class: 'tabs' }, chip(F.rec ? '★ Empfohlen' : '☆ Empfohlen', F.rec, () => { F.rec = !F.rec; if (F.rec) recalcNow(); paintFilters(); applyFilter(); }), chip(F.ht === 'best' ? '🛡 Beste Handtraps' : F.ht === 'all' ? '🛡 Alle Handtraps' : '🛡 Handtraps', !!F.ht, () => { F.ht = F.ht ? (F.ht === 'best' ? 'all' : 0) : 'best'; if (F.ht) F.rec = false; paintFilters(); applyFilter(); }), chip(F.eng ? '⚙ ' + engName(F.eng.code) : '⚙ Engine', !!F.eng, () => pickEngine()), [['all', 'Alle'], ['monster', 'Monster'], ['spell', 'Zauber'], ['trap', 'Fallen'], ['extra', 'Extra']].map(([k, t]) => chip(t, F.type === k, () => { F.type = k; paintFilters(); applyFilter(); })), chip(F.more ? '▲ Filter' : '▼ Filter', F.more, () => { F.more = !F.more; paintFilters(); }), chip('nur erlaubte', F.legal, () => { F.legal = !F.legal; paintFilters(); applyFilter(); }), chip(F.ocg === 'all' ? 'OCG: alle' : F.ocg === 'only' ? 'nur OCG' : 'ohne OCG', F.ocg !== 'all', () => { F.ocg = F.ocg === 'all' ? 'only' : F.ocg === 'only' ? 'none' : 'all'; paintFilters(); applyFilter(); }), countEl));
     if (F.more) filterBar.append(h('div', { class: 'tabs' }, chip('alle Attribute', !F.attr, () => { F.attr = 0; paintFilters(); applyFilter(); }), ATTR_BITS.slice(0, 6).map(([v, n]) => chip(n[0] + n.slice(1).toLowerCase(), F.attr === v, () => { F.attr = v; paintFilters(); applyFilter(); }))),
       h('div', { class: 'tabs' }, [['all', 'jede Stufe'], ['low', '1–4'], ['mid', '5–6'], ['high', '7+']].map(([k, t]) => chip(t, F.lvl === k, () => { F.lvl = k; paintFilters(); applyFilter(); }))),
       h('div', { class: 'tabs' }, [['all', 'jede Art'], ['normal', 'Normal'], ['effect', 'Effekt'], ['fusion', 'Fusion'], ['ritual', 'Ritual'], ['synchro', 'Synchro'], ['xyz', 'Xyz'], ['link', 'Link'], ['pendulum', 'Pendel'], ['tuner', 'Empfänger']].map(([k, t]) => chip(t, F.sub === k, () => { F.sub = k; paintFilters(); applyFilter(); }))));
   };
-  const filterBar = h('div', { class: 'ed-filters' });
-  poolBox.append(h('div', { class: 'ed-pool-h' }, searchIn, filterBar), poolList);
+  const filterBar = h('div', { class: 'ed-filters' }); const sumEl = h('div', { class: 'ed-sum small muted' });
+  poolBox.append(h('div', { class: 'ed-pool-h' }, searchIn, filterBar, sumEl), poolList);
+
+  // ---- Handtrap- und Engine-Filter
+  const ROLE_ORDER = { starter: 0, extender: 1, draw: 2, removal: 3, boss: 4, handtrap: 5, trap: 6, material: 7, other: 8 };
+  const ROLE_SHORT = { starter: 'Start', extender: 'Verl.', draw: 'Zug', removal: 'Räum.', boss: 'Boss', handtrap: 'HT', trap: 'Falle', material: 'Mat.' };
+  const engName = (code) => { const sn = App.strings; return (useDe() && sn.setnameDe && sn.setnameDe[code]) || sn.setname[code] || ('#' + code.toString(16)); };
+  const poolBadge = (c) => {
+    if (F.ht) { const hi = handtrapInfo(c, S.fmt); return hi ? h('span', { class: 'ht-t t' + hi.tier, title: `Handtrap Stufe ${hi.tier}: ${TIER_TEXT[hi.tier]}` }, hi.tier) : null; }
+    if (F.eng) { const r = roleOf(c); return ROLE_SHORT[r] ? h('span', { class: 'rl-t r-' + r, title: ROLE_DE[r] }, ROLE_SHORT[r]) : null; }
+    return null;
+  };
+  const htInDeck = () => { let n = 0, best = 0; for (const z of ['main', 'side']) for (const [code, k] of S[z]) { const hi = handtrapInfo(cardOf(code), S.fmt); if (hi) { n += k; if (hi.curated) best += k; } } return { n, best }; };
+  function paintSummary() {
+    clear(sumEl); if (!F.ht && !F.eng) { sumEl.style.display = 'none'; return; } sumEl.style.display = '';
+    if (F.ht) { const d = htInDeck(); sumEl.append(h('div', null, h('b', null, F.ht === 'best' ? 'Beste zuerst' : 'Alle erkannten'), ' · ', ...['S', 'A', 'B', 'C'].flatMap((t) => [h('span', { class: 'ht-t t0 ' + t }, t), ` ${TIER_SHORT[t]}  `]), `· im Deck: ${d.best}` + (d.n > d.best ? ` (+${d.n - d.best})` : ''))); }
+    if (F.eng) sumEl.append(h('div', null, h('b', null, `Engine „${engName(F.eng.code)}“`), F.ht ? ' – nur Handtraps dieser Engine.' : ' – sortiert nach Rolle: Starter, Verlängerer, Zugkarten, Entferner, Bosse.'));
+  }
+  const engCache = new Map();
+  function engineList(fmtId) {
+    if (engCache.has(fmtId)) return engCache.get(fmtId);
+    const sn = App.strings.setname; const byBase = new Map(); for (const k of Object.keys(sn).map(Number)) { const b = k & 0xfff; if (!byBase.has(b)) byBase.set(b, []); byBase.get(b).push(k); }
+    const cnt = new Map();
+    for (const { c } of poolFor(fmtId)) { const seen = new Set(); for (const s of c.setcodes || []) for (const a of byBase.get(s & 0xfff) || []) if (!seen.has(a) && matches(s, a)) { seen.add(a); cnt.set(a, (cnt.get(a) || 0) + 1); } }
+    const out = [...cnt].filter(([, n]) => n >= 3).map(([code, n]) => ({ code, n })); engCache.set(fmtId, out); return out;
+  }
+  function pickEngine() {
+    const all = engineList(S.fmt).map((e) => ({ ...e, name: engName(e.code), alt: App.strings.setname[e.code] || '' })).sort((a, b) => a.name.localeCompare(b.name));
+    let mine = []; try { if (count(S.main) >= 10) { const rep = profile(deckObj(), App.cards, App.strings.setname, limitOf(deckObj())).rep; mine = rep.engines.map((g) => all.find((e) => e.code === g.code) || { code: g.code, n: 0, name: engName(g.code), alt: g.name }); } } catch (e) { mine = []; }
+    const body = h('div'); const list = h('div', { class: 'col', style: 'gap:6px;margin-top:8px' });
+    const row = (e) => h('button', { class: 'btn' + (F.eng && F.eng.code === e.code ? ' pri' : ''), style: 'justify-content:space-between;text-align:left;height:auto;padding:9px 12px', onclick: () => { F.eng = { code: e.code }; F.rec = false; m.close(); paintFilters(); applyFilter(); } }, h('span', null, e.name), h('span', { class: 'muted small' }, e.n ? `${e.n} Karten` : ''));
+    const q = h('input', { class: 'search', placeholder: 'Engine suchen (deutsch oder englisch) …', oninput: () => paint() });
+    const paint = () => { clear(list); const t = q.value.trim().toLowerCase();
+      if (!t && mine.length) { list.append(h('div', { class: 'small muted' }, 'In deinem Deck')); mine.forEach((e) => list.append(row(e))); list.append(h('div', { class: 'small muted', style: 'margin-top:6px' }, 'Alle Engines')); }
+      const hit = all.filter((e) => !t || e.name.toLowerCase().includes(t) || e.alt.toLowerCase().includes(t)); hit.slice(0, 160).forEach((e) => list.append(row(e)));
+      if (!hit.length) list.append(h('div', { class: 'muted small' }, 'Keine Engine gefunden.')); else if (hit.length > 160) list.append(h('div', { class: 'muted small' }, `… ${hit.length - 160} weitere – Suche eingrenzen.`)); };
+    body.append(q, list); paint();
+    const m = openModal({ title: 'Engine wählen', cls: 'tall', body, footer: [F.eng ? h('button', { class: 'btn ghost', onclick: () => { F.eng = null; m.close(); paintFilters(); applyFilter(); } }, 'Filter aufheben') : null, h('button', { class: 'btn', onclick: () => m.close() }, 'Schließen')].filter(Boolean) });
+  }
 
   // ---- Ändern
   function add(zone, code, silent) {
@@ -224,10 +268,11 @@ screens.editor = (params = {}) => {
       : [h('button', { class: 'btn red', onclick: () => { remove(z, code); if (!num(S[z], code)) closeDock(); } }, '− Entfernen'), h('button', { class: 'btn', onclick: () => add(z, code) }, '＋ Kopie'), z === 'side' ? h('button', { class: 'btn', onclick: () => { move('side', ex ? 'extra' : 'main', code); if (!num(S.side, code)) closeDock(); } }, '→ Deck') : h('button', { class: 'btn', onclick: () => { move(z, 'side', code); if (!num(S[z], code)) closeDock(); } }, '→ Side')];
     dock.append(h('button', { class: 'sh-x', onclick: closeDock }, '✕'), h('div', { class: 'sh-top' }, cardEl(code, { cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'sh-n' }, cleanName(c.name)), h('div', { class: 'small muted' }, typeText(c)), (c.type & 1) ? h('div', { class: 'small' }, [attrName(c.attribute), levelText(c)].filter(Boolean).join(' · ')) : null, (c.type & 1) ? h('div', { class: 'small gold' }, statsText(c)) : null,
       isOcg(c) ? h('div', { class: 'small', style: 'margin-top:4px' }, ocgTag(), ' nur im OCG erschienen') : null,
-      recInfo(code),
+      recInfo(code), htInfoLine(c),
       h('div', { class: 'small', style: 'margin-top:4px' }, `Im Deck: ${inDeck}× · erlaubt: ${lim(code)}×` + (S.fmt === 'genesys' ? ` · ${points(code, App.lists)} Punkte` : '')))),
       h('div', { class: 'sh-t' }, descOf(c).replace(/\r/g, '')), h('div', { class: 'row', style: 'margin-top:8px' }, btns));
   }
+  const htInfoLine = (c) => { const hi = handtrapInfo(c, S.fmt); const r = F.eng ? roleOf(c) : null; return h('div', null, hi ? h('div', { class: 'small ht-line' }, `🛡 Handtrap · Stufe ${hi.tier} (${TIER_TEXT[hi.tier]})` + (hi.note ? ': ' + hi.note : hi.curated ? '' : ' – automatisch erkannt: wirkt im Zug des Gegners aus der Hand.')) : null, r && ROLE_SHORT[r] ? h('div', { class: 'small muted' }, 'Rolle in der Engine: ' + ROLE_DE[r]) : null); };
   const recInfo = (code) => { const a = REC && (REC.add.find((x) => x.code === code) || REC.prot.find((x) => x.code === code)); return a ? h('div', { class: 'small rec-line' }, '★ Empfohlen: ' + a.why) : null; };
   function closeDock() { sel = null; dock.classList.remove('open'); clear(dock); }
 

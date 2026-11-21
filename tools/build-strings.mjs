@@ -12,9 +12,10 @@ const parse = (f) => {
   return out;
 };
 const en = parse(SP + 'strings.conf'), de = parse(SP + 'languages/Deutsch/strings.conf');
-const res = { system: {}, victory: {}, counter: {}, setname: {} };
+const res = { system: {}, victory: {}, counter: {}, setname: {}, setnameDe: {} };
 for (const k of ['system', 'victory', 'counter']) res[k] = { ...en[k], ...de[k] };
-res.setname = en.setname; // Kartennamen sind englisch, also auch die Archetypen
+res.setname = en.setname; // englische Archetyp-Namen (Rechenwerte der Logik)
+res.setnameDe = { ...en.setname, ...de.setname }; // deutsche Namen für die Anzeige (fehlende bleiben englisch)
 writeFileSync('data/strings.json', JSON.stringify(res));
 console.log('system', Object.keys(res.system).length, 'victory', Object.keys(res.victory).length, 'counter', Object.keys(res.counter).length, 'davon deutsch', Object.keys(de.system).length);
 console.log(res.system[1150], '|', res.system[549], '|', res.system[31], '|', res.system[1190], '|', res.victory[1]);
