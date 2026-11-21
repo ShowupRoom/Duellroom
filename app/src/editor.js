@@ -20,7 +20,34 @@ const put = (l, c, n = 1) => { const e = l.find((x) => x[0] === c); if (e) e[1] 
 const take = (l, c, n = 1) => { const i = l.findIndex((x) => x[0] === c); if (i < 0) return 0; const t = Math.min(n, l[i][1]); l[i][1] -= t; if (l[i][1] <= 0) l.splice(i, 1); return t; };
 const num = (l, c) => (l.find((x) => x[0] === c) || [0, 0])[1];
 const clone = (l) => (l || []).map((e) => [...e]);
-const sortList = (l) => l.sort((a, b) => { const A = cardOf(a[0]), B = cardOf(b[0]); return KO.indexOf(kind(A)) - KO.indexOf(kind(B)) || cleanName(A?.name || '').localeCompare(cleanName(B?.name || '')); });
+const ROLE_ORDER = { starter: 0, extender: 1, draw: 2, removal: 3, boss: 4, handtrap: 5, trap: 6, material: 7, other: 8 };
+// ---- Sortieren (Kartenvorrat und Deck getrennt einstellbar, wird auf dem Gerät gemerkt) ------------------------------
+export const SORT_KEYS = [['auto', 'Automatisch'], ['std', 'Standard'], ['name', 'Name'], ['level', 'Stufe / Rang'], ['atk', 'ATK'], ['def', 'Verteidigung'], ['attr', 'Attribut'], ['type', 'Kartenart'], ['role', 'Rolle im Deck']];
+const NATURAL = { auto: 1, std: 1, name: 1, level: -1, atk: -1, def: -1, attr: 1, type: 1, role: 1 }; // -1 = hoch → niedrig
+const SORTS = { pool: { k: 'auto', d: 1 }, deck: { k: 'std', d: 1 } };
+const numKey = (k, c) => { if (!(c.type & 1)) return null; if (k === 'level') return c.level & 0xff; if (k === 'atk') return c.attack >= 0 ? c.attack : null; if (k === 'def') return (c.type & 0x4000000) || c.defense < 0 ? null : c.defense; return null; };
+function sortKey(k, c) {
+  switch (k) {
+    case 'name': return cleanName(c.name);
+    case 'level': case 'atk': case 'def': return numKey(k, c);
+    case 'attr': return (c.type & 1) && c.attribute ? Math.log2(c.attribute & -c.attribute) : 99;
+    case 'type': case 'std': return KO.indexOf(kind(c));
+    case 'role': return ROLE_ORDER[roleOf(c)] ?? 9;
+    default: return 0;
+  }
+}
+/** Sortiert Einträge (Schlüssel einmal berechnen); Karten ohne Wert (z. B. Zauber bei ATK) stehen immer hinten */
+function sortItems(items, cardOfItem, mode) {
+  const k = mode.k === 'auto' ? 'name' : mode.k, d = mode.d;
+  const dec = items.map((it) => { const c = cardOfItem(it); return { it, key: sortKey(k, c), nm: cleanName(c?.name || '') }; });
+  dec.sort((a, b) => {
+    const na = a.key === null, nb = b.key === null; if (na !== nb) return na ? 1 : -1;
+    let r = typeof a.key === 'string' ? a.key.localeCompare(b.key) : (a.key || 0) - (b.key || 0); r *= d; if (r) return r;
+    return a.nm.localeCompare(b.nm);
+  });
+  return dec.map((x) => x.it);
+}
+const sortList = (l) => { const m = SORTS.deck; return sortItems(l, (e) => cardOf(e[0]), m.k === 'std' ? { k: 'type', d: 1 } : m); };
 
 // ---- Kartenvorrat je Format -----------------------------------------------------------------------
 const pools = new Map();
@@ -81,6 +108,7 @@ function importDialog(fmtId, done) {
 screens.editor = (params = {}) => {
   const src = params.deck || {}; const S = { id: src.id || 'my-' + uid(), saved: !!src.id && customDecks().some((d) => d.id === src.id), name: src.name || 'Mein Deck', fmt: src.fmt || params.fmt || 'advanced', list: src.list || 'tcg', main: clone(src.main), extra: clone(src.extra), side: clone(src.side), dirty: params.dirty ?? !src.id };
   if (S.fmt === 'goat') { for (const k of ['main', 'extra', 'side']) S[k] = S[k].map(([c, n]) => [toFmtCode(c, 'goat'), n]); }
+  try { const sv = store.get('ed.sort', null); if (sv && sv.pool && sv.deck) { Object.assign(SORTS.pool, sv.pool); Object.assign(SORTS.deck, sv.deck); } } catch (e) { /* Standard */ }
   const F = { q: '', type: 'all', attr: 0, lvl: 'all', sub: 'all', legal: true, more: false, ocg: 'all', rec: false, ht: 0, eng: null }; let split = 1; let sel = null;
   let CONS = null, REC = null, recSet = new Set(), recT = 0;
   const fmt = () => fmtById(S.fmt, S.fmt === 'advanced' ? S.list : undefined);
@@ -100,7 +128,7 @@ screens.editor = (params = {}) => {
       h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap' }, h('span', { class: 'chip ' + (count(S.main) >= FORMATS[S.fmt].minMain && count(S.main) <= FORMATS[S.fmt].maxMain ? 'ok' : 'bad') }, `Haupt ${count(S.main)}`), h('span', { class: 'chip ' + (count(S.extra) <= FORMATS[S.fmt].maxExtra ? 'ok' : 'bad') }, `Extra ${count(S.extra)}`), h('span', { class: 'chip ' + (count(S.side) <= FORMATS[S.fmt].maxSide ? 'ok' : 'bad') }, `Side ${count(S.side)}`), S.fmt === 'genesys' ? h('span', { class: 'chip ' + (pts <= 100 ? 'ok' : 'bad') }, `${pts}/100 Punkte`) : null,
         ocgN() ? h('button', { class: 'chip ' + (S.fmt === 'advanced' && S.list === 'tcg' ? 'warn' : ''), onclick: showOcg }, `OCG ${ocgN()}`) : null,
         CONS ? h('button', { class: 'chip ' + CONS.tone, title: 'Konsistenz', onclick: () => showCons() }, '🎯 ' + CONS.score) : null,
-        h('button', { class: 'chip ' + (iss.length ? 'warn' : 'ok'), onclick: () => showIssues() }, iss.length ? `⚠ ${iss.length} Hinweis${iss.length > 1 ? 'e' : ''}` : '✓ spielbar'), h('button', { class: 'chip', onclick: () => { split = (split + 1) % 3; split1.className = 'ed-split s' + split; } }, '⇕')));
+        h('button', { class: 'chip ' + (iss.length ? 'warn' : 'ok'), onclick: () => showIssues() }, iss.length ? `⚠ ${iss.length} Hinweis${iss.length > 1 ? 'e' : ''}` : '✓ spielbar'), h('button', { class: 'chip' + (SORTS.pool.k !== 'auto' || SORTS.deck.k !== 'std' ? ' on' : ''), title: 'Sortieren', onclick: () => sortDialog() }, '⇅ Sortieren'), h('button', { class: 'chip', title: 'Aufteilung Deck / Kartenvorrat', onclick: () => { split = (split + 1) % 3; split1.className = 'ed-split s' + split; } }, '⇕')));
   };
   const ocgCodes = () => [...new Set(['main', 'extra', 'side'].flatMap((z) => S[z].map((e) => e[0])))].filter((c) => isOcg(cardOf(c)));
   const ocgN = () => ocgCodes().reduce((n, c) => n + totalOf(c), 0);
@@ -187,6 +215,7 @@ screens.editor = (params = {}) => {
     if (q) { const nm = []; const ds = []; for (const e of filtered) (e.ln.includes(q) ? nm : ds).push(e); filtered = nm.concat(ds); }
     if (F.ht) filtered = filtered.map((e) => ({ e, s: handtrapInfo(e.c, S.fmt).score })).sort((a, b) => b.s - a.s || a.e.sk.localeCompare(b.e.sk)).map((x) => x.e); // beste Handtraps zuerst
     else if (F.eng && !q) filtered = filtered.map((e) => ({ e, r: ROLE_ORDER[roleOf(e.c)] ?? 9 })).sort((a, b) => a.r - b.r || a.e.sk.localeCompare(b.e.sk)).map((x) => x.e); // Starter zuerst
+    if (SORTS.pool.k !== 'auto') filtered = sortItems(filtered, (e) => e.c, SORTS.pool); // ausdrücklich gewählte Reihenfolge
     shown = 0; clear(poolList); poolList.scrollTop = 0; more(); paintSummary();
   };
   const pcEl = (c) => { const code = c.code; const l = lim(code); const e = h('div', { class: 'pc' + (l === 0 ? ' ban' : '') + (recSet.has(code) ? ' rec' : ''), 'data-code': code, 'data-src': 'pool' }, cardEl(code, { cls: 'ed' }), poolBadge(c), isOcg(c) && S.list !== 'none' && S.list !== 'ocg' ? ocgTag() : null, l < 3 ? h('span', { class: 'lim l' + l }, l === 0 ? '✕' : l) : null, S.fmt === 'genesys' && points(code, App.lists) ? h('span', { class: 'pt' }, points(code, App.lists)) : null, h('span', { class: 'inn' }, totalOf(code) ? '×' + totalOf(code) : '')); return e; };
@@ -207,7 +236,6 @@ screens.editor = (params = {}) => {
   poolBox.append(h('div', { class: 'ed-pool-h' }, searchIn, filterBar, sumEl), poolList);
 
   // ---- Handtrap- und Engine-Filter
-  const ROLE_ORDER = { starter: 0, extender: 1, draw: 2, removal: 3, boss: 4, handtrap: 5, trap: 6, material: 7, other: 8 };
   const ROLE_SHORT = { starter: 'Start', extender: 'Verl.', draw: 'Zug', removal: 'Räum.', boss: 'Boss', handtrap: 'HT', trap: 'Falle', material: 'Mat.' };
   const engName = (code) => { const sn = App.strings; return (useDe() && sn.setnameDe && sn.setnameDe[code]) || sn.setname[code] || ('#' + code.toString(16)); };
   const poolBadge = (c) => {
@@ -220,6 +248,22 @@ screens.editor = (params = {}) => {
     clear(sumEl); if (!F.ht && !F.eng) { sumEl.style.display = 'none'; return; } sumEl.style.display = '';
     if (F.ht) { const d = htInDeck(); sumEl.append(h('div', null, h('b', null, F.ht === 'best' ? 'Beste zuerst' : 'Alle erkannten'), ' · ', ...['S', 'A', 'B', 'C'].flatMap((t) => [h('span', { class: 'ht-t t0 ' + t }, t), ` ${TIER_SHORT[t]}  `]), `· im Deck: ${d.best}` + (d.n > d.best ? ` (+${d.n - d.best})` : ''))); }
     if (F.eng) sumEl.append(h('div', null, h('b', null, `Engine „${engName(F.eng.code)}“`), F.ht ? ' – nur Handtraps dieser Engine.' : ' – sortiert nach Rolle: Starter, Verlängerer, Zugkarten, Entferner, Bosse.'));
+  }
+  function sortDialog(which = 'deck') {
+    const body = h('div', { class: 'col' }); let cur = which;
+    const save = () => { try { store.set('ed.sort', { pool: SORTS.pool, deck: SORTS.deck }); } catch (e) { /* ohne Speicher */ } };
+    const paint = () => {
+      clear(body); const m = SORTS[cur]; const keys = SORT_KEYS.filter(([k]) => (cur === 'pool' ? k !== 'std' : k !== 'auto'));
+      body.append(h('div', { class: 'tabs' }, [['deck', 'Mein Deck'], ['pool', 'Kartenvorrat']].map(([k, t]) => h('button', { class: 'chip' + (cur === k ? ' on' : ''), onclick: () => { cur = k; paint(); } }, t))),
+        h('div', { class: 'small muted' }, cur === 'deck' ? 'Ordnet die Karten in Haupt-, Extra- und Sidedeck.' : 'Ordnet die Kartenliste unten. „Automatisch“ sortiert nach Name – bei Handtrap- und Engine-Filter nach Stärke bzw. Rolle.'),
+        h('div', { class: 'tags' }, keys.map(([k, t]) => h('button', { class: 'chip' + (m.k === k ? ' on' : ''), onclick: () => { m.k = k; m.d = NATURAL[k] ?? 1; save(); apply(); paint(); } }, t))));
+      const numeric = ['level', 'atk', 'def'].includes(m.k);
+      if (!['auto', 'std', 'type'].includes(m.k)) body.append(h('button', { class: 'btn', onclick: () => { m.d = -m.d; save(); apply(); paint(); } }, (m.d === NATURAL[m.k] ? 'Reihenfolge: ' : 'Umgekehrt: ') + (numeric ? (m.d < 0 ? 'hoch → niedrig ⬇' : 'niedrig → hoch ⬆') : m.k === 'name' ? (m.d > 0 ? 'A → Z ⬇' : 'Z → A ⬆') : (m.d > 0 ? 'wichtig zuerst ⬇' : 'wichtig zuletzt ⬆')) + '  (tippen zum Umkehren)'));
+      if (numeric) body.append(h('div', { class: 'small muted' }, 'Karten ohne diesen Wert (z. B. Zauber, Fallen, Link bei Verteidigung) stehen am Ende.'));
+    };
+    const apply = () => { if (cur === 'deck') paintDeck(); else applyFilter(); paintStatus(); };
+    const m = openModal({ title: 'Sortieren', cls: 'peek sortm', body, footer: [h('button', { class: 'btn ghost', onclick: () => { SORTS.pool.k = 'auto'; SORTS.pool.d = 1; SORTS.deck.k = 'std'; SORTS.deck.d = 1; save(); paintDeck(); applyFilter(); paintStatus(); paint(); } }, 'Zurücksetzen'), h('button', { class: 'btn pri', onclick: () => m.close() }, 'Fertig')] });
+    paint();
   }
   const engCache = new Map();
   function engineList(fmtId) {

@@ -35,3 +35,7 @@ body.dragging{cursor:grabbing;overflow:hidden}
 .ht-t.t0{position:static;transform:none;display:inline-block;margin:0 1px;vertical-align:middle}
 .rl-t{background:#142a55;color:#cfe3ff}.rl-t.r-starter{background:#1c7a4b;color:#fff}.rl-t.r-extender{background:#2a6bd6;color:#fff}.rl-t.r-boss{background:#8a3a9c;color:#fff}.rl-t.r-handtrap{background:#b4741a;color:#fff}
 .ht-line{margin-top:4px;color:#f6c96b}
+
+/* Sortier-Fenster: Deck und Kartenvorrat bleiben dahinter sichtbar, damit man die Wirkung sofort sieht */
+.modal.peek>.box.sortm{margin-bottom:0;max-height:52%;border-radius:18px 18px 0 0}
+@media (orientation:landscape) and (max-height:520px){.modal.peek>.box.sortm{max-height:78%}.box.sortm .mh{padding:8px 14px 2px}.box.sortm .mb .small.muted{display:none}.box.sortm .mb{padding:4px 14px 6px}.box.sortm .mf{padding:8px 14px calc(8px + var(--safe-b))}.box.sortm .col{gap:8px}}
