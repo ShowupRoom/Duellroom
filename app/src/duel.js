@@ -216,7 +216,8 @@ class Duel {
           this.addLog(`${this.pname(m.controller)}: ${k} – «${nameOf(m.code)}»`); beep('summon'); await this.banner({ title: k, sub: nameOf(m.code), code: m.code, cls: 'summon', ms: 850 }); break; }
         case MSG.SET: this.addLog(`${this.pname(m.controller)} setzt eine Karte`); beep('tap'); break;
         case MSG.CHAINING: {
-          this.chain.push({ code: m.code, p: m.controller }); this.addLog(`Kette ${this.chain.length}: «${nameOf(m.code)}» (${this.pname(m.controller)})`); this.renderTop(); beep('chain');
+          this.chain.push({ code: m.code, p: m.controller }); const lbl = descText(m.description, m.code, m.triggering_location != null ? m.triggering_location : m.location); const BT = { 16: 'Battle Step', 32: 'Battle Step', 64: 'Damage Step', 128: 'Schadensberechnung' };
+          this.addLog(`Kette ${this.chain.length}: «${nameOf(m.code)}»${lbl && lbl.length < 60 ? ' – ' + lbl : ''} (${this.pname(m.controller)})${BT[this.phase] ? ' · ' + BT[this.phase] : ''}`); this.renderTop(); beep('chain');
           const vw = effectView(m.code, m.description, m.triggering_location != null ? m.triggering_location : m.location); const has = !!(vw.ranges && vw.ranges.length);
           await this.banner({ title: `Kette ${this.chain.length}`, sub: nameOf(m.code), code: m.code, cls: 'chain', ms: has ? 1100 + Math.min(2400, vw.text.length * 8) : 800, // (Tippen überspringt)
              mark: has ? markNode(vw) : null }); break; }
@@ -244,6 +245,7 @@ class Duel {
     else if (to === LOC.REMOVED) this.addLog(`${n} wird verbannt`);
     else if (to === LOC.HAND && (from & (LOC.MZONE | LOC.SZONE | LOC.GRAVE | LOC.REMOVED))) this.addLog(`${n} kehrt auf die Hand zurück`);
     else if ((to === LOC.DECK || to === LOC.EXTRA) && (from & (LOC.MZONE | LOC.SZONE | LOC.GRAVE | LOC.REMOVED))) this.addLog(`${n} geht zurück ins Deck`);
+    else if (from === LOC.REMOVED && (to & (LOC.MZONE | LOC.SZONE))) this.addLog(`${n} kehrt aufs Spielfeld zurück`);
     else if (to === LOC.HAND && from === LOC.DECK) this.addLog(`${this.pname(m.to.controller)} fügt eine Karte aus dem Deck der Hand hinzu`);
   }
   /** Offene Hand des Gegners (z. B. unter „Gedankenlesen“) ansehen */
@@ -480,7 +482,7 @@ class Duel {
     if (!this.chain.length) return;
     const m = openModal({ host: this.root, title: 'Aktuelle Kette', body: h('div', { class: 'col' }, [...this.chain].reverse().map((c, i) => h('div', { class: 'row' }, h('div', { class: 'pl-num' }, this.chain.length - i), cardEl(c.code, { cls: 'sm' }), h('div', { class: 'grow' }, h('b', null, nameOf(c.code)), h('div', { class: 'small muted' }, this.pname(c.p)))))), footer: [h('div', { class: 'small muted grow' }, 'Das oberste Kettenglied wird zuerst ausgeführt.'), h('button', { class: 'btn', onclick: () => m.close() }, 'OK')] });
   }
-  showLog() { const m = openModal({ host: this.root, title: 'Verlauf', body: h('div', { class: 'logl' }, [...this.logLines].reverse().map((l) => h('div', { class: l.startsWith('──') ? 'lg-t' : 'lg' }, l))), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Schließen') }); }
+  showLog() { const copy = async () => { const txt = this.logLines.join('\n'); try { await navigator.clipboard.writeText(txt); toast('Verlauf kopiert'); } catch (e) { toast('Kopieren nicht möglich'); } }; const m = openModal({ host: this.root, title: 'Verlauf', body: h('div', { class: 'logl' }, [...this.logLines].reverse().map((l) => h('div', { class: l.startsWith('──') ? 'lg-t' : 'lg' }, l))), footer: [h('button', { class: 'btn', onclick: copy }, '📋 Kopieren'), h('button', { class: 'btn', onclick: () => m.close() }, 'Schließen')] }); }
   menu() {
     const m = openModal({ host: this.root, title: 'Duell', center: true, body: h('div', { class: 'col' },
       h('button', { class: 'btn', onclick: () => { m.close(); this.showLog(); } }, '📜 Verlauf'),
