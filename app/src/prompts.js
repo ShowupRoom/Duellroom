@@ -65,9 +65,10 @@ function askIdle(D, msg) {
   numberDupes(D);
   const n = D.actList.length;
   D.setTip(D.conf.tutor ? idleTip(D, msg) : null); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
-  // Kampfphase nur, wenn der Kern sie erlaubt (nicht im ersten Zug) UND ein Monster in Angriffsposition angreifen kann – wie in Master Duel
+  // Kampfphase, sobald der Kern sie erlaubt (nicht im ersten Zug). Ohne Monster in Angriffsposition weist das Phasen-Menü darauf hin, sperrt aber nichts.
   const pl = D.snap && D.snap.players[msg.player]; const canHit = !pl || pl.mzone.some((c) => c && (c.position & POS.FACEUP_ATTACK));
-  D.phaseOpts = { BP: msg.to_bp && canHit ? r(IA.TO_BP, null) : null, EP: msg.to_ep ? r(IA.TO_EP, null) : null };
+  D.bpCore = !!msg.to_bp; D.bpNoHit = !canHit;
+  D.phaseOpts = { BP: msg.to_bp ? r(IA.TO_BP, null) : null, EP: msg.to_ep ? r(IA.TO_EP, null) : null };
   D.hideBar(); // Kampf / Zugende: über das Phasenrad
   const p = D.wait('idle'); D.render(); return p;
 }

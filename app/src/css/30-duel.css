@@ -225,3 +225,46 @@ mark.fx-mark{background:rgba(246,201,107,.2);color:#ffe3a1;border-radius:3px;pad
 .land .d-top{flex-wrap:wrap}.land .d-turn .tn-p{display:none}.land .d-turn{flex-direction:row;justify-content:center;padding:6px 6px}
 .d-turnb{overflow:hidden}.d-turn{max-width:100%;overflow:hidden}.d-turn .tn-w{overflow:hidden;text-overflow:ellipsis}
 @media (max-width:430px) and (orientation:portrait){.d-turn .tn-p{display:none}}
+
+/* Querformat: Phasenrad mittig im Feld (zwischen den Link-Feldern), Symbole als senkrechte Leiste am rechten Rand */
+.duel.land .bd .d-phases{grid-row:3;grid-column:4;display:flex;align-items:center;justify-content:center;gap:0;margin:0;min-width:0;min-height:0;z-index:4}
+.duel.land .bd .ph-wheel{width:calc(var(--cw)*.96);height:calc(var(--cw)*.96);border-width:3px}
+.duel.land .bd .ph-wheel b{font-size:max(13px,calc(var(--cw)*.4))}.duel.land .bd .ph-wheel small{font-size:max(8px,calc(var(--cw)*.19));margin-top:2px}
+.duel.land .d-r{position:relative;padding-right:46px}
+.duel.land .d-r>.d-top{position:absolute;top:8px;right:6px;width:34px;flex-direction:column;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:6px;padding:0}
+.duel.land .d-r>.d-top .ibtn{flex:none;width:34px;max-width:34px;min-width:0;height:34px;font-size:16px}
+.duel.land .d-r>.d-top .d-chainb{order:9;width:34px;padding:4px 0;font-size:12px;text-align:center}
+.duel.land .d-r>.d-turnb{display:block;order:0;flex:none;width:100%;padding:0;border:0;background:none}
+.duel.land .d-r>.d-turnb .d-turn{display:flex;justify-content:center;width:100%}
+/* ausgegraute Kampfphase im Phasen-Menü */
+.ph-dis{display:flex;flex-direction:column;gap:4px}.ph-dis .btn{opacity:.45}.ph-dis.on .btn{opacity:1}.ph-dis small{font-size:11px;line-height:1.3;color:var(--mut);padding:0 2px}
+.duel.land .d-r .d-acts .ac-r{gap:6px;padding:5px 6px;font-size:12px;overflow-wrap:anywhere}.duel.land .d-r .d-acts .ac-r b{font-size:15px;min-width:12px}
+/* Vorspulen (⏩) während die KI zieht */
+.ibtn.ffb{border-color:var(--gold);color:var(--gold)}.ibtn.ffb.on{background:linear-gradient(180deg,#f6c96b,#b27a14);color:#2a1a00;box-shadow:0 0 12px rgba(246,201,107,.6)}
+.duel.ffing .d-board{outline:2px solid rgba(246,201,107,.35);outline-offset:-2px;border-radius:10px}
+
+/* Kombo-Vorführung: Erklärung zu jedem Schritt der KI */
+.d-demo{display:none}
+.duel.demo .d-demo{display:flex;flex-direction:column;gap:6px;min-height:0;padding:8px 10px;border:1px solid var(--gold);border-radius:12px;background:linear-gradient(180deg,rgba(14,36,86,.94),rgba(6,16,40,.94));box-shadow:0 0 14px rgba(246,201,107,.18)}
+.duel.demo:not(.land) .d-demo{order:5;flex:none;max-height:36%;margin:6px 8px 0}
+.duel.demo .d-sheet{display:none!important}
+.duel.demo .ffb{display:none!important}
+.dm-b{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:5px}
+.dm-hint{font-size:12.5px;line-height:1.4;color:var(--mut)}
+.dm-h{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px}
+.dm-h b{color:var(--gold);letter-spacing:.4px}
+.chip.role{background:rgba(246,201,107,.18);color:var(--gold);border-color:var(--gold);padding:1px 8px;font-size:11px}
+.dm-top{display:flex;gap:8px;align-items:flex-start}
+.dm-card{flex:none;padding:0;border:0;background:none}.dm-card .card{--w:50px}
+.dm-ti{font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--gold)}
+.dm-li{font-weight:800;font-size:13.5px;line-height:1.25;overflow-wrap:anywhere}
+.dm-tx{font-size:12.5px;line-height:1.42;color:#d9ebff}
+.dm-ro{font-size:11.5px;line-height:1.35;color:var(--cy)}
+.dm-n{font-size:12px;line-height:1.35;color:var(--mut)}
+.dm-ctl{flex:none;display:flex;gap:6px}.dm-ctl .btn{flex:1 1 0;min-width:0;min-height:34px;height:34px;padding:0 4px;font-size:12px;white-space:nowrap}
+.duel.land.demo .d-l{gap:6px}
+.duel.land.demo .d-demo{flex:1 1 0}
+.duel.land.demo .dm-card .card{--w:40px}
+.duel.land.demo .d-strip{padding:4px 9px;gap:1px}.duel.land.demo .d-strip .lpn{font-size:21px}.duel.land.demo .d-strip .st-n{font-size:12px}
+.duel.land.demo .d-r>.d-turnb{display:none}
+.duel.land.demo .d-r .ph-wheel{width:72px;height:72px}.duel.land.demo .d-r .ph-wheel b{font-size:24px}

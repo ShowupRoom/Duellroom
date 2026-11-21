@@ -30,6 +30,7 @@ screens.home = () => h('div', { class: 'screen home' },
     h('div', { class: 'home-menu' },
       h('button', { class: 'btn pri lg', onclick: () => go('formats') }, '⚔  Duell starten'),
       store.get('last') ? h('button', { class: 'btn lg', onclick: () => { const l = store.get('last'); try { go('duel', hydrate(l)); } catch (e) { toast('Das letzte Duell konnte nicht geladen werden.'); } } }, '↻  Letztes Duell wiederholen') : null,
+      h('button', { class: 'btn lg', onclick: () => go('formats', { demo: true }) }, '🎬  Kombos ansehen'),
       h('button', { class: 'btn lg', onclick: () => go('online') }, '🌐  Online gegeneinander'),
       h('button', { class: 'btn lg', onclick: () => go('workshop') }, '🃏  Deck-Werkstatt'),
       h('button', { class: 'btn lg', onclick: () => go('learn') }, '🎓  Lernen & Regeln'),
@@ -52,10 +53,10 @@ function hydrate(l) {
 }
 
 // ---- Format wählen ----------------------------------------------------------
-screens.formats = () => h('div', { class: 'screen' }, hdr('Format wählen', 'Welche Regeln und welche Verbotsliste?'),
+screens.formats = ({ demo } = {}) => h('div', { class: 'screen' }, hdr(demo ? 'Kombos ansehen' : 'Format wählen', demo ? 'In welchem Format soll die KI das Deck vorspielen?' : 'Welche Regeln und welche Verbotsliste?'),
   h('div', { class: 'body' }, h('div', { class: 'wrap fmt-grid' }, ['goat', 'edison', 'advanced', 'genesys', 'speed'].map((id) => {
     const f = FORMAT_INFO[id]; const n = allDecks(id).filter((d) => d.status !== 'entwurf').length;
-    return h('button', { class: 'panel fmt-card f-' + id, onclick: () => go('setup', { fmt: id }) },
+    return h('button', { class: 'panel fmt-card f-' + id, onclick: () => go('setup', { fmt: id, demo }) },
       h('div', { class: 'fmt-ic' }, f.icon), h('div', { class: 'grow' }, h('div', { class: 'fmt-t' }, f.title), h('div', { class: 'gold small' }, f.sub), h('p', { class: 'muted fmt-b' }, f.blurb), h('div', { class: 'chip' }, n + ' Decks')));
   }))));
 
@@ -64,19 +65,22 @@ const MODES = [
   { id: 'hot', t: 'Zu zweit am Gerät', d: 'Ihr spielt abwechselnd; bei jedem Wechsel wird das Gerät übergeben, die Hand bleibt geheim.' },
   { id: 'ai', t: 'Gegen die KI', d: 'Die KI spielt wie ein Mensch: Sie beschwört, aktiviert Karten, greift an und antwortet auf deine Züge.' },
   { id: 'solo', t: 'Allein üben', d: 'Der Gegner steht still. Ideal, um die eigene Combo zu lernen.' },
+  { id: 'demo', t: '🎬 Kombo ansehen', d: 'Die KI spielt das Deck langsam vor und erklärt jeden Schritt: Starter, Verlängerer, Ziel. Du schaust nur zu – mit Pause, Einzelschritt und Vorspulen.' },
 ];
-screens.setup = ({ fmt }) => {
+screens.setup = ({ fmt, demo }) => {
   const saved = store.get('setup.' + fmt, {}); const info = FORMAT_INFO[fmt];
-  let st = { mode: saved.mode === 'bot' ? 'ai' : (saved.mode || 'hot'), level: saved.level || 'normal', names: saved.names || settings.names, decks: saved.decks || [null, null], list: saved.list || 'tcg', first: saved.first || 'random' };
+  let st = { mode: demo ? 'demo' : (saved.mode === 'bot' || saved.mode === 'demo' ? 'ai' : (saved.mode || 'hot')), demoOpp: saved.demoOpp || 'passive', level: saved.level || 'normal', names: saved.names || settings.names, decks: saved.decks || [null, null], list: saved.list || 'tcg', first: saved.first || 'random' };
   const pool = () => allDecks(fmt).filter((d) => d.status !== 'entwurf' && (fmt !== 'advanced' || st.list === 'none' || d.list === st.list || d.custom));
   const byId = (id) => id && allDecks(fmt).find((d) => d.id === id);
   const start = () => {
-    const ds = st.decks.map(byId); const pl = [0, 1].map((i) => ({ name: (st.names[i] || 'Spieler ' + (i + 1)).trim(), deck: withTutor(ds[i]) }));
+    const ds = st.decks.map(byId); if (st.mode === 'demo' && st.demoOpp !== 'ai') ds[1] = ds[0]; // der stille Gegner braucht nur irgendein Deck
+    const pl = [0, 1].map((i) => ({ name: (st.names[i] || 'Spieler ' + (i + 1)).trim(), deck: withTutor(ds[i]) }));
     if (st.mode === 'ai' && (!st.names[1] || st.names[1] === 'Spieler 2')) pl[1].name = 'KI · ' + AI_LEVELS[st.level].name;
-    const first = st.first === 'random' ? (rand32() & 1) : +st.first;
+    if (st.mode === 'demo') pl[1].name = st.demoOpp === 'ai' ? 'KI · Profi' : 'Übungsgegner';
+    const first = st.mode === 'demo' ? 0 : st.first === 'random' ? (rand32() & 1) : +st.first; // in der Vorführung beginnt immer das gezeigte Deck
     if (first === 1) { pl.reverse(); }
-    const human = st.mode === 'hot' ? [true, true] : (first === 1 ? [false, true] : [true, false]);
-    const conf = { fmt, list: st.list, mode: st.mode, level: st.level, players: pl, human, lp: settings.lp, tutor: settings.tutor };
+    const human = st.mode === 'demo' ? [false, false] : st.mode === 'hot' ? [true, true] : (first === 1 ? [false, true] : [true, false]);
+    const conf = { fmt, list: st.list, mode: st.mode, level: st.level, demoOpp: st.mode === 'demo' ? st.demoOpp : undefined, players: pl, human, lp: settings.lp, tutor: st.mode === 'demo' ? false : settings.tutor };
     store.set('last', { ...conf, players: pl.map((p) => ({ name: p.name, deck: p.deck.id })) });
     go('duel', conf);
   };
@@ -85,28 +89,30 @@ screens.setup = ({ fmt }) => {
   const save = () => { store.set('setup.' + fmt, st); settings.names = st.names; };
   const render = () => {
     clear(body); clear(foot);
-    if (st.mode === 'ai' && !byId(st.decks[1])) { const p = pool(); if (p.length) { st.decks[1] = p[rand32() % p.length].id; save(); } }
+    if ((st.mode === 'ai' || (st.mode === 'demo' && st.demoOpp === 'ai')) && !byId(st.decks[1])) { const p = pool(); if (p.length) { st.decks[1] = p[rand32() % p.length].id; save(); } }
     const dsel = st.decks.map(byId);
     body.append(h('div', { class: 'wrap col' },
       h('div', { class: 'seg' }, MODES.map((m) => h('button', { class: 'seg-b' + (st.mode === m.id ? ' on' : ''), onclick: () => { st.mode = m.id; save(); render(); } }, m.t))),
       h('div', { class: 'muted small', style: 'margin:-2px 2px 4px' }, MODES.find((m) => m.id === st.mode).d),
+      st.mode === 'demo' ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('span', { class: 'muted small' }, 'Gegner:'), [['passive', 'Steht still'], ['ai', 'Spielt mit (KI)']].map(([v, t]) => h('button', { class: 'chip' + (st.demoOpp === v ? ' on' : ''), onclick: () => { st.demoOpp = v; save(); render(); } }, t))) : null,
       st.mode === 'ai' ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('span', { class: 'muted small' }, 'Stärke der KI:'), Object.entries(AI_LEVELS).map(([id, l]) => h('button', { class: 'chip' + (st.level === id ? ' on' : ''), onclick: () => { st.level = id; save(); render(); } }, l.name))) : null,
       fmt === 'advanced' ? h('div', { class: 'row' }, h('span', { class: 'muted small' }, 'Verbotsliste:'), ADV_LISTS.map((l) => h('button', { class: 'chip' + (st.list === l ? ' on' : ''), onclick: () => { st.list = l; st.decks = [null, null]; save(); render(); } }, LIST_NAME[l]))) : null,
-      h('div', { class: 'pl-grid' }, [0, 1].map((i) => {
+      h('div', { class: 'pl-grid' }, (st.mode === 'demo' && st.demoOpp !== 'ai' ? [0] : [0, 1]).map((i) => {
         const d = dsel[i]; const dis = i === 1 && st.mode !== 'hot';
         return h('div', { class: 'panel pl' },
           h('div', { class: 'row' }, h('div', { class: 'pl-num' }, i + 1), h('input', { class: 'input grow', value: st.names[i], maxlength: 18, placeholder: 'Name', oninput: (e) => { st.names[i] = e.target.value; save(); } })),
-          h('div', { class: 'muted small', style: 'margin-top:6px' }, i === 1 && st.mode === 'solo' ? 'Übungsgegner (macht nichts)' : i === 1 && st.mode === 'ai' ? 'KI-Gegner · ' + AI_LEVELS[st.level].name : 'Spielt mit:'),
+          h('div', { class: 'muted small', style: 'margin-top:6px' }, i === 1 && st.mode === 'solo' ? 'Übungsgegner (macht nichts)' : i === 1 && st.mode === 'ai' ? 'KI-Gegner · ' + AI_LEVELS[st.level].name : st.mode === 'demo' ? (i === 0 ? 'Dieses Deck wird vorgespielt:' : 'KI-Gegner · Profi') : 'Spielt mit:'),
           d ? deckMini(d) : h('div', { class: 'deck-empty' }, 'Noch kein Deck gewählt'),
           h('div', { class: 'row', style: 'margin-top:8px' },
             h('button', { class: 'btn grow ' + (d ? '' : 'pri'), onclick: () => go('decks', { fmt, list: st.list, title: `Deck für ${st.names[i] || 'Spieler ' + (i + 1)}`, onPick: (dk) => { st.decks[i] = dk.id; save(); } }) }, d ? 'Anderes Deck' : 'Deck wählen'),
             h('button', { class: 'btn ghost', title: 'Zufälliges Deck', onclick: () => { const p = pool(); st.decks[i] = p[rand32() % p.length].id; save(); render(); } }, '🎲')));
       })),
-      h('div', { class: 'panel row', style: 'flex-wrap:wrap' },
+      st.mode === 'demo' ? h('div', { class: 'muted small', style: 'margin:0 2px' }, 'Die KI spielt als Profi und beginnt. Sie folgt keiner festen Combo-Liste, sondern wählt nach Spielwert – du siehst also, was sie aus der Starthand macht. Mit „Neue Starthand“ (☰) probierst du eine andere.') : h('div', { class: 'panel row', style: 'flex-wrap:wrap' },
         h('span', { class: 'muted small' }, 'Wer beginnt?'),
         [['random', 'Zufall'], ['0', st.names[0] || 'Spieler 1'], ['1', st.names[1] || 'Spieler 2']].map(([v, t]) => h('button', { class: 'chip' + (st.first === v ? ' on' : ''), onclick: () => { st.first = v; save(); render(); } }, t)),
         h('span', { class: 'grow' }), h('label', { class: 'chip' }, h('input', { type: 'checkbox', checked: settings.tutor, onchange: (e) => { settings.tutor = e.target.checked; } }), ' Tutor-Tipps'))));
-    foot.append(h('button', { class: 'btn pri lg grow', disabled: !(dsel[0] && dsel[1]), onclick: start }, dsel[0] && dsel[1] ? '⚔  Duell beginnen' : 'Bitte beide Decks wählen'));
+    const ready = dsel[0] && (dsel[1] || (st.mode === 'demo' && st.demoOpp !== 'ai')); const dm = st.mode === 'demo';
+    foot.append(h('button', { class: 'btn pri lg grow', disabled: !ready, onclick: start }, ready ? (dm ? '🎬  Vorführung starten' : '⚔  Duell beginnen') : dm && st.demoOpp !== 'ai' ? 'Bitte ein Deck wählen' : 'Bitte beide Decks wählen'));
   };
   render();
   // nach der Deckwahl zurückkommen → neu zeichnen
