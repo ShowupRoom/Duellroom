@@ -1,5 +1,5 @@
 // Der Tutor im Duell: schlägt auf Grundlage der Deck-Analyse sinnvolle Aktionen vor
-import { cardOf, nameOf } from './data.js';
+import { cardOf, nameOf, descOf } from './data.js';
 import { roleOf } from '../../src/tutor.mjs';
 
 export const first = (txt, n = 190) => { const t = (txt || '').replace(/\s+/g, ' ').trim(); const m = t.match(/^.*?[.。!](?=\s|$)/); let s = m ? m[0] : t; return s.length > n ? s.slice(0, n - 1) + '…' : s; };
@@ -10,7 +10,7 @@ const VERB = { summon: 'Beschwöre', special: 'Spezialbeschwöre', set: 'Setze',
 export function idleTip(D, msg) {
   const me = msg.player; const T = D.deckOf(me).tutor || {}; const K = T.keys || {}; const L = D.actList; const snap = D.snap;
   const mk = (a, why) => ({ keys: [a.key], text: `${VERB[a.kind]} «${nameOf(a.code)}». ${why}` });
-  const eff = (c) => first(cardOf(c)?.desc);
+  const eff = (c) => first(descOf(cardOf(c)));
   let a = L.find((x) => ['activate', 'summon', 'special'].includes(x.kind) && inK(K.starters, x.code));
   if (a) return mk(a, `Das ist einer deiner Starter – er holt die nächsten Teile deiner Combo. ${eff(a.code)}`);
   a = L.find((x) => ['activate', 'summon', 'special'].includes(x.kind) && inK(K.extenders, x.code));
@@ -51,7 +51,7 @@ export function battleTip(D, msg) {
 export function chainTip(D, msg) {
   const T = D.deckOf(msg.player).tutor || {}; const K = T.keys || {};
   const a = msg.selects.findIndex((s) => inK(K.handtraps, s.code) || inK(K.removal, s.code));
-  if (a >= 0) { const s = msg.selects[a]; return { text: `«${nameOf(s.code)}» passt hier gut: ${first(cardOf(s.code)?.desc)}`, keys: [] }; }
+  if (a >= 0) { const s = msg.selects[a]; return { text: `«${nameOf(s.code)}» passt hier gut: ${first(descOf(cardOf(s.code)))}`, keys: [] }; }
   return { text: 'Du darfst antworten, musst aber nicht. Antworte nur, wenn dir die Aktion des Gegners schadet oder dein Effekt jetzt am besten wirkt.', keys: [] };
 }
 export function introText(deck) {

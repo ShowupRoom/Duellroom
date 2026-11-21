@@ -2,3 +2,4 @@ node_modules/
 app/dist/
 app/www/
 smoke.txt
+data/de.json

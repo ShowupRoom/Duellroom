@@ -1,4 +1,6 @@
 // Kleine Helfer: DOM-Bau, Töne, Zufall
+/** Hook für Anzeigetexte (App: englische Kartennamen in „…“ durch deutsche ersetzen) */
+export const textHook = { fn: null };
 export function h(tag, props, ...kids) {
   const el = document.createElement(tag);
   if (props) for (const [k, v] of Object.entries(props)) {
@@ -9,7 +11,7 @@ export function h(tag, props, ...kids) {
     else if (k === 'value' || k === 'checked' || k === 'disabled' || k === 'selected') el[k] = v;
     else el.setAttribute(k, v === true ? '' : v);
   }
-  for (const kid of kids.flat(Infinity)) { if (kid == null || kid === false) continue; el.append(kid.nodeType ? kid : document.createTextNode(String(kid))); }
+  for (const kid of kids.flat(Infinity)) { if (kid == null || kid === false) continue; el.append(kid.nodeType ? kid : document.createTextNode(textHook.fn ? textHook.fn(String(kid)) : String(kid))); }
   return el;
 }
 export const $ = (sel, root = document) => root.querySelector(sel);

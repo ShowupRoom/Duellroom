@@ -1,6 +1,6 @@
 // Deck-Werkstatt: eigene Decks bauen, Ziehen & Ablegen aus allen Karten, Prüfung je Format
 import { h, $, clear, toast, uid } from './util.js';
-import { App, FORMAT_INFO, FORMATS, fmtById, allDecks, customDecks, saveCustom, deleteCustom, withTutor, nameOf, cardOf, cleanName, count, expand, toFmtCode, toPlainCode, goatMaps, consOf, limitOf } from './data.js';
+import { App, FORMAT_INFO, FORMATS, fmtById, allDecks, customDecks, saveCustom, deleteCustom, withTutor, nameOf, cardOf, cleanName, count, expand, toFmtCode, toPlainCode, goatMaps, consOf, limitOf, ADV_LISTS, LIST_NAME, descOf, searchName } from './data.js';
 import { suggest } from '../../src/konsistenz.mjs';
 import { consBlock } from './cons.js';
 import { cardEl, isOcg, ocgTag } from './cards.js';
@@ -17,7 +17,7 @@ const put = (l, c, n = 1) => { const e = l.find((x) => x[0] === c); if (e) e[1] 
 const take = (l, c, n = 1) => { const i = l.findIndex((x) => x[0] === c); if (i < 0) return 0; const t = Math.min(n, l[i][1]); l[i][1] -= t; if (l[i][1] <= 0) l.splice(i, 1); return t; };
 const num = (l, c) => (l.find((x) => x[0] === c) || [0, 0])[1];
 const clone = (l) => (l || []).map((e) => [...e]);
-const sortList = (l) => l.sort((a, b) => { const A = cardOf(a[0]), B = cardOf(b[0]); return KO.indexOf(kind(A)) - KO.indexOf(kind(B)) || (A?.name || '').localeCompare(B?.name || ''); });
+const sortList = (l) => l.sort((a, b) => { const A = cardOf(a[0]), B = cardOf(b[0]); return KO.indexOf(kind(A)) - KO.indexOf(kind(B)) || cleanName(A?.name || '').localeCompare(cleanName(B?.name || '')); });
 
 // ---- Kartenvorrat je Format -----------------------------------------------------------------------
 const pools = new Map();
@@ -30,9 +30,9 @@ export function poolFor(fmtId) {
     if (fmtId === 'edison' && (c.type & (0x800000 | 0x4000000 | 0x1000000))) continue;
     if (fmtId === 'genesys' && (c.type & (0x4000000 | 0x1000000))) continue;
     if (!(c.type & 7)) continue;
-    out.push({ c, ln: c.name.toLowerCase() });
+    out.push({ c, ln: searchName(c) });
   }
-  out.sort((a, b) => a.ln.localeCompare(b.ln)); pools.set(fmtId, out); return out;
+  for (const e of out) e.sk = cleanName(e.c.name); out.sort((a, b) => a.sk.localeCompare(b.sk)); pools.set(fmtId, out); return out;
 }
 
 // ---- Werkstatt-Übersicht -----------------------------------------------------------------------------
@@ -93,7 +93,7 @@ screens.editor = (params = {}) => {
   const issues = () => validate({ main: S.main, extra: S.extra, side: S.side }, fmt(), App.cards, App.lists);
   const paintStatus = () => {
     const iss = issues(); const pts = deckPoints(S, App.lists); clear(status);
-    status.append(h('div', { class: 'tabs' }, ['goat', 'edison', 'advanced', 'genesys'].map((f) => h('button', { class: 'chip' + (S.fmt === f ? ' on' : ''), onclick: () => switchFmt(f) }, FORMAT_INFO[f].title)), S.fmt === 'advanced' ? ['tcg', 'ocg'].map((l) => h('button', { class: 'chip' + (S.list === l ? ' on' : ''), onclick: () => { S.list = l; S.dirty = true; paint(); } }, l.toUpperCase())) : null),
+    status.append(h('div', { class: 'tabs' }, ['goat', 'edison', 'advanced', 'genesys'].map((f) => h('button', { class: 'chip' + (S.fmt === f ? ' on' : ''), onclick: () => switchFmt(f) }, FORMAT_INFO[f].title)), S.fmt === 'advanced' ? ADV_LISTS.map((l) => h('button', { class: 'chip' + (S.list === l ? ' on' : ''), onclick: () => { S.list = l; S.dirty = true; paint(); } }, LIST_NAME[l])) : null),
       h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap' }, h('span', { class: 'chip ' + (count(S.main) >= 40 && count(S.main) <= 60 ? 'ok' : 'bad') }, `Haupt ${count(S.main)}`), h('span', { class: 'chip ' + (count(S.extra) <= 15 ? 'ok' : 'bad') }, `Extra ${count(S.extra)}`), h('span', { class: 'chip ' + (count(S.side) <= 15 ? 'ok' : 'bad') }, `Side ${count(S.side)}`), S.fmt === 'genesys' ? h('span', { class: 'chip ' + (pts <= 100 ? 'ok' : 'bad') }, `${pts}/100 Punkte`) : null,
         ocgN() ? h('button', { class: 'chip ' + (S.fmt === 'advanced' && S.list === 'tcg' ? 'warn' : ''), onclick: showOcg }, `OCG ${ocgN()}`) : null,
         CONS ? h('button', { class: 'chip ' + CONS.tone, title: 'Konsistenz', onclick: () => showCons() }, '🎯 ' + CONS.score) : null,
@@ -158,7 +158,7 @@ screens.editor = (params = {}) => {
     }
     deckPane.scrollTop = keepTop;
   };
-  const ecEl = (c, z, bad) => { const e = h('div', { class: 'ec' + (bad ? ' bad' : ''), 'data-code': c, 'data-src': z }, cardEl(c, { cls: 'ed' }), isOcg(cardOf(c)) ? ocgTag() : null); if (S.fmt === 'genesys' && points(c, App.lists)) e.append(h('span', { class: 'pt' }, points(c, App.lists))); return e; };
+  const ecEl = (c, z, bad) => { const e = h('div', { class: 'ec' + (bad ? ' bad' : ''), 'data-code': c, 'data-src': z }, cardEl(c, { cls: 'ed' }), isOcg(cardOf(c)) && S.list !== 'none' && S.list !== 'ocg' ? ocgTag() : null); if (S.fmt === 'genesys' && points(c, App.lists)) e.append(h('span', { class: 'pt' }, points(c, App.lists))); return e; };
 
   // ---- Kartenvorrat
   let filtered = []; let shown = 0; const CH = 72;
@@ -176,18 +176,18 @@ screens.editor = (params = {}) => {
       if (F.sub !== 'all') { const mk = subMasks[F.sub]; if (!(c.type & mk)) return false; }
       if (F.legal && lim(c.code) === 0) return false;
       if (F.ocg === 'only' && !isOcg(c)) return false; if (F.ocg === 'none' && isOcg(c)) return false;
-      if (q && !(ln.includes(q) || (q.length > 3 && c.desc && c.desc.toLowerCase().includes(q)))) return false;
+      if (q && !(ln.includes(q) || (q.length > 3 && descOf(c).toLowerCase().includes(q)))) return false;
       return true;
     });
     if (q) { const nm = []; const ds = []; for (const e of filtered) (e.ln.includes(q) ? nm : ds).push(e); filtered = nm.concat(ds); }
     shown = 0; clear(poolList); poolList.scrollTop = 0; more();
   };
-  const pcEl = (c) => { const code = c.code; const l = lim(code); const e = h('div', { class: 'pc' + (l === 0 ? ' ban' : '') + (recSet.has(code) ? ' rec' : ''), 'data-code': code, 'data-src': 'pool' }, cardEl(code, { cls: 'ed' }), isOcg(c) ? ocgTag() : null, l < 3 ? h('span', { class: 'lim l' + l }, l === 0 ? '✕' : l) : null, S.fmt === 'genesys' && points(code, App.lists) ? h('span', { class: 'pt' }, points(code, App.lists)) : null, h('span', { class: 'inn' }, totalOf(code) ? '×' + totalOf(code) : '')); return e; };
+  const pcEl = (c) => { const code = c.code; const l = lim(code); const e = h('div', { class: 'pc' + (l === 0 ? ' ban' : '') + (recSet.has(code) ? ' rec' : ''), 'data-code': code, 'data-src': 'pool' }, cardEl(code, { cls: 'ed' }), isOcg(c) && S.list !== 'none' && S.list !== 'ocg' ? ocgTag() : null, l < 3 ? h('span', { class: 'lim l' + l }, l === 0 ? '✕' : l) : null, S.fmt === 'genesys' && points(code, App.lists) ? h('span', { class: 'pt' }, points(code, App.lists)) : null, h('span', { class: 'inn' }, totalOf(code) ? '×' + totalOf(code) : '')); return e; };
   const more = () => { const end = Math.min(filtered.length, shown + CH); const frag = document.createDocumentFragment(); for (let i = shown; i < end; i++) frag.append(pcEl(filtered[i].c)); shown = end; poolList.append(frag); if (!filtered.length) poolList.append(h('div', { class: 'dz-empty' }, F.rec ? (count(S.main) < 10 ? 'Lege erst ein paar Karten ins Deck – dann gibt es Empfehlungen.' : 'Keine Empfehlung – dein Deck ist in dieser Hinsicht gut aufgestellt.') : 'Keine Karte gefunden')); countEl.textContent = `${filtered.length.toLocaleString('de-DE')} Karten`; };
   const refreshPool = () => { for (const e of poolList.querySelectorAll('.pc')) { const code = +e.dataset.code; const n = totalOf(code); e.classList.toggle('rec', recSet.has(code)); const i = e.querySelector('.inn'); if (i) i.textContent = n ? '×' + n : ''; } };
   poolList.addEventListener('scroll', () => { if (poolList.scrollTop + poolList.clientHeight > poolList.scrollHeight - 400 && shown < filtered.length) more(); });
   const countEl = h('span', { class: 'muted small' });
-  let deb; const searchIn = h('input', { class: 'search', placeholder: 'Karte suchen (Name, englisch) …', oninput: (e) => { clearTimeout(deb); deb = setTimeout(() => { F.q = e.target.value; applyFilter(); }, 150); } });
+  let deb; const searchIn = h('input', { class: 'search', placeholder: 'Karte suchen (deutsch oder englisch) …', oninput: (e) => { clearTimeout(deb); deb = setTimeout(() => { F.q = e.target.value; applyFilter(); }, 150); } });
   const chip = (label, active, fn) => h('button', { class: 'chip' + (active ? ' on' : ''), onclick: fn }, label);
   const paintFilters = () => {
     clear(filterBar);
@@ -226,7 +226,7 @@ screens.editor = (params = {}) => {
       isOcg(c) ? h('div', { class: 'small', style: 'margin-top:4px' }, ocgTag(), ' nur im OCG erschienen') : null,
       recInfo(code),
       h('div', { class: 'small', style: 'margin-top:4px' }, `Im Deck: ${inDeck}× · erlaubt: ${lim(code)}×` + (S.fmt === 'genesys' ? ` · ${points(code, App.lists)} Punkte` : '')))),
-      h('div', { class: 'sh-t' }, (c.desc || '').replace(/\r/g, '')), h('div', { class: 'row', style: 'margin-top:8px' }, btns));
+      h('div', { class: 'sh-t' }, descOf(c).replace(/\r/g, '')), h('div', { class: 'row', style: 'margin-top:8px' }, btns));
   }
   const recInfo = (code) => { const a = REC && (REC.add.find((x) => x.code === code) || REC.prot.find((x) => x.code === code)); return a ? h('div', { class: 'small rec-line' }, '★ Empfohlen: ' + a.why) : null; };
   function closeDock() { sel = null; dock.classList.remove('open'); clear(dock); }

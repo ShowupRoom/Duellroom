@@ -1,6 +1,6 @@
 // Duell-Oberfläche: Spielfeld, Hand, Ereignisse, Übergabe zwischen den Spielern
 import { h, clear, sleep, toast, shuffled, beep, rand32, zkey as key } from './util.js';
-import { App, MODES, fmtById, expand, nameOf, cardOf, cleanName, withTutor } from './data.js';
+import { App, MODES, fmtById, expand, nameOf, cardOf, cleanName, withTutor, descOf } from './data.js';
 import { DuelAI } from '../../src/ai.mjs';
 import { randomResponse, OcgResponseType as R, OcgMessageType as MSG, SelectIdleCMDAction as IA, SelectBattleCMDAction as BA, LOC, MSG_NAME } from '../../src/core.mjs';
 import { cardEl, fieldEl } from './cards.js';
@@ -9,12 +9,13 @@ import { screens, back, replace, root as navRoot, setGuard } from './nav.js';
 import { store } from './store.js';
 import { sys, descText, PHASE, PHASE_HELP, victoryText, typeText, levelText, attrName, statsText } from './strings.js';
 import { idleTip, battleTip, introText } from './tips.js';
-import { ask } from './prompts.js';
+import { ask, autoAnswer } from './prompts.js';
 import { settings, handComment } from './screens.js';
 import { LocalEngine, RemoteEngine, HostLink, maskEvents } from './engine.js';
 import { session, keepAwake } from './net.js';
 import { netRematch, netMenu } from './online.js';
 
+const PH_PILLS = [['DP', 'Ziehphase', [1]], ['SP', 'Standby-Phase', [2]], ['M1', 'Main Phase 1', [4]], ['BP', 'Kampfphase', [8, 16, 32, 64, 128]], ['M2', 'Main Phase 2', [256]], ['EP', 'End Phase', [512]]];
 const LK = { [LOC.HAND]: 'hand', [LOC.MZONE]: 'mzone', [LOC.SZONE]: 'szone', [LOC.GRAVE]: 'grave', [LOC.REMOVED]: 'banished', [LOC.EXTRA]: 'extra' };
 const FACEUP = 5;
 
@@ -36,19 +37,40 @@ class Duel {
     this.tipBtn = h('button', { class: 'ibtn tipb', title: 'Tutor-Tipp', onclick: () => this.showTip() }, '💡');
     this.top = h('div', { class: 'd-top' }, h('button', { class: 'ibtn', onclick: () => this.menu() }, '☰'), h('button', { class: 'd-turnb', onclick: () => this.phaseHelp() }, this.turnEl), this.chainEl, this.tipBtn, h('button', { class: 'ibtn', onclick: () => this.showLog() }, '📜'));
     this.oppBar = h('div', { class: 'd-strip opp' }); this.meBar = h('div', { class: 'd-strip me' });
-    this.boardWrap = h('div', { class: 'd-board' }); this.board = h('div', { class: 'bd' }); this.boardWrap.append(this.board);
+    this.boardWrap = h('div', { class: 'd-board' }); this.board = h('div', { class: 'bd' }); this.ohand = h('div', { class: 'd-ohand' }); this.boardWrap.append(this.board, this.ohand);
+    this.wheel = h('button', { class: 'ph-wheel', title: 'Phase wählen', onclick: () => this.phaseTap() }, h('b', null, '–'), h('small', null, ''));
+    this.phaseEl = h('div', { class: 'd-phases' }, this.wheel, h('div', { class: 'ph-pills' }, PH_PILLS.map((x) => h('button', { class: 'ph', 'data-ph': x[0], title: x[1], onclick: () => this.phasePick(x[0]) }, x[0]))));
     this.board.addEventListener('click', (e) => { const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); });
     this.handEl = h('div', { class: 'd-hand' }); this.handEl.addEventListener('click', (e) => { const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); }); this.bar = h('div', { class: 'd-bar' });
     this.sheet = h('div', { class: 'd-sheet' }); this.fx = h('div', { class: 'd-fx' });
     this.over = h('div', { class: 'd-over' });
     this.testBar = this.conf.test ? this.buildTestBar() : null;
-    r.append(this.top, ...(this.testBar ? [this.testBar] : []), this.oppBar, this.boardWrap, this.meBar, this.handEl, this.bar, this.sheet, this.fx, this.over);
-    this.ro = new ResizeObserver(() => this.fit()); this.ro.observe(this.boardWrap); this.ro.observe(this.bar);
+    // Hochformat: Spalten lösen sich auf (display:contents) und werden untereinander gestapelt.
+    // Querformat (wie Master Duel): links Gegner/Karteninfo/Du, Mitte Feld mit Hand unten, rechts Phasen und Aktionen.
+    const col = (c, ...kids) => h('div', { class: 'd-col ' + c }, ...kids);
+    this.colR = col('d-r', this.top, this.testBar, this.phaseEl, this.bar);
+    r.append(col('d-l', this.oppBar, this.sheet, this.meBar), col('d-c', this.boardWrap, this.handEl), this.colR, this.fx, this.over);
+    this.probe = h('div', { class: 'd-probe' }); r.append(this.probe);
+    this.ro = new ResizeObserver(() => this.fit()); this.ro.observe(this.boardWrap); this.ro.observe(this.bar); this.ro.observe(r);
   }
+  /** Sicherheitsabstände (Notch, Dynamic Island, Home-Balken) in Pixeln */
+  safe() { const cs = getComputedStyle(this.probe); return { t: parseFloat(cs.paddingTop) || 0, r: parseFloat(cs.paddingRight) || 0, b: parseFloat(cs.paddingBottom) || 0, l: parseFloat(cs.paddingLeft) || 0 }; }
   fit() {
+    const R = this.root; const W = R.clientWidth, H = R.clientHeight; if (!W || !H) return;
+    const land = W / H >= 1.3; R.classList.toggle('land', land);
+    if (land && this.phaseEl.parentNode !== this.colR) this.colR.insertBefore(this.phaseEl, this.bar);
+    if (!land && this.phaseEl.parentNode !== this.top) this.top.insertBefore(this.phaseEl, this.top.children[1] || null);
+    if (land) {
+      // Querformat: die Kartengröße richtet sich nach der Höhe (5 Reihen + herausschauende Hand + Gegnerhand)
+      const sp = this.safe(); const rowsH = this.mode.emz ? 5 * 1.42 : 4 * 1.42 + 0.32; const gaps = 4 * 3 + 6;
+      const cwH = (H - sp.t - sp.b - gaps - 4) / (rowsH + 0.34 + 1.0); const cwW = (W - sp.l - sp.r - 2 * 140 - 18 - 12) / 7;
+      const cw = Math.max(30, Math.min(cwH, cwW, 112)); const boardW = cw * 7 + 18 + 12;
+      const st = R.style; st.setProperty('--cw', cw.toFixed(1) + 'px'); st.setProperty('--hpk', (cw * 1.0).toFixed(1) + 'px'); st.setProperty('--opk', (cw * 0.34).toFixed(1) + 'px');
+      st.setProperty('--sidew', Math.max(140, (W - sp.l - sp.r - boardW) / 2 - 6).toFixed(0) + 'px'); st.setProperty('--barh', '0px'); return;
+    }
     const b = this.boardWrap.getBoundingClientRect(); if (!b.width || !b.height) return;
-    const rows = this.mode.emz ? 5 : 4.35; const cw = Math.max(30, Math.min(b.width / 7.25, b.height / (rows * 1.42 + 0.35), 96));
-    this.root.style.setProperty('--cw', cw.toFixed(1) + 'px'); this.root.style.setProperty('--barh', this.bar.offsetHeight + 'px');
+    const rows = this.mode.emz ? 5 : 4.35; const cw = Math.max(30, Math.min((b.width - 22) / 7, b.height / (rows * 1.42 + 0.35), 96));
+    R.style.setProperty('--cw', cw.toFixed(1) + 'px'); R.style.setProperty('--barh', this.bar.offsetHeight + 'px'); R.style.setProperty('--sidew', '100%');
   }
 
   // ---------------------------------------------------------------- Start & Schleife
@@ -112,6 +134,7 @@ class Duel {
         resp = await this.host.waitResp(); if (this.stopped) return; continue;
       }
       if (this.conf.human[p]) {
+        const auto = autoAnswer(msg); if (auto) { resp = auto; continue; } // nichts zu entscheiden → kein Fenster, keine Geräteübergabe
         if (this.viewer !== p) await this.handover(p);
         this.render();
         if (r.retry) toast('Das ist nicht erlaubt – bitte noch einmal wählen.');
@@ -242,6 +265,19 @@ class Duel {
     this.turnEl.textContent = this.turnNo ? `Zug ${this.turnNo} · ${PHASE[this.phase] || ''} · ${this.pname(tp)}` : 'Duell beginnt …';
     this.chainEl.textContent = this.chain.length ? `⛓ ${this.chain.length}` : ''; this.chainEl.style.display = this.chain.length ? '' : 'none';
     this.tipBtn.style.display = this.conf.tutor && this.conf.human[this.viewer] ? '' : 'none';
+    const cur = PH_PILLS.find((x) => x[2].includes(this.phase)); const po = this.phaseOpts || {}; const can = PH_PILLS.some((x) => po[x[0]]);
+    this.phaseEl.className = 'd-phases ' + (tp === this.viewer ? 'mine' : 'theirs') + (this.turnNo ? '' : ' idle'); this.wheel.classList.toggle('go', can);
+    this.wheel.firstChild.textContent = this.turnNo && cur ? cur[0] : '–'; this.wheel.lastChild.textContent = this.turnNo ? `Zug ${this.turnNo}${can ? ' ▾' : ''}` : '';
+    for (const el of this.phaseEl.querySelectorAll('.ph')) { el.classList.toggle('on', !!cur && el.dataset.ph === cur[0]); el.classList.toggle('go', !!po[el.dataset.ph]); }
+  }
+  /** Phasen, in die der aktive Spieler jetzt wechseln darf: { BP, M2, EP } → Antwort für den Kern */
+  setPhaseOpts(o) { this.phaseOpts = o; this.renderTop(); }
+  phasePick(id) { const o = this.phaseOpts; if (o && o[id]) { this.answer(o[id]); return; } this.phaseHelp(); }
+  /** Antippen des Rads: ab der Main Phase 1 die nächste Phase wählen (Kampf, Main Phase 2, End Phase) */
+  phaseTap() {
+    const o = this.phaseOpts; const list = o ? PH_PILLS.filter((x) => o[x[0]]) : []; if (!list.length) { this.phaseHelp(); return; }
+    const lab = { BP: ['⚔ Kampfphase', 'gold'], M2: ['Main Phase 2', 'gold'], EP: ['⏭ End Phase – Zug beenden', 'red'] };
+    const m = openModal({ host: this.root, title: 'Phase wählen', cls: 'peek', body: h('div', { class: 'col' }, list.map((x) => h('button', { class: 'btn ' + lab[x[0]][1], onclick: () => { m.close(); this.answer(o[x[0]]); } }, lab[x[0]][0]))), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Abbrechen') });
   }
   renderStrips() {
     const s = this.snap; const v = this.viewer, o = 1 - v;
@@ -251,6 +287,7 @@ class Duel {
       clear(bar); const hb = h('div', { class: 'lpbar' }, h('i', { style: `width:${Math.max(0, Math.min(100, (lp / max) * 100))}%` }));
       const num = h('div', { class: 'lpn' }, String(cur)); bar.append(h('div', { class: 'st-n' + (this.turnPlayer === p ? ' act' : '') }, this.pname(p)), h('div', { class: 'lpw' }, hb, num),
         h('div', { class: 'st-c' }, p === o ? h('span', { class: 'hbacks' }, Array.from({ length: Math.min(pl.hand.length, 12) }, () => h('i'))) : null, h('span', { class: 'chip' }, `🂠 ${pl.deck}`), p === o ? h('span', { class: 'chip' }, `✋ ${pl.hand.length}`) : null));
+      if (p === o) { clear(this.ohand); for (let i = 0; i < Math.min(pl.hand.length, 14); i++) this.ohand.append(h('i')); }
       this.tweenLp(p, num, cur, lp); this.lpShown[p] = lp;
       for (const f of fl) { const e = h('div', { class: 'lpf ' + (f.d < 0 ? 'neg' : 'pos') }, (f.d > 0 ? '+' : '') + f.d); bar.append(e); setTimeout(() => e.remove(), 1600); }
     }
@@ -264,7 +301,7 @@ class Duel {
     if (c) z.append(this.cardNode(c)); this.mark(z, k); return z;
   }
   mark(z, k) {
-    if (this.acts.has(k)) z.classList.add('hl'); if (this.cand.has(k)) z.classList.add('cand'); if (this.chosen.has(k)) z.classList.add('chosen'); if (this.tipKeys.has(k)) z.classList.add('tip');
+    if (this.selKey === k) z.classList.add('sel'); if (this.acts.has(k)) z.classList.add('hl'); if (this.cand.has(k)) z.classList.add('cand'); if (this.chosen.has(k)) z.classList.add('chosen'); if (this.tipKeys.has(k)) z.classList.add('tip');
     if (this.zoneSel && this.zoneSel.allowed.has(k)) z.classList.add('zsel'); if (this.zoneSel && this.zoneSel.chosen.has(k)) z.classList.add('zchosen');
   }
   cardNode(c) {
@@ -298,8 +335,8 @@ class Duel {
         const pz = this.mode.pzone && (s === 0 || s === 4) ? (s === 0 ? 'pz pz-l' : 'pz pz-r') : '';
         b.append(this.zone(p, LOC.SZONE, s, rowS, col(s), { cls: pz }));
       }
-      b.append(this.zone(p, LOC.SZONE, 5, rowS, mir ? 7 : 1, { cls: 'fz', label: 'Feld' }));
-      b.append(this.pile(p, LOC.EXTRA, rowM, mir ? 7 : 1, 'Extra'));
+      b.append(this.zone(p, LOC.SZONE, 5, rowM, mir ? 7 : 1, { cls: 'fz', label: 'Feld' }));
+      b.append(this.pile(p, LOC.EXTRA, rowS, mir ? 7 : 1, 'Extra'));
       b.append(this.pile(p, LOC.GRAVE, rowM, mir ? 1 : 7, 'Friedhof'));
       b.append(this.pile(p, LOC.DECK, rowS, mir ? 1 : 7, 'Deck'));
     }
@@ -320,6 +357,7 @@ class Duel {
   renderHand() {
     const v = this.viewer; const hand = this.snap.players[v].hand; clear(this.handEl);
     const n = this.newHand; this.newHand = 0;
+    if (this.root.classList.contains('land')) { const cw = parseFloat(this.root.style.getPropertyValue('--cw')) || 40; const w = cw * 1.35, maxW = cw * 7.4, cnt = hand.filter(Boolean).length; this.handEl.style.setProperty('--hov', cnt > 1 ? -Math.max(-4, (cnt * w - maxW) / (cnt - 1)).toFixed(1) + 'px' : '0px'); }
     hand.forEach((c, i) => {
       if (!c) return; const k = key(v, LOC.HAND, c.sequence); const el = h('div', { class: 'hc', 'data-k': k, style: hand.length > 6 ? 'margin-left:-14px' : '' }, cardEl(c.code, { cls: 'hcard' }));
       if (i >= hand.length - n) el.classList.add('new'); this.mark(el, k); this.handEl.append(el);
@@ -345,18 +383,19 @@ class Duel {
   }
   info(code) { const m = openModal({ host: this.root, title: null, body: cardInfoBody(code), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Schließen') }); return m; }
   openSheet(c, k) {
+    this.selKey = k; this.render();
     const vis = this.visible(c); clear(this.sheet); this.sheet.classList.add('open');
     const acts = this.acts.get(k) || [];
     const own = c.controller === this.viewer; const card = cardOf(c.code);
     const head = vis ? h('div', { class: 'sh-top' }, cardEl(c.code, { cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'sh-n' }, cleanName(c.name)), h('div', { class: 'small muted' }, typeText(card)), (card.type & 1) ? h('div', { class: 'small' }, [attrName(card.attribute), levelText(card)].filter(Boolean).join(' · ')) : null, (card.type & 1) ? h('div', { class: 'small gold' }, statsText({ ...card, attack: c.attack, defense: c.defense }) + (c.attack !== card.attack || c.defense !== card.defense ? ' (aktuell)' : '')) : null))
       : h('div', { class: 'sh-top' }, cardEl(0, { back: true, cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'sh-n' }, 'Verdeckte Karte'), h('div', { class: 'small muted' }, `von ${this.pname(c.controller)}`)));
-    this.sheet.append(h('button', { class: 'sh-x', onclick: () => this.closeSheet() }, '✕'), head, vis ? h('div', { class: 'sh-t' }, (card.desc || '').replace(/\r/g, '')) : null);
+    this.sheet.append(h('button', { class: 'sh-x', onclick: () => this.closeSheet() }, '✕'), head, vis ? h('div', { class: 'sh-t' }, descOf(card).replace(/\r/g, '')) : null);
     if (acts.length) this.sheet.append(h('div', { class: 'sh-acts' }, acts.map((a) => h('button', { class: 'btn ' + (a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, a.label))));
     else if (own && this.pending && this.pending.kind === 'idle') this.sheet.append(h('div', { class: 'small muted', style: 'margin-top:6px' }, 'Mit dieser Karte ist gerade keine Aktion möglich.'));
     this.sheet.append(h('button', { class: 'btn ghost sm', style: 'margin-top:8px', onclick: () => this.info(c.code) }, 'Ganzen Text'));
     if (!vis) this.sheet.lastChild.remove();
   }
-  closeSheet() { this.sheet.classList.remove('open'); clear(this.sheet); }
+  closeSheet() { const had = this.selKey; this.selKey = null; this.sheet.classList.remove('open'); clear(this.sheet); if (had && this.snap) this.render(); }
   phaseHelp() { const t = PHASE_HELP[this.phase === 16 || this.phase === 32 || this.phase === 64 || this.phase === 128 ? 8 : this.phase]; if (t) toast(t, 5000); }
   showChain() {
     if (!this.chain.length) return;
@@ -409,7 +448,7 @@ class Duel {
   clearBar() { clear(this.bar); this.bar.append(h('div', { class: 'bar-t' }, h('div', { class: 'bar-m muted' }, ''))); }
   /** wartet auf eine Antwort der Oberfläche */
   wait(kind) { return new Promise((resolve) => { this.pending = { resolve, kind }; }); }
-  answer(resp) { const p = this.pending; if (!p) return; this.pending = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
+  answer(resp) { const p = this.pending; if (!p) return; this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
   setTip(t) { this.tip = t; }
   showTip() {
     this.tipBtn.classList.remove('pulse'); const t = this.tip; if (!t) { toast('Gerade gibt es nichts zu raten.'); return; }

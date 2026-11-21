@@ -79,6 +79,9 @@ export function rate(p) {
 }
 
 const nm = (cards, code) => clean(cards.get(code)?.name) || String(code);
+/** Anzeigename in Hinweistexten (die App setzt hier die deutschen Namen ein; gerechnet wird mit dem englischen) */
+let DISPLAY = null; export const setDisplayName = (fn) => { DISPLAY = fn; };
+const shown = (cards, code) => (DISPLAY ? DISPLAY(code) : nm(cards, code));
 const lst = (a) => (a.length <= 1 ? a.join('') : a.slice(0, -1).join(', ') + ' und ' + a[a.length - 1]);
 
 /** Gesamtbewertung mit Erklärungen (deutsch) */
@@ -95,7 +98,7 @@ export function consistency(deck, cards, setnames, limOf = () => 3) {
   else if (N >= 40) good.push(`Brick-Risiko nur ${pct(r.brick)} – selten eine unbrauchbare Starthand.`);
   if (p.c.B >= 3 && r.dead2 > 0.1) warn.push(`${p.c.B} schwere Monster im Hauptdeck: In ${pct(r.dead2)} der Hände liegen 2 oder mehr davon tot herum (sie brauchen Tribute/Material).`);
   if (N > 40) { const gain = pAtLeast(40, sN, 5, 1); warn.push(`${N} statt 40 Karten: jede Karte über 40 verdünnt dein Deck${sN ? ` (mit 40 Karten hättest du ${pct(gain)} statt ${pct(r.p5)} Starterchance)` : ''}.`); }
-  const low = p.list.filter((e) => e.k === 'S' && e.n < Math.min(3, limOf(e.code) || 0)).map((e) => `${nm(cards, e.code)} (${e.n}×)`);
+  const low = p.list.filter((e) => e.k === 'S' && e.n < Math.min(3, limOf(e.code) || 0)).map((e) => `${shown(cards, e.code)} (${e.n}×)`);
   if (low.length) notes.push(`Starter nicht voll ausgespielt: ${lst(low.slice(0, 3))} – 3× ist konstanter (wenn erlaubt).`);
   if (p.engines >= 3) warn.push(`${p.engines} Engines im selben Deck: jede braucht eigene Starter – das senkt die Konstanz. Gute Brücken sind hier Pflicht.`);
   else if (p.engines === 2) notes.push('2 Engines: funktioniert mit gemeinsamen Brücken-Karten; je Engine mindestens 4–5 Starter einplanen.');
@@ -157,7 +160,7 @@ export function suggest(deck, cards, setnames, o = {}) {
     if (!best || best.gain < 1.5) continue;
     const have0 = cd.have ? cd.have.n : 0; const lim = Math.min(3, limOf(cd.c.code) || 0); const bl = blurb(cd.c);
     const g = engs.find((g) => (cd.c.setcodes || []).some((s) => matches(s, g.code)));
-    const why = have0 ? `Du spielst ${nm(cards, cd.c.code)} nur ${have0}× (erlaubt ${lim}×) – eine Kopie mehr erhöht die Chance auf einen Start.` : cd.k === 'D' ? `Zugkarte${bl ? ' – ' + bl : ''}: mehr Zugriff auf deine Karten.` : `${CLS_DE[cd.k]}${g ? ' der Engine „' + g.name + '“' : ''}${bl ? ' – ' + bl : ''}.`;
+    const why = have0 ? `Du spielst ${shown(cards, cd.c.code)} nur ${have0}× (erlaubt ${lim}×) – eine Kopie mehr erhöht die Chance auf einen Start.` : cd.k === 'D' ? `Zugkarte${bl ? ' – ' + bl : ''}: mehr Zugriff auf deine Karten.` : `${CLS_DE[cd.k]}${g ? ' der Engine „' + g.name + '“' : ''}${bl ? ' – ' + bl : ''}.`;
     out.push({ code: cd.c.code, k: cd.k, gain: best.gain, syn: syn(cd.c) + (have0 ? 4 : 0), why, cut: best.cut ? best.cut.code : null, cutWhy: best.cut ? cutWhy(best.cut) : '', copy: have0 > 0 });
   }
   out.sort((a, b) => Math.round(b.gain * 2) - Math.round(a.gain * 2) || b.syn - a.syn || b.gain - a.gain);

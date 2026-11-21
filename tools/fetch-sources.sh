@@ -7,6 +7,8 @@ clone CardScripts ocg/scripts
 clone BabelCDB babel/BabelCDB
 clone LFLists lflists/repo
 clone windbot windbot
+# Deutsche Kartennamen und -texte (nur der Ordner locales/de-DE)
+rm -rf "$D/de-db"; git clone -q --depth 1 --filter=blob:none --sparse https://github.com/mycard/ygopro-database.git "$D/de-db"; git -C "$D/de-db" sparse-checkout set locales/de-DE; echo "de-DE: $(git -C "$D/de-db" log -1 --format='%cd %h' --date=short)"
 mkdir -p "$D/dist-repo/d/config/languages/Deutsch"
 curl -fsSL https://raw.githubusercontent.com/ProjectIgnis/Distribution/master/config/strings.conf -o "$D/dist-repo/d/config/strings.conf"
 curl -fsSL https://raw.githubusercontent.com/ProjectIgnis/Distribution/master/config/languages/Deutsch/strings.conf -o "$D/dist-repo/d/config/languages/Deutsch/strings.conf"

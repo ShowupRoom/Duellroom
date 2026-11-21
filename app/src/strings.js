@@ -1,5 +1,5 @@
 // Texte: Systemtexte des Kerns, Kartenbeschreibungen, Namen
-import { App, cleanName } from './data.js';
+import { App, cleanName, strOf } from './data.js';
 
 export const sys = (id, fb = '') => App.strings.system[Number(id)] ?? fb;
 export const PHASE = { 1: 'Ziehphase', 2: 'Standby-Phase', 4: 'Main Phase 1', 8: 'Kampfphase', 16: 'Kampfphase', 32: 'Kampfphase', 64: 'Kampfphase', 128: 'Kampfphase', 256: 'Main Phase 2', 512: 'End Phase' };
@@ -22,7 +22,7 @@ export function descText(desc, fallbackCode = 0) {
   const d = Number(desc || 0); if (!d) return '';
   if (d < 10000) return sys(d);
   const code = Math.floor(d / 16), idx = d % 16; const c = App.cards.get(code) || App.cards.get(fallbackCode);
-  return (c && c.strs && c.strs[idx]) || '';
+  return strOf(c, idx);
 }
 export const victoryText = (r) => App.strings.victory[r] || (r === 1 ? 'LP haben 0 erreicht' : 'Spielende');
 export const counterText = (t) => App.strings.counter[t] || 'Zählmarke';

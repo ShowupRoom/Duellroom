@@ -3,18 +3,21 @@ import { openCards, openData, fetchBin } from './pack.js';
 import { OcgDuelMode } from '../../src/core.mjs';
 import { FORMATS, count, allowed } from '../../src/decks.mjs';
 import { analyze } from '../../src/tutor.mjs';
-import { consistency, consSummary } from '../../src/konsistenz.mjs';
+import { consistency, consSummary, setDisplayName } from '../../src/konsistenz.mjs';
+import { textHook } from './util.js';
 import { store } from './store.js';
 
-export const App = { cards: null, decks: [], lists: null, strings: null, readFor: null, lib: null, byName: null };
+export const App = { cards: null, decks: [], lists: null, strings: null, readFor: null, lib: null, byName: null, de: null, deName: null, enByDe: null, lang: store.get('lang', 'de') };
 
 const V = typeof __VERSION__ !== 'undefined' ? '?v=' + __VERSION__ : '';
 export async function boot(progress = () => {}) {
   progress('Karten und Decks werden geladen …', 0.2);
   const cardsP = fetchBin('data/cards.dat' + V).then((u) => { progress('Karten werden gelesen …', 0.55); return openCards(u); });
   const dataP = fetchBin('data/decks.dat' + V).then(openData);
-  const [cards, d] = await Promise.all([cardsP, dataP]);
+  const deP = fetchBin('data/de.dat' + V).then(openData).catch(() => null); // deutsche Kartentexte – fehlen sie, bleibt es englisch
+  const [cards, d, de] = await Promise.all([cardsP, dataP, deP]);
   App.cards = cards; App.decks = d.decks; App.lists = d.lists; App.strings = d.strings;
+  if (de) { buildDe(de); textHook.fn = (t) => ((t.includes('„') || t.includes('«')) ? loc(t) : t); setDisplayName((code) => nameOf(code)); }
   progress('Fertig', 1);
 }
 
@@ -32,6 +35,9 @@ export const FORMAT_INFO = {
   advanced: { title: 'Advanced', sub: 'Aktuell · TCG / OCG', blurb: 'Das moderne Spiel mit Link, Pendel und Extra-Monsterzonen und der heutigen Verbotsliste. Schnell, kombo-lastig.', icon: '🌀' },
   genesys: { title: 'Genesys', sub: '100 Punkte', blurb: 'Alle Karten sind erlaubt – aber jede starke Karte kostet Punkte. Du baust ein Deck mit höchstens 100 Punkten.', icon: '🧬' },
 };
+/** Verbotslisten im Advanced-Format (Auswahl) */
+export const ADV_LISTS = ['tcg', 'ocg', 'none'];
+export const LIST_NAME = { tcg: 'TCG', ocg: 'OCG', none: 'Keine Banlist' };
 export const fmtOf = (deck) => ({ ...FORMATS[deck.fmt], list: deck.list || FORMATS[deck.fmt].list });
 export const fmtById = (id, list) => ({ ...FORMATS[id], list: list || FORMATS[id].list });
 
@@ -62,8 +68,24 @@ export function allDecks(fmt) {
 
 // ---- Karten-Hilfen -----------------------------------------------------------
 export const cardOf = (code) => App.cards.get(code);
-export const cleanName = (n) => (n || '').replace(/\s*\((goat|pre-errata)\)$/i, '');
+const stripName = (n) => (n || '').replace(/\s*\((goat|pre-errata)\)$/i, '');
+/** Deutsche Namen und Texte: Die Logik (Tutor, KI, Ziele) rechnet weiter mit dem englischen Original; angezeigt wird Deutsch. */
+function buildDe(de) {
+  App.de = new Map(); App.deName = new Map(); App.enByDe = new Map();
+  for (const k of Object.keys(de)) { const code = +k; App.de.set(code, de[k]); const c = App.cards.get(code); if (!c) continue; const en = stripName(c.name); if (!App.deName.has(en)) { App.deName.set(en, de[k][0]); if (!App.enByDe.has(de[k][0])) App.enByDe.set(de[k][0], en); } }
+}
+export const useDe = () => App.lang !== 'en' && !!App.de;
+/** Anzeigename einer Karte (aus dem englischen Namen) */
+export const cleanName = (n) => { const s = stripName(n); if (useDe()) { const g = App.deName.get(s); if (g) return g; } return s; };
 export const nameOf = (code) => cleanName(App.cards.get(code)?.name || String(code));
+/** Kartentext in der gewählten Sprache */
+export const descOf = (c) => { if (!c) return ''; if (useDe()) { const t = App.de.get(c.code); if (t && t[1]) return t[1]; } return c.desc || ''; };
+/** Effekttext (strN) einer Karte in der gewählten Sprache */
+export const strOf = (c, i) => { if (!c) return ''; if (useDe()) { const t = App.de.get(c.code); if (t && t[2] && t[2][i]) return t[2][i]; } return (c.strs && c.strs[i]) || ''; };
+/** Englische Namen in „…“ / «…» eines Textes durch die deutschen ersetzen (Tutor-Texte entstehen mit englischen Namen) */
+export const loc = (t) => { if (!t || !useDe() || typeof t !== 'string') return t; return t.replace(/([„«])([^“»]{2,80})([“»])/g, (m, a, n, z) => { const g = App.deName.get(n); return g ? a + g + z : m; }); };
+/** Suchtext einer Karte: englischer und deutscher Name */
+export const searchName = (c) => (c.name + '|' + ((App.deName && App.deName.get(stripName(c.name))) || '')).toLowerCase();
 /** Kartennummer, unter der das Bild zu finden ist (Goat-Einträge zeigen auf das Original) */
 export const imageId = (code) => { const c = App.cards.get(code); return c && c.alias && code >= 504700000 && code < 504800000 ? c.alias : code; };
 export { FORMATS, count };

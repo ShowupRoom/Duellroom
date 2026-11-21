@@ -1,5 +1,5 @@
 // Packt Skripte, Karten und Decks in komprimierte Blöcke (gzip, später base64 im HTML).
-import { readFileSync, readdirSync, writeFileSync, statSync, mkdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, statSync, mkdirSync, existsSync } from 'node:fs';
 mkdirSync('app/dist', { recursive: true });
 import { gzipSync } from 'node:zlib';
 import path from 'node:path';
@@ -38,3 +38,7 @@ const data = { decks: JSON.parse(readFileSync('data/decks.json', 'utf-8')), list
 const dj = gzipSync(Buffer.from(JSON.stringify(data)), { level: 9 });
 writeFileSync('app/dist/data.gz', dj);
 console.log('Daten gz', (dj.length / 1e6).toFixed(2), 'MB');
+// Deutsche Kartentexte (fehlt die Datei, bleibt die App englisch)
+const dePath = 'data/de.json'; const de = existsSync(dePath) ? readFileSync(dePath) : Buffer.from('{}');
+const dg = gzipSync(de, { level: 9 }); writeFileSync('app/dist/de.gz', dg);
+console.log('Deutsch gz', (dg.length / 1e6).toFixed(2), 'MB');

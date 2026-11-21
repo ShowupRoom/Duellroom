@@ -36,7 +36,7 @@
 .hc.hl{box-shadow:0 0 0 2px #58e0a8,0 0 14px 2px rgba(88,224,168,.75)}.hc.cand{box-shadow:0 0 0 2px var(--cy),0 0 18px 3px rgba(79,211,255,.85);animation:pulse 1.3s infinite}.hc.chosen{box-shadow:0 0 0 3px var(--gold),0 0 20px 4px rgba(246,201,107,.9);transform:translateY(-8px)}
 .d-bar{flex:none;display:flex;flex-direction:column;gap:6px;padding:8px 12px calc(8px + var(--safe-b));background:linear-gradient(180deg,rgba(8,20,48,.2),rgba(2,8,22,.95));border-top:1px solid var(--line);min-height:44px}
 .bar-t{display:flex;align-items:baseline;gap:8px;min-width:0;flex-wrap:wrap}.bar-m{font-weight:700;font-size:13.5px;line-height:1.2}.bar-s{font-size:12px;color:var(--mut)}.bar-b{display:flex;gap:8px}.bar-b .btn{flex:1;min-height:42px;padding:0 10px;font-size:14px}.bar-b .btn:empty{display:none}.bar-b:empty{display:none}
-.d-sheet{position:absolute;left:0;right:0;bottom:var(--barh,60px);z-index:60;background:linear-gradient(180deg,#112b60,#091735);border:1px solid var(--line2);border-radius:18px 18px 0 0;padding:12px 14px 12px;max-height:52%;overflow:auto;transform:translateY(120%);visibility:hidden;transition:transform .22s,visibility .22s;box-shadow:0 -10px 40px rgba(0,0,0,.6);pointer-events:none}
+.d-sheet{position:absolute;left:var(--safe-l);right:var(--safe-r);bottom:var(--barh,60px);z-index:60;background:linear-gradient(180deg,#112b60,#091735);border:1px solid var(--line2);border-radius:18px 18px 0 0;padding:12px 14px 12px;max-height:52%;overflow:auto;transform:translateY(120%);visibility:hidden;transition:transform .22s,visibility .22s;box-shadow:0 -10px 40px rgba(0,0,0,.6);pointer-events:none}
 .d-sheet.open{transform:none;pointer-events:auto;visibility:visible}.sh-x{position:absolute;right:10px;top:8px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.1)}.sh-top{display:flex;gap:12px;margin-bottom:8px;padding-right:30px}.sh-n{font-weight:800;font-size:17px}.sh-t{white-space:pre-wrap;font-size:13px;line-height:1.45;color:#dbe8ff;background:rgba(0,0,0,.28);border-radius:10px;padding:8px 10px;max-height:22vh;overflow:auto}
 .sh-acts{display:flex;flex-direction:column;gap:8px;margin-top:10px}.sh-acts .btn{justify-content:flex-start;text-align:left;height:auto;min-height:44px;padding:8px 14px;line-height:1.25}
 .d-fx{position:absolute;inset:0;z-index:80;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}.d-fx>*{pointer-events:auto}
@@ -53,9 +53,73 @@
 .logl{display:flex;flex-direction:column;gap:4px;font-size:13px}.lg-t{color:var(--gold);font-weight:700;margin-top:8px}.lg{padding:2px 0;border-bottom:1px dashed rgba(110,185,255,.12)}
 .win .win-b{text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;padding:6px}.win-ic{font-size:70px}
 .modal>.box.cardbox{max-height:90%}
-@media (min-width:860px) and (min-aspect-ratio:1/1){.d-sheet{left:0;right:auto;width:300px;top:0;bottom:58px;max-height:none;border-radius:0 18px 18px 0}.d-sheet.open{transform:none}.d-sheet{transform:translateX(-110%)}}
+@media (min-width:860px) and (min-aspect-ratio:1/1){.d-sheet{left:var(--safe-l);right:auto;width:300px;top:0;bottom:58px;max-height:none;border-radius:0 18px 18px 0}.d-sheet.open{transform:none}.d-sheet{transform:translateX(-110%)}}
 
 .d-hand>.hc:first-child{margin-left:auto!important}.d-hand>.hc:last-child{margin-right:auto}
 @media (min-width:860px) and (min-aspect-ratio:1/1){.d-sheet{bottom:var(--barh,60px)}}
 
 .d-test{flex:none;display:flex;align-items:center;gap:6px;padding:4px 10px;overflow-x:auto;scrollbar-width:none;background:rgba(246,201,107,.08);border-bottom:1px solid var(--line)}.d-test::-webkit-scrollbar{display:none}.d-test .chip{flex:none;white-space:nowrap}.d-test-t{flex:none;font-size:12px;font-weight:700;color:var(--gold);white-space:nowrap}
+
+/* ===== Aufbau in Spalten ===== */
+.d-col{display:contents}
+.d-probe{position:absolute;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;padding:var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l)}
+.duel:not(.land) .d-top{order:1}.duel:not(.land) .d-test{order:2}.duel:not(.land) .d-strip.opp{order:3}.duel:not(.land) .d-board{order:4}.duel:not(.land) .d-strip.me{order:5}.duel:not(.land) .d-hand{order:6}.duel:not(.land) .d-bar{order:7}
+.d-ohand{display:none}
+.zn.sel{border-color:#fff;box-shadow:0 0 0 2px #fff,0 0 16px 3px rgba(255,255,255,.7)}.hc.sel{box-shadow:0 0 0 2px #fff,0 0 16px 3px rgba(255,255,255,.7)}
+.zn.fz{border-color:rgba(120,230,160,.45)}
+
+/* ===== Querformat – wie Master Duel: links Gegner / Karteninfo / du, Mitte Feld, rechts Phasen + Aktionen ===== */
+.duel.land{flex-direction:row;padding-top:var(--safe-t);align-items:stretch}
+.duel.land .d-col{display:flex;flex-direction:column;min-height:0;min-width:0}
+.duel.land .d-col>*{order:0}
+.land .d-l{flex:0 0 var(--sidew);width:var(--sidew);padding:8px 4px 8px 6px;gap:6px}
+.land .d-r{flex:0 0 var(--sidew);width:var(--sidew);padding:8px 6px calc(8px + var(--safe-b)) 4px;gap:6px}
+.land .d-c{flex:1 1 0;position:relative;align-items:center;justify-content:center;padding:var(--opk) 6px calc(var(--hpk) + var(--safe-b))}
+.land .d-board{flex:1;min-height:0;width:100%;padding:0}
+.land .d-ohand{display:flex;position:absolute;top:calc(var(--opk)*-1);left:50%;transform:translateX(-50%);height:var(--opk);overflow:hidden;pointer-events:none;z-index:2}
+.land .d-ohand i{display:block;flex:none;width:calc(var(--cw)*.5);height:calc(var(--cw)*.72);margin:calc(var(--opk)*-.62) 0 0 calc(var(--cw)*-.12);border-radius:3px;background:radial-gradient(circle at 50% 50%,#7a3c10 0 18%,#3a1a06 19% 38%,#1d0c03 39%);border:1px solid #8a6a2e;box-shadow:0 2px 4px rgba(0,0,0,.6)}
+.land .d-ohand i:first-child{margin-left:0}
+/* LP-Felder */
+.land .d-strip{flex:none;flex-direction:column;align-items:stretch;gap:3px;padding:6px 10px;border:1px solid var(--line2);border-radius:12px;background:linear-gradient(180deg,rgba(14,36,86,.85),rgba(6,16,40,.85))}
+.land .d-strip.opp{border-color:rgba(255,120,130,.5)}.land .d-strip.me{border-color:rgba(79,211,255,.6)}
+.land .st-n{max-width:none;font-size:13px}
+.land .lpw{height:auto;flex-direction:column-reverse;align-items:stretch;gap:3px;min-width:0}
+.land .lpn{font-size:26px;line-height:1;text-align:left;min-width:0}
+.land .lpbar{height:7px;flex:none}.land .hbacks{display:none}.land .st-c{flex-wrap:wrap;gap:4px}.land .lpf{right:12px;top:6px}
+/* Karteninfo (früher das Blatt von unten) */
+.duel.land .d-sheet{position:static;flex:1 1 0;min-height:0;max-height:none;width:auto;transform:none;visibility:visible;pointer-events:auto;overflow:auto;border-radius:12px;border:1px solid var(--line);box-shadow:none;padding:8px;display:flex;flex-direction:column;background:linear-gradient(180deg,rgba(14,36,86,.6),rgba(6,16,40,.6))}
+.duel.land .d-sheet:empty::before{content:"Tippe eine Karte an – hier erscheinen Bild, Text und mögliche Aktionen.";color:var(--mut);font-size:12px;line-height:1.35;padding:4px}
+.land .d-sheet .sh-top{order:0;margin-bottom:6px;gap:8px;padding-right:26px}.land .d-sheet .sh-acts{order:1;margin:0 0 6px}.land .d-sheet .sh-t{order:2;max-height:none;font-size:12px;line-height:1.4}.land .d-sheet .btn.ghost{order:3}
+.land .d-sheet .card.md{--w:56px}.land .d-sheet .sh-n{font-size:14px}.land .d-sheet .sh-acts .btn{min-height:38px;padding:6px 10px;font-size:13px}.land .d-sheet .sh-x{right:6px;top:6px;width:26px;height:26px}
+/* Kopfzeile + Phasenleiste */
+.land .d-top{flex:none;flex-wrap:wrap;padding:0;gap:6px;background:none}.land .d-top .ibtn{width:34px;height:34px;font-size:16px}
+.land .d-turnb{display:none;order:9;flex:1 0 100%;text-align:left;padding:5px 9px;border:1px solid var(--line);border-radius:10px;background:rgba(6,16,40,.6)}.land .d-turn{white-space:normal;font-size:12px;line-height:1.25}
+.land .d-test{display:grid;grid-template-columns:1fr 1fr;gap:4px;overflow:visible;padding:4px;border:1px solid var(--line);border-radius:10px}.land .d-test-t{display:none}.land .d-test .chip{font-size:11px;padding:4px 3px;justify-content:center}
+.d-phases{display:flex;align-items:center;gap:8px;flex:none}
+.ph-pills{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;flex:1;min-width:0}
+.ph{text-align:center;font-size:11px;font-weight:800;padding:5px 0;border-radius:7px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--mut);letter-spacing:.3px}
+.ph.on{color:#2a1a00;background:linear-gradient(180deg,#f6c96b,#b27a14);border-color:#ffe3a1;box-shadow:0 0 12px rgba(246,201,107,.6)}
+.ph.go:not(.on){color:var(--cy);border-color:var(--cy);animation:pulse 1.4s infinite}
+.d-phases.theirs .ph.on{color:#2a0006;background:linear-gradient(180deg,#ff9aa5,#b8323f);border-color:#ffc2c8;box-shadow:0 0 12px rgba(255,90,115,.6)}.d-phases.idle .ph.on{background:rgba(255,255,255,.04);color:var(--mut);box-shadow:none;border-color:var(--line)}
+/* Phasenrad (wie Master Duel): zeigt die aktuelle Phase; antippen → nächste Phase wählen */
+.ph-wheel{flex:none;width:62px;height:62px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;color:#fff;background:radial-gradient(circle at 50% 35%,#1d4a96,#0a1d46 70%);border:3px solid var(--gold);box-shadow:0 0 0 2px rgba(0,0,0,.5),0 0 16px rgba(246,201,107,.55),inset 0 0 12px rgba(0,0,0,.5)}
+.ph-wheel b{font-size:21px;letter-spacing:.5px;text-shadow:0 0 8px rgba(79,211,255,.8)}.ph-wheel small{font-size:9.5px;color:#cfe6ff;margin-top:3px;white-space:nowrap}
+.d-phases.theirs .ph-wheel{border-color:var(--red);box-shadow:0 0 0 2px rgba(0,0,0,.5),0 0 16px rgba(255,90,115,.55),inset 0 0 12px rgba(0,0,0,.5)}.d-phases.idle .ph-wheel{border-color:var(--line2);box-shadow:none}
+.ph-wheel.go{animation:pulse 1.3s infinite;border-color:#fff}.ph-wheel.go small{color:var(--cy);font-weight:700}
+/* im Hochformat: kleines Rad in der Kopfzeile, ohne die Phasenliste */
+.duel:not(.land) .d-top .ph-pills{display:none}.duel:not(.land) .d-top .d-phases{gap:0}.duel:not(.land) .d-top .ph-wheel{width:44px;height:44px;border-width:2px}.duel:not(.land) .d-top .ph-wheel b{font-size:15px}.duel:not(.land) .d-top .ph-wheel small{display:none}
+/* Aktionsfeld */
+.land .d-bar{flex:1 1 0;min-height:0;overflow:auto;padding:8px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,rgba(14,36,86,.7),rgba(6,16,40,.8));justify-content:flex-end}
+.land .bar-b{flex-direction:column}.land .bar-b .btn{flex:none;min-height:40px;font-size:13px;padding:0 8px}
+/* Hand: groß, am unteren Rand, schaut nur zum Teil heraus */
+.land .d-hand{position:absolute;left:50%;bottom:0;transform:translateX(-50%);height:calc(var(--hpk) + var(--safe-b));min-height:0;width:max-content;padding:0;overflow:visible;gap:0;align-items:flex-start;justify-content:center;z-index:6;pointer-events:none}
+.land .d-hand>.hc{pointer-events:auto;--w:calc(var(--cw)*1.35);margin-left:var(--hov,0px)!important;transition:transform .15s,box-shadow .15s}
+.land .d-hand>.hc:first-child{margin-left:0!important}.land .hc .card{--w:calc(var(--cw)*1.35)}
+.land .hc:active,.land .hc.sel,.land .hc.chosen{transform:translateY(calc(var(--hpk)*-.6));z-index:3}
+/* Antwortfenster rechts statt über dem Feld */
+.duel.land .modal.peek{justify-content:flex-end;align-items:center;padding-right:var(--safe-r)}
+.duel.land .modal.peek>.box{width:var(--sidew);max-height:100%;margin-bottom:0;border-radius:16px 0 0 16px}
+.duel{overflow:clip}.sh-top .card{align-self:flex-start}
+.duel.land .modal.peek .mh{padding:10px 12px 4px}.duel.land .modal.peek .mh h3{font-size:14px}.duel.land .modal.peek .mb{padding:4px 10px 8px}.duel.land .modal.peek .mf{padding:8px 10px;gap:6px}
+.duel.land .modal.peek .ch-row{flex-wrap:wrap;gap:6px}.duel.land .modal.peek .ch-row .btn{flex:1 0 100%;min-height:38px;font-size:13px}.duel.land .modal.peek .ch-row .small{font-size:11px;line-height:1.3}
+.land .midinfo{visibility:hidden}

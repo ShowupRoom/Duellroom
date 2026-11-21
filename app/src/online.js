@@ -1,6 +1,6 @@
 // Online-Raum: Gastgeber eröffnet mit Code, Partnerin tritt an ihrem Handy bei, jeder wählt sein Deck.
 import { h, clear, toast, rand32 } from './util.js';
-import { App, FORMAT_INFO, allDecks, withTutor } from './data.js';
+import { App, FORMAT_INFO, allDecks, withTutor, ADV_LISTS, LIST_NAME } from './data.js';
 import { openModal, confirmBox } from './ui.js';
 import { go, back, root as navRoot, screens, setGuard } from './nav.js';
 import { store } from './store.js';
@@ -11,7 +11,7 @@ import { cardEl } from './cards.js';
 
 const hdr = (title, sub, onBack) => h('div', { class: 'hd' }, h('button', { class: 'ibtn', onclick: onBack || (() => back()) }, '←'), h('h2', null, title, sub ? h('div', { class: 'sub' }, sub) : null));
 const slim = (d) => (d ? { id: d.id, name: d.name, fmt: d.fmt, list: d.list, main: d.main, extra: d.extra, side: d.side || [], tutor: withTutor(d).tutor, custom: d.custom, sub: d.sub, grp: d.grp } : null);
-const fmtTitle = (s) => (s.fmt ? FORMAT_INFO[s.fmt].title + (s.fmt === 'advanced' ? ' · ' + (s.list || 'tcg').toUpperCase() : '') : '–');
+const fmtTitle = (s) => (s.fmt ? FORMAT_INFO[s.fmt].title + (s.fmt === 'advanced' ? ' · ' + (s.list === 'none' ? 'ohne Banlist' : (s.list || 'tcg').toUpperCase()) : '') : '–');
 
 // ---- Einstieg -------------------------------------------------------------------------------------------------
 screens.online = () => {
@@ -61,7 +61,7 @@ function wireGuest(s) {
   s.on((ev) => { if (ev === 'open') s.send({ t: 'hello', name: myName(), v: VERSION, inDuel: s.inDuel }); });
   s.handle('setup', (m) => {
     const changed = m.fmt !== s.fmt || m.list !== s.list; Object.assign(s, { fmt: m.fmt, list: m.list, hostName: m.hostName, hostDeckName: m.hostDeckName });
-    if (changed) { const last = store.get('online.guest.' + m.fmt); s.myDeck = byIdIn(m.fmt, last) || null; if (s.myDeck && m.fmt === 'advanced' && s.myDeck.list !== m.list && !s.myDeck.custom) s.myDeck = null; if (s.myDeck) s.send({ t: 'deck', deck: slim(s.myDeck), name: myName() }); }
+    if (changed) { const last = store.get('online.guest.' + m.fmt); s.myDeck = byIdIn(m.fmt, last) || null; if (s.myDeck && m.fmt === 'advanced' && m.list !== 'none' && s.myDeck.list !== m.list && !s.myDeck.custom) s.myDeck = null; if (s.myDeck) s.send({ t: 'deck', deck: slim(s.myDeck), name: myName() }); }
     s.emit('state');
   });
   s.handle('start', (m) => {
@@ -120,7 +120,7 @@ screens.lobby = () => {
       body.append(h('div', { class: 'panel col center' }, h('div', { class: 'small muted' }, 'Raum-Code'), h('div', { class: 'room-code' }, s.code.split('').map((c) => h('span', null, c))),
         h('button', { class: 'btn', onclick: async () => { const text = `Komm in meinen Duellraum! Code: ${s.code}`; try { if (navigator.share) await navigator.share({ title: 'Duellraum', text, url: link }); else { await navigator.clipboard.writeText(link); toast('Link kopiert'); } } catch (e) { /* abgebrochen */ } } }, '📤  Einladung teilen')));
       body.append(h('div', { class: 'panel col' }, h('div', { class: 'small muted' }, 'Format'), h('div', { class: 'tabs' }, ['goat', 'edison', 'advanced', 'genesys'].map((f) => h('button', { class: 'chip' + (s.fmt === f ? ' on' : ''), onclick: () => { if (s.fmt === f) return; s.fmt = f; s.myDeck = null; s.guestDeck = null; saveHost(s); pushSetup(s); paint(); } }, FORMAT_INFO[f].icon + ' ' + FORMAT_INFO[f].title))),
-        s.fmt === 'advanced' ? h('div', { class: 'tabs' }, ['tcg', 'ocg'].map((l) => h('button', { class: 'chip' + (s.list === l ? ' on' : ''), onclick: () => { s.list = l; s.myDeck = null; s.guestDeck = null; saveHost(s); pushSetup(s); paint(); } }, 'Verbotsliste ' + l.toUpperCase()))) : null));
+        s.fmt === 'advanced' ? h('div', { class: 'tabs' }, ADV_LISTS.map((l) => h('button', { class: 'chip' + (s.list === l ? ' on' : ''), onclick: () => { s.list = l; s.myDeck = null; s.guestDeck = null; saveHost(s); pushSetup(s); paint(); } }, l === 'none' ? 'Keine Banlist' : 'Verbotsliste ' + LIST_NAME[l]))) : null));
       body.append(deckBox('Dein Deck', s.myDeck, true, (d) => { s.myDeck = d; saveHost(s); pushSetup(s); }, 'Noch kein Deck gewählt'));
       body.append(deckBox(`Deck von ${s.guestName || 'deiner Mitspielerin'}`, s.guestDeck, false, null, s.connected ? 'wählt gerade …' : 'noch nicht verbunden'));
       body.append(h('div', { class: 'panel row', style: 'flex-wrap:wrap' }, h('span', { class: 'small muted' }, 'Wer beginnt?'), [['random', 'Zufall'], ['me', 'Ich'], ['other', s.guestName || 'Gast']].map(([v, t]) => h('button', { class: 'chip' + (s.first === v ? ' on' : ''), onclick: () => { s.first = v; paint(); } }, t)),

@@ -1,6 +1,6 @@
 // Auswahlfenster zu allen Entscheidungen, die der Spielkern verlangt
 import { h, clear, toast, zkey as key } from './util.js';
-import { App, nameOf, cardOf, cleanName } from './data.js';
+import { App, nameOf, cardOf, cleanName, searchName } from './data.js';
 import { OcgResponseType as R, OcgMessageType as MSG, SelectIdleCMDAction as IA, SelectBattleCMDAction as BA, LOC, OcgPosition as POS, placesFromMask, sumSelectionValid } from '../../src/core.mjs';
 import { cardMatchesOpcode } from 'ocgcore-wasm';
 import { cardEl } from './cards.js';
@@ -10,6 +10,14 @@ import { idleTip, battleTip, chainTip } from './tips.js';
 
 const M = (D, o) => openModal({ host: D.root, ...o });
 const FIELD = LOC.MZONE | LOC.SZONE;
+/** Entscheidungen, bei denen es nichts zu entscheiden gibt – dafür wird weder gefragt noch das Gerät übergeben */
+export function autoAnswer(msg) {
+  switch (msg.type) {
+    case MSG.SELECT_CHAIN: return !msg.forced && !(msg.selects && msg.selects.length) ? { type: R.SELECT_CHAIN, index: null } : null;
+    case MSG.SORT_CARD: case MSG.SORT_CHAIN: return { type: R.SORT_CARD, order: null };
+    default: return null;
+  }
+}
 export async function ask(D, msg) {
   switch (msg.type) {
     case MSG.SELECT_IDLECMD: return askIdle(D, msg);
@@ -54,6 +62,7 @@ function askIdle(D, msg) {
   if (msg.to_ep) btns.push({ label: 'Zug beenden ⏭', cls: 'red', onclick: () => D.answer(r(IA.TO_EP, null)) });
   const n = D.actList.length;
   D.setTip(D.conf.tutor ? idleTip(D, msg) : null); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
+  D.phaseOpts = { BP: msg.to_bp ? r(IA.TO_BP, null) : null, EP: msg.to_ep ? r(IA.TO_EP, null) : null };
   D.setBar(`${D.pname(msg.player)} · ${PHASE[D.phase] || 'Main Phase'}`, btns, n ? 'Tippe auf eine leuchtende Karte' : 'Keine Aktion möglich – beende die Phase');
   const p = D.wait('idle'); D.render(); return p;
 }
@@ -66,6 +75,7 @@ function askBattle(D, msg) {
   if (msg.to_m2) btns.push({ label: 'Main Phase 2', cls: 'gold', onclick: () => D.answer(r(BA.TO_M2, null)) });
   if (msg.to_ep) btns.push({ label: 'Zug beenden ⏭', cls: 'red', onclick: () => D.answer(r(BA.TO_EP, null)) });
   D.setTip(D.conf.tutor ? battleTip(D, msg) : null); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
+  D.phaseOpts = { M2: msg.to_m2 ? r(BA.TO_M2, null) : null, EP: msg.to_ep ? r(BA.TO_EP, null) : null };
   D.setBar(`${D.pname(msg.player)} · Kampfphase`, btns, msg.attacks.length ? 'Tippe ein leuchtendes Monster an, um anzugreifen' : 'Keine Angriffe möglich');
   const p = D.wait('battle'); D.render(); return p;
 }
@@ -246,7 +256,7 @@ function askAnnounceCard(D, msg) {
   return new Promise((resolve) => {
     let all = null; const list = h('div', { class: 'cgrid' }); let q = '';
     const find = () => { if (!all) { all = []; for (const c of App.cards.values()) if (c.code < 504700000 || c.code >= 504800000) { try { if (cardMatchesOpcode(c, msg.opcodes)) all.push(c); } catch (e) { /* */ } } } };
-    const paint = () => { find(); clear(list); const ql = q.toLowerCase(); const res = all.filter((c) => !ql || c.name.toLowerCase().includes(ql)).slice(0, 60); if (!res.length) list.append(h('p', { class: 'muted' }, 'Keine passende Karte.')); res.forEach((c) => list.append(h('button', { class: 'cg', onclick: () => { m.close(); resolve({ type: R.ANNOUNCE_CARD, card: c.code }); } }, cardEl(c.code, { cls: 'sm' }), h('div', { class: 'small cg-n' }, cleanName(c.name))))); };
+    const paint = () => { find(); clear(list); const ql = q.toLowerCase(); const res = all.filter((c) => !ql || searchName(c).includes(ql)).slice(0, 60); if (!res.length) list.append(h('p', { class: 'muted' }, 'Keine passende Karte.')); res.forEach((c) => list.append(h('button', { class: 'cg', onclick: () => { m.close(); resolve({ type: R.ANNOUNCE_CARD, card: c.code }); } }, cardEl(c.code, { cls: 'sm' }), h('div', { class: 'small cg-n' }, cleanName(c.name))))); };
     const m = M(D, { title: D.hintText || 'Nenne eine Karte', sticky: true, cls: 'tall', body: h('div', null, h('input', { class: 'search', placeholder: 'Kartenname (englisch) eintippen …', oninput: (e) => { q = e.target.value; paint(); } }), h('div', { style: 'height:10px' }), list) }); paint();
   });
 }
