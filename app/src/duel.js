@@ -408,6 +408,7 @@ class Duel {
     else if (own && this.pending && this.pending.kind === 'idle') this.sheet.append(h('div', { class: 'small muted', style: 'margin-top:6px' }, 'Mit dieser Karte ist gerade keine Aktion möglich.'));
     this.sheet.append(h('button', { class: 'btn ghost sm', style: 'margin-top:8px', onclick: () => this.info(c.code) }, 'Ganzen Text'));
     if (!vis) this.sheet.lastChild.remove();
+    setTimeout(() => revealMark(this.sheet.querySelector('.sh-t')), 40); // markierte Effektstelle ins Bild scrollen
   }
   closeSheet() { const had = this.selKey; this.selKey = null; this.sheet.classList.remove('open'); clear(this.sheet); if (had && this.snap) this.render(); }
   phaseHelp() { const t = PHASE_HELP[this.phase === 16 || this.phase === 32 || this.phase === 64 || this.phase === 128 ? 8 : this.phase]; if (t) toast(t, 5000); }

@@ -180,6 +180,12 @@ export function markNode(view) {
   return h('span', null, kids);
 }
 
+/** Ganzer Kartentext mit Markierung, in eigener Box (im Querformat sichtbar, dort ist Platz zum Lesen) */
+export function fullNode(view) {
+  if (!view || !view.text) return null;
+  return h('div', { class: 'fx-full' }, markNode(view));
+}
+
 /** Nur die markierte Stelle (gekürzt) */
 export function excerptNode(view, max = 180) {
   if (!view || !view.ranges || !view.ranges.length) return null;
@@ -191,5 +197,5 @@ export function excerptNode(view, max = 180) {
 /** Scrollt eine Textbox so, dass die erste Markierung sichtbar ist */
 export function revealMark(box) {
   const mk = box && box.querySelector && box.querySelector('mark.fx-mark'); if (!mk) return;
-  box.scrollTop = Math.max(0, mk.offsetTop - 4);
+  const dy = mk.getBoundingClientRect().top - box.getBoundingClientRect().top; if (dy > 6 || dy < 0) box.scrollTop = Math.max(0, box.scrollTop + dy - 6);
 }
