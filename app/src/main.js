@@ -7,6 +7,8 @@ import './duel.js';
 import './editor.js';
 import './online.js';
 import './md.js';
+import './match.js';
+import { applyLook } from './look.js';
 import { joinRoom } from './online.js';
 import { prewarm } from './engine.js';
 import { myName } from './net.js';
@@ -19,7 +21,7 @@ addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__bi
   try {
     await boot(set);
     window.__app = App; window.__fx = fx; window.__txt = TXT; window.__efx = EFX; window.__nav = { root, go, back, screens }; // (Prüfhaken für Tests)
-    initNav(); root('home'); document.body.dataset.done = 'ready';
+    applyLook(true); initNav(); root('home'); document.body.dataset.done = 'ready';
     const upd = () => { if (document.querySelector('.upd') || (window.__duel && !window.__duel.stopped)) return; const b = document.createElement('div'); b.className = 'upd'; b.innerHTML = '<span style="flex:1">✨ Neue Version verfügbar</span><button class="btn pri sm">Jetzt laden</button><button class="btn ghost sm">Später</button>'; b.children[1].onclick = () => { window.__swReload = true; window.__swWaiting && window.__swWaiting.postMessage('skip'); }; b.children[2].onclick = () => b.remove(); document.body.append(b); };
     document.addEventListener('sw-update', upd); if (window.__swWaiting) upd();
     // Spielkern im Hintergrund vorwärmen, sobald das Menü steht

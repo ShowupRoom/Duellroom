@@ -95,3 +95,33 @@ body{font-family:"Segoe UI","Helvetica Neue",system-ui,-apple-system,Roboto,Aria
 .fmt-card,.panel.pl{border-radius:3px}.deck-mini .dm-n{letter-spacing:.03em}
 .ft{background:linear-gradient(0deg,rgba(2,6,16,.95),rgba(2,6,16,.6));border-top:1px solid var(--line)}
 .duel .ibtn,.d-top .ibtn{clip-path:none;border-radius:8px}
+/* Match / Side Decking */
+.match-score{font-size:30px;font-weight:300;letter-spacing:.08em;margin:6px 0 2px;color:var(--mdw)}
+.sd-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}.sd-z{padding:10px 12px}.sd-z>b{display:block;margin-bottom:6px;color:var(--gold);letter-spacing:.06em}
+.sd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:5px}.sd-c{position:relative}.sd-c .card{width:100%;--w:46px}
+.sd-side{border-color:rgba(111,214,255,.55)}
+@media (max-width:700px){.sd-cols{grid-template-columns:1fr}}
+/* ===== Aussehen: Spielfeld-Designs und Kartenhüllen (Variablen kommen aus look.js) ===== */
+.duel{isolation:isolate}
+html .duel{background:var(--field-bg,radial-gradient(90% 60% at 50% 50%,#0c2756 0%,#061230 55%,#02060f 100%))}
+html .md-home .home-bg{background:var(--field-bg,#030816)}
+html .zn{border-color:var(--zline,rgba(190,225,255,.34));background:linear-gradient(180deg,var(--zfill,rgba(14,38,90,.28)),rgba(3,10,28,.5));box-shadow:inset 0 0 12px var(--zglow,rgba(111,214,255,.1))}
+html .card.back,html .fcard.back{background:var(--sleeve-me) center/100% 100% no-repeat}
+html .duel[data-v="0"] [data-k^="1:"] .fcard.back,html .duel[data-v="1"] [data-k^="0:"] .fcard.back{background:var(--sleeve-op) center/100% 100% no-repeat}
+html .hbacks i{background:var(--sleeve-op) center/100% 100% no-repeat}
+html .card.back::after,html .fcard.back::after{display:none}
+html[data-fx] .duel::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none}
+html[data-fx="stars"] .duel::after{background-image:radial-gradient(1.6px 1.6px at 12% 18%,#fff,transparent),radial-gradient(1.2px 1.2px at 33% 62%,#cfe0ff,transparent),radial-gradient(1.4px 1.4px at 58% 24%,#fff,transparent),radial-gradient(1px 1px at 74% 70%,#d9e5ff,transparent),radial-gradient(1.6px 1.6px at 88% 40%,#fff,transparent),radial-gradient(1px 1px at 46% 86%,#fff,transparent),radial-gradient(1.2px 1.2px at 6% 78%,#cfe0ff,transparent),radial-gradient(1px 1px at 92% 90%,#fff,transparent);animation:twk 5s ease-in-out infinite alternate}
+@keyframes twk{from{opacity:.3}to{opacity:1}}
+html[data-fx="ember"] .duel::after{background:radial-gradient(60% 40% at 50% 112%,rgba(255,130,40,.42),transparent 70%),radial-gradient(3px 3px at 20% 80%,rgba(255,170,80,.8),transparent),radial-gradient(2px 2px at 66% 70%,rgba(255,170,80,.7),transparent),radial-gradient(2px 2px at 82% 85%,rgba(255,200,120,.8),transparent);animation:glw 4s ease-in-out infinite alternate}
+@keyframes glw{from{opacity:.45;transform:translateY(8px)}to{opacity:1;transform:none}}
+html[data-fx="scan"] .duel::after{background:linear-gradient(180deg,transparent 0 46%,rgba(95,243,255,.13) 50%,transparent 54% 100%);background-size:100% 240%;animation:scn 7s linear infinite}
+@keyframes scn{from{background-position:0 0}to{background-position:0 100%}}
+@media (prefers-reduced-motion:reduce){html[data-fx] .duel::after{animation:none!important}}
+/* Auswahl-Kacheln in den Einstellungen */
+.sx-pick{flex-direction:column;align-items:stretch;gap:10px}
+.pk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.pk-t{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px 7px;border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:12px;text-align:center;line-height:1.2}
+.pk-t.on{border-color:#fff;background:rgba(255,255,255,.14);box-shadow:0 0 0 1px #fff inset}
+.pk-sl{width:46px;height:67px;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.5)}.pk-ph{display:grid;place-items:center;font-size:22px;background:rgba(255,255,255,.06);border:1px dashed var(--line2)}
+.pk-fd{position:relative;width:100%;height:54px;border-radius:3px;overflow:hidden;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:9px 10px;border:1px solid var(--line)}.pk-fd i{border:1px solid var(--zl);border-radius:2px;background:rgba(0,0,0,.22)}

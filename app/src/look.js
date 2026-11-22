@@ -1,0 +1,51 @@
+// Aussehen: Spielfeld-Designs und Kartenhüllen. Alles selbst gezeichnet (SVG/CSS), keine fremden Bilder oder Markenzeichen.
+// Gewählt wird in Einstellungen → Aussehen; angewendet über CSS-Variablen am <html>-Element.
+import { store } from './store.js';
+
+const enc = (s) => 'url("data:image/svg+xml,' + encodeURIComponent(s) + '")';
+const STARS = [[8, 10], [19, 22], [45, 14], [51, 31], [12, 47], [40, 56], [24, 70], [48, 74], [33, 8], [6, 66], [52, 52], [15, 33], [37, 66], [28, 80]];
+const stars = (c, r = 0.9) => STARS.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${(r * (i % 3 ? 0.6 : 1)).toFixed(2)}" fill="${c}" fill-opacity="${i % 2 ? 0.55 : 0.9}"/>`).join('');
+const frame = (c) => `<rect x="2.5" y="2.5" width="54" height="81" rx="3" fill="none" stroke="${c}" stroke-opacity=".75" stroke-width="1.2"/><rect x="5.5" y="5.5" width="48" height="75" rx="2" fill="none" stroke="${c}" stroke-opacity=".35" stroke-width=".6"/>`;
+const sv = (inner, defs = '') => enc(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 59 86" preserveAspectRatio="none"><defs>${defs}</defs>${inner}</svg>`);
+
+/** Kartenhüllen: id, Name, Hintergrund (CSS-Wert) */
+export const SLEEVES = [
+  { id: 'classic', name: 'Klassisch', bg: sv(`<rect width="59" height="86" fill="url(#g)"/><circle cx="29.5" cy="43" r="17" fill="none" stroke="#f6c96b" stroke-opacity=".6" stroke-width="2"/><circle cx="29.5" cy="43" r="6" fill="#7a3c10"/>${frame('#f6c96b')}`, '<radialGradient id="g"><stop offset=".18" stop-color="#7a3c10"/><stop offset=".4" stop-color="#3a1a06"/><stop offset="1" stop-color="#1d0c03"/></radialGradient>') },
+  { id: 'night', name: 'Nachtmond', bg: sv(`<rect width="59" height="86" fill="url(#g)"/>${stars('#cfe0ff')}<path d="M36 28A15 15 0 1 0 36 58A12 12 0 1 1 36 28Z" fill="#ffe29a"/>${frame('#9fb8ff')}`, '<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1b5e"/><stop offset="1" stop-color="#05061c"/></linearGradient>') },
+  { id: 'dragon', name: 'Drachenglut', bg: sv(`<rect width="59" height="86" fill="url(#g)"/><rect width="59" height="86" fill="url(#p)"/><path d="M29.5 22c3 7 11 11 11 22a11 11 0 0 1-22 0c0-6 3-8 4-12c2 3 3 4 5 5c0-5 0-10 2-15z" fill="#ff8a2a"/><path d="M29.5 36c1.5 4 5 6 5 11a5 5 0 0 1-10 0c0-3 2-4 5-11z" fill="#ffd36b"/>${frame('#ff9a5a')}`, '<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a0f0a"/><stop offset="1" stop-color="#1a0403"/></linearGradient><pattern id="p" width="8" height="6" patternUnits="userSpaceOnUse"><path d="M0 6a4 4 0 0 1 8 0" fill="none" stroke="#ff6a3a" stroke-opacity=".28" stroke-width=".7"/></pattern>') },
+  { id: 'galaxy', name: 'Galaxie', bg: sv(`<rect width="59" height="86" fill="url(#g)"/>${stars('#ffffff', 1.1)}<path d="M29.5 20L33.5 39.5L53 43L33.5 46.5L29.5 66L25.5 46.5L6 43L25.5 39.5Z" fill="#ffffff" fill-opacity=".92"/>${frame('#c7a6ff')}`, '<radialGradient id="g" cx=".5" cy=".4" r=".8"><stop offset="0" stop-color="#6a2fc9"/><stop offset=".5" stop-color="#2a1274"/><stop offset="1" stop-color="#070322"/></radialGradient>') },
+  { id: 'crystal', name: 'Kristall', bg: sv(`<rect width="59" height="86" fill="url(#g)"/><path d="M0 20L30 0L59 26M0 60L28 86L59 58" stroke="#bff6ff" stroke-opacity=".25" fill="none"/><path d="M19 35h21l8 9-18.5 21L11 44z" fill="#9ff3ff" fill-opacity=".92"/><path d="M11 44h37M19 35l10.5 30M40 35L29.5 65" stroke="#1d7f9c" stroke-width=".9" fill="none"/>${frame('#9ff3ff')}`, '<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0e5a70"/><stop offset=".55" stop-color="#0a2f44"/><stop offset="1" stop-color="#062033"/></linearGradient>') },
+  { id: 'neon', name: 'Neon-Gitter', bg: sv(`<rect width="59" height="86" fill="#080212"/><rect width="59" height="86" fill="url(#p)"/><path d="M34 21L19 47h10l-3 19L42 39H32z" fill="#ff4fd8"/><path d="M34 21L19 47h10l-3 19L42 39H32z" fill="none" stroke="#5ff3ff" stroke-width="1.2"/>${frame('#ff4fd8')}`, '<pattern id="p" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M7 0H0V7" fill="none" stroke="#5ff3ff" stroke-opacity=".22" stroke-width=".5"/></pattern>') },
+  { id: 'gold', name: 'Goldenes Auge', bg: sv(`<rect width="59" height="86" fill="url(#g)"/><rect width="59" height="86" fill="url(#p)"/><path d="M9 43q20.5-21 41 0q-20.5 21-41 0z" fill="#150f03" stroke="#f6c96b" stroke-width="2"/><circle cx="29.5" cy="43" r="6.5" fill="#f6c96b"/><circle cx="29.5" cy="43" r="2.6" fill="#1a1204"/>${frame('#f6c96b')}`, '<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c220a"/><stop offset="1" stop-color="#0c0802"/></linearGradient><pattern id="p" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M5 0L10 5L5 10L0 5Z" fill="none" stroke="#f6c96b" stroke-opacity=".2" stroke-width=".5"/></pattern>') },
+  { id: 'forest', name: 'Waldgeist', bg: sv(`<rect width="59" height="86" fill="url(#g)"/><path d="M0 70q15-10 20 4t39-8M0 18q20 8 30-6t29 6" stroke="#58c96a" stroke-opacity=".3" fill="none"/><path d="M29.5 63C15 52 15 32 29.5 23C44 32 44 52 29.5 63z" fill="#7be36a"/><path d="M29.5 63V29M29.5 50l-7-6M29.5 44l7-6" stroke="#1f6a2a" stroke-width="1" fill="none"/>${frame('#9bf5a0')}`, '<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14502a"/><stop offset="1" stop-color="#04180b"/></linearGradient>') },
+  { id: 'ice', name: 'Eiskristall', bg: sv(`<rect width="59" height="86" fill="url(#g)"/><g stroke="#f2fcff" stroke-width="2.2" stroke-linecap="round" fill="none"><path d="M29.5 22v42M11 32.5l37 21M11 53.5l37-21"/><path d="M25 27l4.5 4 4.5-4M25 59l4.5-4 4.5 4"/></g>${frame('#d8f6ff')}`, '<linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fa6d8"/><stop offset="1" stop-color="#173a63"/></linearGradient>') },
+  { id: 'rune', name: 'Steinrune', bg: sv(`<rect width="59" height="86" fill="url(#g)"/><circle cx="29.5" cy="43" r="15" fill="none" stroke="#e3dfce" stroke-width="2"/><circle cx="29.5" cy="43" r="8.5" fill="none" stroke="#e3dfce" stroke-width="1"/><path d="M29.5 27v32M13.5 43h32M18 31.5l23 23M41 31.5l-23 23" stroke="#e3dfce" stroke-opacity=".8" stroke-width="1"/>${frame('#cfcab6')}`, '<linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a5e66"/><stop offset="1" stop-color="#23262c"/></linearGradient>') },
+];
+/** Spielfeld-Designs: Hintergrund, Zonenlinie, Zonenfüllung, Leuchten; fx = bewegte Ebene (Sterne, Glut, Scan) */
+export const FIELDS = [
+  { id: 'md', name: 'Standard', bg: 'radial-gradient(90% 60% at 50% 50%,#0c2756 0%,#061230 55%,#02060f 100%)', line: 'rgba(190,225,255,.34)', fill: 'rgba(14,38,90,.28)', glow: 'rgba(111,214,255,.1)' },
+  { id: 'ember', name: 'Drachenglut', bg: 'radial-gradient(70% 55% at 50% 105%,rgba(255,110,40,.42),transparent 70%),radial-gradient(90% 60% at 50% 40%,#3a0d0d 0%,#1a0505 60%,#070202 100%)', line: 'rgba(255,165,95,.5)', fill: 'rgba(90,20,10,.4)', glow: 'rgba(255,120,50,.14)', fx: 'ember' },
+  { id: 'night', name: 'Nachthimmel', bg: 'radial-gradient(60% 50% at 72% 18%,rgba(130,90,255,.4),transparent 70%),linear-gradient(180deg,#0b0733,#170b45 55%,#050318)', line: 'rgba(190,175,255,.45)', fill: 'rgba(40,20,100,.3)', glow: 'rgba(150,120,255,.14)', fx: 'stars' },
+  { id: 'crystal', name: 'Kristallhöhle', bg: 'linear-gradient(180deg,rgba(2,12,20,.55),rgba(2,12,20,.05)),conic-gradient(from 215deg at 50% 125%,#0b3a4a,#0e6a7a,#0b3a4a,#08202c,#0e5566,#0b3a4a)', line: 'rgba(150,245,255,.5)', fill: 'rgba(6,50,66,.4)', glow: 'rgba(120,240,255,.16)' },
+  { id: 'neon', name: 'Neon-Stadt', bg: 'repeating-linear-gradient(0deg,rgba(95,243,255,.07) 0 1px,transparent 1px 34px),repeating-linear-gradient(90deg,rgba(255,79,216,.06) 0 1px,transparent 1px 34px),linear-gradient(180deg,#0a0220 0%,#1b0743 62%,#2c0b52 100%)', line: 'rgba(255,100,225,.6)', fill: 'rgba(40,6,70,.4)', glow: 'rgba(255,79,216,.18)', fx: 'scan' },
+  { id: 'gold', name: 'Goldener Tempel', bg: 'repeating-linear-gradient(45deg,rgba(246,201,107,.06) 0 1px,transparent 1px 22px),repeating-linear-gradient(-45deg,rgba(246,201,107,.05) 0 1px,transparent 1px 22px),radial-gradient(80% 60% at 50% 50%,#2c2208,#130e03 70%,#050301)', line: 'rgba(246,201,107,.55)', fill: 'rgba(60,44,8,.4)', glow: 'rgba(246,201,107,.14)' },
+  { id: 'forest', name: 'Verzauberter Wald', bg: 'radial-gradient(40% 30% at 25% 30%,rgba(120,255,160,.14),transparent 70%),radial-gradient(70% 60% at 50% 40%,#0e3a22,#07200f 60%,#020a05)', line: 'rgba(150,255,175,.45)', fill: 'rgba(8,50,24,.4)', glow: 'rgba(120,255,160,.14)' },
+  { id: 'ice', name: 'Eis & Schnee', bg: 'repeating-linear-gradient(120deg,rgba(255,255,255,.05) 0 2px,transparent 2px 42px),radial-gradient(90% 60% at 50% 40%,#2a5f8a,#123456 60%,#06142a)', line: 'rgba(235,250,255,.55)', fill: 'rgba(30,80,130,.3)', glow: 'rgba(200,240,255,.16)' },
+];
+
+export const look = {
+  get field() { return store.get('look.field', 'md'); }, set field(v) { store.set('look.field', v); },
+  get sleeve() { return store.get('look.sleeve', 'classic'); }, set sleeve(v) { store.set('look.sleeve', v); },
+  get sleeveOp() { return store.get('look.sleeveOp', 'same'); }, set sleeveOp(v) { store.set('look.sleeveOp', v); },
+  get fx() { return store.get('look.fx', true); }, set fx(v) { store.set('look.fx', !!v); },
+};
+export const sleeveOf = (id) => SLEEVES.find((s) => s.id === id) || SLEEVES[0];
+export const fieldOf = (id) => FIELDS.find((f) => f.id === id) || FIELDS[0];
+/** Aussehen an <html> setzen (random: die Hülle des Gegners wird bei jedem Duell neu gewürfelt) */
+export function applyLook(reroll = false) {
+  const r = document.documentElement; const f = fieldOf(look.field); const me = sleeveOf(look.sleeve);
+  let op = look.sleeveOp === 'same' ? me : look.sleeveOp === 'random' ? (reroll || !applyLook.op ? SLEEVES[Math.floor(Math.random() * SLEEVES.length)] : applyLook.op) : sleeveOf(look.sleeveOp); applyLook.op = op;
+  r.style.setProperty('--field-bg', f.bg); r.style.setProperty('--zline', f.line); r.style.setProperty('--zfill', f.fill); r.style.setProperty('--zglow', f.glow);
+  r.style.setProperty('--sleeve-me', me.bg); r.style.setProperty('--sleeve-op', op.bg);
+  r.dataset.field = f.id; r.dataset.fx = look.fx && f.fx ? f.fx : '';
+}

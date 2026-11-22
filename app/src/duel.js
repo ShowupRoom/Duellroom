@@ -1,4 +1,6 @@
 // Duell-Oberfläche: Spielfeld, Hand, Ereignisse, Übergabe zwischen den Spielern
+import { applyLook } from './look.js';
+import { matchModal } from './match.js';
 import { h, clear, sleep, toast, shuffled, beep, rand32, zkey as key } from './util.js';
 import { App, MODES, FORMATS, fmtById, expand, nameOf, cardOf, cleanName, withTutor, descOf } from './data.js';
 import { DuelAI } from '../../src/ai.mjs';
@@ -27,7 +29,7 @@ const FACEUP = 5;
 
 class Duel {
   constructor(conf) {
-    this.conf = conf; this.mode = MODES[conf.fmt]; if (this.mode.lp) conf.lp = this.mode.lp; // Speed Duell: fest 4000 LP this.fmtDef = fmtById(conf.fmt, conf.list);
+    applyLook(true); this.conf = conf; this.mode = MODES[conf.fmt]; if (this.mode.lp) conf.lp = this.mode.lp; // Speed Duell: fest 4000 LP this.fmtDef = fmtById(conf.fmt, conf.list);
     this.net = conf.mode === 'net-host' || conf.mode === 'net-guest' ? session : null; this.viewer = this.net ? conf.seat : conf.mode === 'demo' ? 0 : (conf.human[0] ? 0 : 1); this.snap = null; this.logLines = []; this.chain = []; this.stopped = false; this.turnNo = 0; this.phase = 0; this.turnPlayer = 0;
     this.actList = []; this.acts = new Map(); this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.tip = null; this.tipKeys = new Set(); this.pending = null; this.hintText = ''; this.introShown = [false, false];
     this.lpShown = [conf.lp, conf.lp]; this.floats = []; this.prevHand = [0, 0]; this.newHand = 0; this.anim = store.get('anim', true); this.tempo = store.get('tempo', 'fast'); this.aiPace = AIP[store.get('aipace', 'relaxed')] ? store.get('aipace', 'relaxed') : 'relaxed'; this.ff = false; this.naps = new Set(); this.aiBusy = false; // Effekt-Tempo: schnell (Standard) oder normal
@@ -39,7 +41,7 @@ class Duel {
 
   // ---------------------------------------------------------------- Aufbau
   build() {
-    const r = this.root = h('div', { class: 'screen duel' + (this.demo ? ' demo' : '') + (this.mode.emz ? ' has-emz' : '') + (this.tempo === 'fast' ? ' fxfast' : '') });
+    const r = this.root = h('div', { 'data-v': this.viewer, class: 'screen duel' + (this.demo ? ' demo' : '') + (this.mode.emz ? ' has-emz' : '') + (this.tempo === 'fast' ? ' fxfast' : '') });
     this.turnEl = h('div', { class: 'd-turn' }); this.chainEl = h('button', { class: 'd-chainb', onclick: () => this.showChain() });
     this.tipBtn = h('button', { class: 'ibtn tipb', title: 'Tutor-Tipp', onclick: () => this.showTip() }, '💡');
     this.ffBtn = h('button', { class: 'ibtn ffb', title: 'Vorspulen bis zu deiner nächsten Entscheidung', onclick: () => this.setFF(!this.ff) }, '⏩'); this.ffBtn.style.display = 'none';
@@ -320,6 +322,7 @@ class Duel {
     store.set('stats', stats); beep('win');
     const name = draw ? 'Unentschieden' : `${this.pname(winner)} gewinnt!`;
     this.closeSheet(); this.clearBar();
+    if (this.conf.match) { matchModal(this, winner, victoryText(reason)); return; } // Match (Best of 3): Spielstand, Side Decking, nächstes Spiel
     openModal({ host: this.root, title: '', center: true, cls: 'win', body: h('div', { class: 'win-b' }, h('div', { class: 'win-ic' }, draw ? '🤝' : '🏆'), h('h2', { class: 'title-glow' }, name), h('p', { class: 'muted' }, victoryText(reason)), h('p', { class: 'small muted' }, `Das Duell dauerte ${this.turnNo} Züge. Endstand: ${this.pname(0)} ${this.snap.lp[0]} · ${this.pname(1)} ${this.snap.lp[1]}`)),
       footer: this.net ? [h('button', { class: 'btn ghost', onclick: () => { this.destroy(); netMenu(); } }, 'Zum Raum'), h('button', { class: 'btn pri', onclick: (e) => { e.target.disabled = true; e.target.textContent = 'Warte …'; netRematch(this); } }, '↻ Revanche')]
         : [h('button', { class: 'btn ghost', onclick: () => { this.destroy(); navRoot('home'); } }, 'Zum Menü'), h('button', { class: 'btn', onclick: () => { this.destroy(); back(); } }, 'Neue Decks'), h('button', { class: 'btn pri', onclick: () => { this.destroy(); navRoot('duel', this.conf); } }, '↻ Revanche')] });

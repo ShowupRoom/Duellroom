@@ -11,6 +11,7 @@ import { validate, deckPoints, isExtra } from '../../src/decks.mjs';
 import { handtrapPlan } from '../../src/block.mjs';
 import { kind, KIND_DE } from './strings.js';
 import { AI_LEVELS } from '../../src/ai.mjs';
+import { beginMatch } from './match.js';
 
 const hdr = (title, sub, right) => h('div', { class: 'hd' }, h('button', { class: 'ibtn', onclick: () => back(), 'aria-label': 'Zurück' }, '←'), h('h2', null, title, sub ? h('div', { class: 'sub' }, sub) : null), right || null);
 
@@ -77,11 +78,13 @@ screens.setup = ({ fmt, demo, list: listP, mode: modeP }) => {
     const pl = [0, 1].map((i) => ({ name: (st.names[i] || 'Spieler ' + (i + 1)).trim(), deck: withTutor(ds[i]) }));
     if (st.mode === 'ai' && (!st.names[1] || st.names[1] === 'Spieler 2')) pl[1].name = 'KI · ' + AI_LEVELS[st.level].name;
     if (st.mode === 'demo') pl[1].name = st.demoOpp === 'ai' ? 'KI · Profi' : 'Übungsgegner';
+    const sides = pl.map((p, i) => ({ name: p.name, deck: p.deck, human: st.mode === 'hot' || i === 0 })); // feste Plätze (Spieler 1/2) für ein Match
     const first = st.mode === 'demo' ? 0 : st.first === 'random' ? (rand32() & 1) : +st.first; // in der Vorführung beginnt immer das gezeigte Deck
     if (first === 1) { pl.reverse(); }
     const human = st.mode === 'demo' ? [false, false] : st.mode === 'hot' ? [true, true] : (first === 1 ? [false, true] : [true, false]);
     const conf = { fmt, list: st.list, mode: st.mode, level: st.level, demoOpp: st.mode === 'demo' ? st.demoOpp : undefined, demoGoal: st.demoGoal, demoMs: st.mode === 'demo' && st.demoOpp !== 'ai' ? st.demoMs : 0, players: pl, human, lp: settings.lp, tutor: st.mode === 'demo' ? false : settings.tutor };
     store.set('last', { ...conf, players: pl.map((p) => ({ name: p.name, deck: p.deck.id })) });
+    if (st.match && (st.mode === 'ai' || st.mode === 'hot')) { const { players, human: hm, ...base } = conf; beginMatch(base, sides, first === 1 ? 1 : 0); return; }
     go('duel', conf);
   };
   const root = h('div', { class: 'screen' }, hdr(demo ? 'Kombo-Ansicht einrichten' : 'Duell einrichten', info.title + (fmt === 'advanced' ? ' · ' + LIST_NAME[listP || saved.list || 'tcg'] : ' · ' + info.sub)));
@@ -94,6 +97,7 @@ screens.setup = ({ fmt, demo, list: listP, mode: modeP }) => {
     body.append(h('div', { class: 'wrap col' },
       h('div', { class: 'seg' }, MODES.map((m) => h('button', { class: 'seg-b' + (st.mode === m.id ? ' on' : ''), onclick: () => { st.mode = m.id; save(); render(); } }, m.t))),
       h('div', { class: 'muted small', style: 'margin:-2px 2px 4px' }, MODES.find((m) => m.id === st.mode).d),
+      st.mode === 'ai' || st.mode === 'hot' ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('span', { class: 'muted small' }, 'Spielart:'), [[false, 'Einzelduell'], [true, '🏆 Match · Best of 3 mit Sidedeck']].map(([v, t]) => h('button', { class: 'chip' + (!!st.match === v ? ' on' : ''), onclick: () => { st.match = v; save(); render(); } }, t))) : null,
       st.mode === 'demo' ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('span', { class: 'muted small' }, 'Gegner:'), [['passive', 'Steht still'], ['ai', 'Spielt mit (KI)']].map(([v, t]) => h('button', { class: 'chip' + (st.demoOpp === v ? ' on' : ''), onclick: () => { st.demoOpp = v; save(); render(); } }, t))) : null,
       st.mode === 'demo' && st.demoOpp !== 'ai' ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('span', { class: 'muted small' }, 'Ziel:'), [['balance', 'Ausgewogen'], ['power', 'Stärkste Monster'], ['inter', 'Meiste Unterbrechungen']].map(([v, t]) => h('button', { class: 'chip' + (st.demoGoal === v ? ' on' : ''), onclick: () => { st.demoGoal = v; save(); render(); } }, t))) : null,
       st.mode === 'demo' && st.demoOpp !== 'ai' ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('span', { class: 'muted small' }, 'Suche:'), [[0, 'Aus'], [8000, 'Kurz 8 s'], [15000, 'Normal 15 s'], [30000, 'Gründlich 30 s']].map(([v, t]) => h('button', { class: 'chip' + (st.demoMs === v ? ' on' : ''), onclick: () => { st.demoMs = v; save(); render(); } }, t))) : null,
@@ -114,7 +118,7 @@ screens.setup = ({ fmt, demo, list: listP, mode: modeP }) => {
         [['random', 'Zufall'], ['0', st.names[0] || 'Spieler 1'], ['1', st.names[1] || 'Spieler 2']].map(([v, t]) => h('button', { class: 'chip' + (st.first === v ? ' on' : ''), onclick: () => { st.first = v; save(); render(); } }, t)),
         h('span', { class: 'grow' }), h('label', { class: 'chip' }, h('input', { type: 'checkbox', checked: settings.tutor, onchange: (e) => { settings.tutor = e.target.checked; } }), ' Tutor-Tipps'))));
     const ready = dsel[0] && (dsel[1] || (st.mode === 'demo' && st.demoOpp !== 'ai')); const dm = st.mode === 'demo';
-    foot.append(h('button', { class: 'btn pri lg grow', disabled: !ready, onclick: start }, ready ? (dm ? '🎬  Vorführung starten' : '⚔  Duell beginnen') : dm && st.demoOpp !== 'ai' ? 'Bitte ein Deck wählen' : 'Bitte beide Decks wählen'));
+    foot.append(h('button', { class: 'btn pri lg grow', disabled: !ready, onclick: start }, ready ? (dm ? '🎬  Vorführung starten' : st.match && (st.mode === 'ai' || st.mode === 'hot') ? '🏆  Match beginnen' : '⚔  Duell beginnen') : dm && st.demoOpp !== 'ai' ? 'Bitte ein Deck wählen' : 'Bitte beide Decks wählen'));
   };
   render();
   // nach der Deckwahl zurückkommen → neu zeichnen

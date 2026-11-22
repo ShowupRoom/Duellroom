@@ -11,6 +11,7 @@ import { settings, deckRow, deckDetail, dataPanels, isApp, installApp, hydrate }
 import { importDialog, toYdk } from './editor.js';
 import { AI_LEVELS } from '../../src/ai.mjs';
 import { VERSION } from './engine.js';
+import { look, FIELDS, SLEEVES, applyLook } from './look.js';
 
 // ---- Banlists -------------------------------------------------------------------------------------------------
 export const BANS = [
@@ -114,7 +115,7 @@ screens.workshop = (p) => screens.deckhub(p);
 const AIP_OPTS = [['relaxed', 'Entspannt'], ['normal', 'Normal'], ['fast', 'Schnell']];
 const demoCfg = () => ({ opp: 'passive', goal: 'balance', ms: 15000, ...store.get('cfg.demo', {}) });
 screens.settings = () => {
-  const pages = [['duel', '⚔', 'Duell'], ['combo', '🎬', 'Kombo-Ansicht'], ['sound', '🔊', 'Ton'], ['cards', '🃏', 'Karten & Sprache'], ['player', '👤', 'Spieler'], ['data', '💾', 'Daten'], ['about', 'ℹ', 'Über']];
+  const pages = [['duel', '⚔', 'Duell'], ['look', '🎨', 'Aussehen'], ['combo', '🎬', 'Kombo-Ansicht'], ['sound', '🔊', 'Ton'], ['cards', '🃏', 'Karten & Sprache'], ['player', '👤', 'Spieler'], ['data', '💾', 'Daten'], ['about', 'ℹ', 'Über']];
   let page = store.get('setpage', 'duel'); if (!pages.some((p) => p[0] === page)) page = 'duel';
   const root = h('div', { class: 'screen md-pg' }, hdr('Einstellungen')); const nav = h('div', { class: 'sx-pages' }); const rows = h('div', { class: 'sx-rows' });
   root.append(h('div', { class: 'body sx-body' }, h('div', { class: 'sx-wrap' }, nav, rows)));
@@ -126,6 +127,9 @@ screens.settings = () => {
     return h('div', { class: 'sx-row' }, h('div', { class: 'sx-l' }, h('div', { class: 'sx-n' }, label), h('div', { class: 'sx-nt' }, note)), h('div', { class: 'sx-c sx-sel' }, h('button', { class: 'sx-a', onclick: () => step(-1), 'aria-label': 'Zurück' }, '‹'), val, h('button', { class: 'sx-a', onclick: () => step(1), 'aria-label': 'Weiter' }, '›')));
   };
   const text = (label, note, get, set, max = 30) => h('div', { class: 'sx-row' }, h('div', { class: 'sx-l' }, h('div', { class: 'sx-n' }, label), note ? h('div', { class: 'sx-nt' }, note) : null), h('div', { class: 'sx-c' }, h('input', { class: 'input', value: get(), maxlength: max, oninput: (e) => set(e.target.value) })));
+  const picker = (label, note, items, get, set, kind) => h('div', { class: 'sx-row sx-pick' }, h('div', { class: 'sx-l' }, h('div', { class: 'sx-n' }, label), h('div', { class: 'sx-nt' }, note)),
+    h('div', { class: 'pk-grid' }, items.map((it) => h('button', { class: 'pk-t' + (get() === it.id ? ' on' : ''), onclick: () => { set(it.id); applyLook(true); paint(); } },
+      kind === 'field' ? h('div', { class: 'pk-fd', style: `background:${it.bg};--zl:${it.line}` }, h('i'), h('i'), h('i')) : it.bg ? h('div', { class: 'pk-sl', style: `background:${it.bg} center/100% 100% no-repeat` }) : h('div', { class: 'pk-sl pk-ph' }, it.id === 'random' ? '🎲' : '＝'), h('span', null, it.name)))));
   const lvOpts = Object.entries(AI_LEVELS).map(([id, l]) => [id, l.name]);
   const body = async () => {
     const P = page; const out = [];
@@ -136,6 +140,11 @@ screens.settings = () => {
       toggle('Tutor-Tipps im Duell', 'Zeigt einen Lampen-Knopf mit Zugvorschlägen.', () => settings.tutor, (v) => { settings.tutor = v; }),
       choice('Startlebenspunkte', 'Gilt für alle Formate außer Speed Duell (dort immer 4000).', [[4000, '4000'], [8000, '8000'], [16000, '16000']], () => settings.lp, (v) => { settings.lp = v; }),
       choice('Karten auf dem Feld', 'Ganze Karte wie in den Fenstern oder nur das Kunstbild mit farbigem Rahmen.', [['full', 'Ganze Karte'], ['art', 'Nur Kunst']], () => (fieldCfg.full ? 'full' : 'art'), (v) => setFieldFull(v === 'full')));
+    else if (P === 'look') out.push(
+      picker('Spielfeld-Design', 'Hintergrund und Zonen im Duell – auch das Hauptmenü übernimmt die Farben.', FIELDS, () => look.field, (v) => { look.field = v; }, 'field'),
+      toggle('Bewegte Hintergründe', 'Funkelnde Sterne, Glut oder Scan-Linien bei passenden Designs. Aus spart Akku.', () => look.fx, (v) => { look.fx = v; applyLook(); }),
+      picker('Meine Kartenhülle', 'Rückseite deiner Karten – auf dem Feld, im Friedhof-Stapel, im Deck.', SLEEVES, () => look.sleeve, (v) => { look.sleeve = v; }),
+      picker('Hülle des Gegners', 'Rückseite der gegnerischen Karten. „Zufällig“ würfelt bei jedem Duell neu.', [{ id: 'same', name: 'Wie meine' }, { id: 'random', name: 'Zufällig' }, ...SLEEVES], () => look.sleeveOp, (v) => { look.sleeveOp = v; }));
     else if (P === 'combo') { const C = demoCfg(); const sv = (k, v) => { const c = demoCfg(); c[k] = v; store.set('cfg.demo', c); };
       out.push(choice('Gegner', 'Ob der Gegner still steht oder mitspielt und antwortet.', [['passive', 'Steht still'], ['ai', 'Spielt mit (KI)']], () => demoCfg().opp, (v) => sv('opp', v)),
         choice('Ziel der Suche', 'Wonach die Kombo-Suche das beste Endboard auswählt.', [['balance', 'Ausgewogen'], ['power', 'Stärkste Monster'], ['inter', 'Meiste Unterbrechungen']], () => demoCfg().goal, (v) => sv('goal', v)),
