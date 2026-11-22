@@ -52,6 +52,10 @@ jobs:
         env:
           SRC: ${{ runner.temp }}/src
         run: node test/combo-guides.mjs
+      - name: Einmal-pro-Spielzug-Sperre
+        env:
+          SRC: ${{ runner.temp }}/src
+        run: node test/opt-limit.mjs
       - name: Geänderte Listen im Repository sichern
         run: |
           git config user.name "duellraum-bot"

@@ -528,6 +528,7 @@ class Duel {
     const head = vis ? h('div', { class: 'sh-top' }, cardEl(c.code, { cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'sh-n' }, cleanName(c.name)), h('div', { class: 'small muted' }, typeText(card)), (card.type & 1) ? h('div', { class: 'small' }, [attrName(card.attribute), levelText(card)].filter(Boolean).join(' · ')) : null, (card.type & 1) ? h('div', { class: 'small gold' }, statsText({ ...card, attack: c.attack, defense: c.defense }) + (c.attack !== card.attack || c.defense !== card.defense ? ' (aktuell)' : '')) : null))
       : h('div', { class: 'sh-top' }, cardEl(0, { back: true, cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'sh-n' }, 'Verdeckte Karte'), h('div', { class: 'small muted' }, `von ${this.pname(c.controller)}`)));
     const txt = vis ? h('div', { class: 'sh-t' }, (() => { const mv = mergeViews(acts.filter((a) => a.kind === 'activate' && a.c).map((a) => effectView(a.code, a.c.description, a.c.location))); return mv && mv.ranges.length ? markNode(mv) : descOf(card).replace(/\r/g, ''); })()) : null;
+    const optNote = vis ? optHint(descOf(card)) : null; if (txt && optNote) txt.append(h('div', { class: 'opt-note' }, optNote));
     const actBtns = acts.map((a) => h('button', { class: 'btn ' + (a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, a.label));
     const none = !acts.length && own && this.selKey === k && this.pending && this.pending.kind === 'idle' ? h('div', { class: 'small muted', style: 'margin-top:6px' }, 'Mit dieser Karte ist gerade keine Aktion möglich.') : null;
     if (land) {
@@ -782,5 +783,13 @@ class Duel {
   }
 }
 
+/** „Einmal pro Spielzug“ (je Karte) und „nur einmal pro Spielzug“ (für alle Kopien zusammen) werden oft verwechselt – kurze Erklärung zur Karte */
+function optHint(t) {
+  if (!t) return null; const soft = /Einmal pro Spielzug/.test(t); const hard = /nur (einmal|zweimal|dreimal|1)[^.]*pro Spielzug/i.test(t);
+  if (soft && hard) return 'ℹ️ „Einmal pro Spielzug“ gilt je Karte. Steht zusätzlich „nur … pro Spielzug“ dabei, ist das die Obergrenze für alle Kopien zusammen.';
+  if (hard) return 'ℹ️ „Nur … pro Spielzug“ gilt für alle Kopien dieser Karte zusammen.';
+  if (soft) return 'ℹ️ „Einmal pro Spielzug“ gilt je Karte: Zwei Exemplare dürfen den Effekt je einmal nutzen. Verlässt die Karte das Feld und kommt zurück, zählt sie als neue Karte.';
+  return null;
+}
 screens.duel = (conf) => { const d = new Duel(conf); queueMicrotask(() => d.start()); return d.root; };
 export { Duel };

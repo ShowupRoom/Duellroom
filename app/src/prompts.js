@@ -87,7 +87,13 @@ function askBattle(D, msg) {
 // ---------------------------------------------------------------- Kartenauswahl
 const sk = (s) => key(s.controller, s.location, s.sequence);
 const onField = (D, list) => list.length > 0 && list.every((s) => (s.location & FIELD) && !(s.location & LOC.OVERLAY) && D.cardAt(s.controller, s.location, s.sequence)) && new Set(list.map(sk)).size === list.length;
-function candLabel(D, s) { return D.selVisible(s) ? cleanName(nameOf(s.code)) : 'Verdeckte Karte'; }
+const WHERE = { 1: 'Deck', 2: 'Hand', 4: 'Feld', 8: 'Feld', 16: 'Friedhof', 32: 'Verbannt', 64: 'Extradeck', 128: 'Xyz-Material' };
+/** Name + Herkunft (Hand/Feld/Friedhof …), damit gleiche Karten unterscheidbar sind; fremde Karten mit „Gegner“ */
+function candLabel(D, s) {
+  const nm = D.selVisible(s) ? cleanName(nameOf(s.code)) : 'Verdeckte Karte'; let loc = WHERE[s.location & 0xff] || '';
+  if ((s.location & 0x80) && !loc) loc = 'Xyz-Material'; const opp = s.controller != null && D.viewer != null && s.controller !== D.viewer;
+  return loc ? h('span', null, nm, h('span', { class: 'cg-loc' + (opp ? ' opp' : '') }, (opp ? 'Gegner · ' : '') + loc)) : nm;
+}
 
 /** Auswahl direkt auf dem Spielfeld (Karten leuchten, Antippen wählt aus) */
 function fieldSelect(D, items, o) {
@@ -105,7 +111,7 @@ function fieldSelect(D, items, o) {
     const toggle = (i) => {
       if (chosen.has(i)) chosen.delete(i);
       else { if (o.max && chosen.size >= o.max) { if (o.max === 1) chosen.clear(); else { toast(`Höchstens ${o.max} Karten.`); return; } } chosen.add(i); }
-      last = candLabel(D, items[i]); D.chosen = new Set([...chosen].map((j) => keys[j])); D.render(); bar();
+      last = D.selVisible(items[i]) ? cleanName(nameOf(items[i].code)) : 'Verdeckte Karte'; D.chosen = new Set([...chosen].map((j) => keys[j])); D.render(); bar();
     };
     D.cand = new Map(items.map((s, i) => [keys[i], () => toggle(i)]));
     D.setTip(null); const p = D.wait('select'); p.then(resolve); D.render(); bar();
