@@ -173,7 +173,7 @@ screens.editor = (params = {}) => {
   }
   function switchFmt(f) {
     if (f === S.fmt) return; const old = S.fmt;
-    for (const k of ['main', 'extra', 'side']) S[k] = S[k].map(([c, n]) => [toFmtCode(toPlainCode(c), f), n]); S.fmt = f; S.dirty = true; paint();
+    for (const k of ['main', 'extra', 'side']) S[k] = S[k].map(([c, n]) => [toFmtCode(toPlainCode(c), f), n]); S.fmt = f; S.dirty = true; recSet = new Set(); paint(); applyFilter(); // Kartenliste für das neue Format neu filtern
     const n = issues().length; if (n) toast(`${n} Hinweis(e) für ${FORMAT_INFO[f].title} – tippe auf „Hinweise“, um sie zu reparieren.`, 4000);
   }
 

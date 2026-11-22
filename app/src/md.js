@@ -172,7 +172,7 @@ screens.settings = () => {
     return out.filter(Boolean);
   };
   const paint = async () => {
-    clear(nav); nav.append(...pages.map(([id, ic, t]) => h('button', { class: 'sx-pg' + (id === page ? ' on' : ''), onclick: () => { page = id; store.set('setpage', id); paint(); } }, h('span', null, ic), h('b', null, t))));
+    clear(nav); nav.append(...pages.map(([id, ic, t]) => h('button', { class: 'sx-pg' + (id === page ? ' on' : ''), onclick: () => { page = id; store.set('setpage', id); paint(); } }, h('span', null, ic), h('b', null, t)))); requestAnimationFrame(() => { const on = nav.querySelector('.sx-pg.on'); if (on && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, on.offsetLeft - (nav.clientWidth - on.offsetWidth) / 2); });
     const items = await body(); clear(rows); rows.append(h('div', { class: 'sx-title' }, pages.find((p) => p[0] === page)[2]), ...items);
   };
   paint(); return root;

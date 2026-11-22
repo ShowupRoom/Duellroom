@@ -6,6 +6,7 @@ import { cardEl, cfg as imgCfg, setImages, preload, idbCount, storageInfo, isOcg
 import { openModal, confirmBox, showCard } from './ui.js';
 import { go, back, screens } from './nav.js';
 import { store } from './store.js';
+import { backupPanel } from './backup.js';
 import { ROLE_DE, roleOf } from '../../src/tutor.mjs';
 import { validate, deckPoints, isExtra } from '../../src/decks.mjs';
 import { handtrapPlan } from '../../src/block.mjs';
@@ -252,6 +253,7 @@ screens.learn = () => h('div', { class: 'screen' }, hdr('Lernen & Regeln', 'In w
 export const dataPanels = (n, si, paint) => {
   const mbOf = (x) => Math.round(x / 1048576); const deckCodes = () => { const s = new Set(); for (const d of allDecks()) for (const sec of ['main', 'extra', 'side']) for (const [c] of (d[sec] || [])) s.add(c); return s; };
   return [
+      backupPanel(),
       h('div', { class: 'panel col' }, h('b', null, 'Bilder für Offline-Betrieb vorladen'), h('div', { class: 'muted small' }, `${n} Bilder auf diesem Gerät gespeichert. Lade alle Karten auf einmal (unabhängig vom Format) oder nur die Beliebt-/Turnier-Decks eines Formats (ca. 15 KB je Karte).`),
         h('div', { class: 'small', style: 'color:' + (si.persisted ? 'var(--ok,#6c6)' : 'var(--warn,#e9b44c)') }, si.persisted ? '🔒 Speicher dauerhaft gesichert – der Browser löscht die Bilder nicht von selbst.' : '⚠️ Speicher nicht gesichert – der Browser darf Bilder bei Platzmangel oder nach einigen Tagen ohne Nutzung löschen. Auf dem iPhone: Seite über „Teilen → Zum Home-Bildschirm“ als App ablegen, dann bleibt alles erhalten.'), si.quota ? h('div', { class: 'muted small' }, `Belegt: ${mbOf(si.used)} MB von ca. ${mbOf(si.quota)} MB erlaubt.`) : null,
         h('div', { class: 'row', style: 'flex-wrap:wrap' }, [['Alle Decks aller Formate', 'alle Karten, die in irgendeinem Deck vorkommen', () => deckCodes()], ['Wirklich alle Karten', 'alle Karten der Datenbank – für eigene Decks mit beliebigen Karten', () => { const s = deckCodes(); for (const c of App.cards.values()) if (!(c.type & 0x4000)) s.add(c.code); return s; }]].map(([label, what, get]) => h('button', { class: 'btn sm pri', onclick: async (e) => {
@@ -263,6 +265,6 @@ export const dataPanels = (n, si, paint) => {
         } }, label))),
         h('div', { class: 'row', style: 'flex-wrap:wrap' }, ['goat', 'edison', 'advanced', 'genesys', 'speed'].map((f) => h('button', { class: 'btn sm', onclick: async (e) => { const b = e.currentTarget; const codes = new Set(); for (const d of allDecks(f).filter((x) => x.grp === 'Beliebte Decks' || x.grp === 'Turnier-Decks' || x.custom || f === 'speed')) for (const s of ['main', 'extra']) for (const [c] of d[s]) codes.add(c); b.disabled = true; const r = await preload([...codes], (a, t) => { b.textContent = `${a}/${t}`; }); b.textContent = FORMAT_INFO[f].title; b.disabled = false; toast(`${r.ok} von ${r.total} Bildern gespeichert` + (r.ok < r.total ? ' – ohne Internet nicht möglich?' : '')); paint(); } }, FORMAT_INFO[f].title)))),
       h('div', { class: 'panel col' }, h('b', null, 'Eigene Decks'), h('div', { class: 'muted small' }, customDecks().length + ' gespeichert (nur auf diesem Gerät).'),
-        h('button', { class: 'btn red sm', onclick: async () => { if (await confirmBox('Alle eigenen Decks löschen?', 'Das kann nicht rückgängig gemacht werden.', 'Löschen', 'Abbrechen', true)) { customDecks().forEach((d) => deleteCustom(d.id)); paint(); } } }, 'Alle eigenen Decks löschen'))
+        h('button', { class: 'btn red sm', onclick: async () => { if (await confirmBox('Alle eigenen Decks löschen?', 'Das kann nicht rückgängig gemacht werden – speichere vorher eine Sicherung.', 'Löschen', 'Abbrechen', true)) { customDecks().forEach((d) => deleteCustom(d.id)); paint(); } } }, 'Alle eigenen Decks löschen'))
   ];
 };

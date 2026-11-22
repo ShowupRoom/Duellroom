@@ -68,3 +68,8 @@ button:focus-visible{outline:2px solid #7fe3ff;outline-offset:2px}
 .md-item .mi-t,.sx-pg,.sx-cat,.sx-h{font-family:var(--nx-head);font-weight:800}
 .md-item .mi-s{opacity:.85}
 .sx-n{font-family:var(--nx-head);font-weight:700}
+/* Tippflächen außerhalb des Duells: mindestens 36 px hoch (Finger statt Maus) */
+@media (min-height:560px){.screen:not(.duel) .chip,.screen:not(.duel) .tabs>button,.screen:not(.duel) .btn.sm{min-height:36px}
+.screen:not(.duel) .chip{display:inline-flex;align-items:center;justify-content:center}}
+.hm-arr{position:relative}.hm-arr::after{content:"";position:absolute;inset:-8px -6px}
+@media (max-width:560px){.dk-tools{flex-wrap:wrap}.dk-tools>.search{flex:1 1 100%;min-width:0}}

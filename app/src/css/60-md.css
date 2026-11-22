@@ -54,7 +54,7 @@ body{font-family:"Segoe UI","Helvetica Neue",system-ui,-apple-system,Roboto,Aria
 .dh-r{display:flex;flex-direction:column;gap:8px;max-width:560px}
 .ban-info{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;padding:8px 14px;border-left:3px solid var(--mdc);background:rgba(255,255,255,.04)}.ban-info p{margin:2px 0 0;flex:1 0 100%;line-height:1.4}
 .ban-pill{display:flex;gap:10px;align-items:baseline;padding:8px 14px;border-left:3px solid var(--mdc);background:rgba(255,255,255,.04)}
-@media (max-width:700px){.dh{grid-template-columns:1fr;gap:12px}.dh-l .ban-list{display:none}.dh-l .ban-rail{display:flex}}
+@media (max-width:700px){.dh{grid-template-columns:minmax(0,1fr);gap:12px}.dh>*{min-width:0}.dh-l .ban-list{display:none}.dh-l .ban-rail{display:flex}}
 /* Deck-Zentrale */
 .dk-top{border-bottom:0}.dk-tools{flex-wrap:nowrap}.dk-tools .search{flex:1;min-width:0}
 .deck-row{border-radius:3px;border-color:var(--line);background:linear-gradient(90deg,rgba(14,32,70,.8),rgba(5,12,28,.8));clip-path:polygon(0 0,calc(100% - 10px) 0,100% 100%,10px 100%);padding-left:16px}

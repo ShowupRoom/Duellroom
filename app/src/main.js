@@ -1,5 +1,9 @@
 import { App, boot } from './data.js';
 import * as TXT from './strings.js';
+import { toast } from './util.js';
+// Wischleisten (Reiter, Banlisten, Formate): den gewählten Eintrag ins Bild holen, sobald er wechselt
+let scT = 0; new MutationObserver(() => { clearTimeout(scT); scT = setTimeout(() => { for (const on of document.querySelectorAll('.screen:not(.duel) .on')) { const row = on.parentElement; if (!row || row.scrollWidth <= row.clientWidth + 4) continue; const ox = getComputedStyle(row).overflowX; if (ox !== 'auto' && ox !== 'scroll') continue; const key = on.textContent; if (row.dataset.scOn === key) continue; row.dataset.scOn = key; const l = on.offsetLeft - row.offsetLeft, r = l + on.offsetWidth; if (l < row.scrollLeft || r > row.scrollLeft + row.clientWidth) row.scrollLeft = Math.max(0, l - (row.clientWidth - on.offsetWidth) / 2); } }, 60); }).observe(document.documentElement, { childList: true, subtree: true });
+window.addEventListener('dr-full', () => toast('⚠️ Der Speicher dieses Geräts ist voll – Neues wird evtl. nicht gespeichert. Einstellungen → Daten: Sicherung speichern, alte Duelle oder Bilder löschen.', 7000));
 import * as EFX from './effecttext.js';
 import { screens, root, go, back, initNav } from './nav.js';
 import './screens.js';
