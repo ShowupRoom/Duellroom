@@ -6,7 +6,7 @@ import { openModal } from './ui.js';
 import { go, screens } from './nav.js';
 import { store } from './store.js';
 import { cardEl, wantImage } from './cards.js';
-import { settings, isApp, installApp, hydrate } from './screens.js';
+import { settings, isApp, installApp, installNudge, hydrate } from './screens.js';
 import { curBan } from './md.js';
 
 const svg = (s, cls = 'ic') => { const d = document.createElement('span'); d.className = cls; d.innerHTML = s; return d; };
@@ -65,12 +65,13 @@ function slides() {
   out.push({ t: 'Neu hier? Leichter Einstieg', s: 'Karten aussuchen, die dir gefallen – mit Begleiterin', on: () => go('taste') });
   out.push({ t: 'Kombo-Ansicht', s: 'Die KI spielt dein Deck vor und erklärt jeden Schritt', on: () => go('setup', { fmt: ban.fmt, list: ban.list, demo: true }) });
   out.push({ t: `Banlist: ${ban.t}`, s: `${App.decks.length} Decks · ${App.cards.size.toLocaleString('de-DE')} Karten · offline spielbar`, on: () => go('duelhub') });
-  if (!isApp()) out.push({ t: 'Als App installieren', s: 'Auf dem Startbildschirm, ohne Browser-Leiste', on: installApp });
+  if (!isApp()) out.push({ t: 'Als App installieren', s: 'Auf dem Startbildschirm, ohne Browser-Leiste', on: () => installApp() });
   return out;
 }
 
 screens.home = () => {
   if (!store.get('onb.done')) return screens.welcome(); // erster Start: Einstieg wählen
+  installNudge();
   const ban = curBan(); const names = settings.names; const S = slides(); let si = 0; const M = mission();
   const avatar = h('button', { class: 'hm-av', title: 'Profilbild ändern', onclick: () => pickCard('Profilbild wählen', (c) => { fav.avatar = c; go('home'); }) }, artEl(fav.avatar, 'hm-avi'));
   const slideBox = h('div', { class: 'hm-sl' }); const dots = h('div', { class: 'hm-dots' });

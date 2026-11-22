@@ -1,0 +1,59 @@
+/* ===== Master-Duel-Farbwelt für die ganze App (eigene Gestaltung, nur Farben und Formen) ===================================
+   Nachtblau/Indigo als Grund · Limettengrün = ausgewählt · Eisblau/Weiß = Hauptknopf · Cyan = Leuchtkante · Gold = Belohnung/Spieler 2
+   Liegt über allen anderen Schichten; das Duellfeld (.duel) bleibt unberührt. */
+:root{
+  --md-navy:#070b1f;--md-ind:#141f55;--md-ind2:#1b1a5e;--md-vio:#2a0f4a;
+  --md-cyan:#43d3ff;--md-ice:#d6efff;--md-lime:#b6f23a;--md-lime2:#7fbf12;--md-gold:#f3c969;--md-gold2:#c8912a;--md-red:#ff5a6e;
+  --md-line:rgba(150,180,255,.28);--md-line2:rgba(190,210,255,.55);--md-glass:linear-gradient(180deg,rgba(18,30,78,.78),rgba(8,13,38,.86));
+  --md-dim:#9fb0d8;
+  /* Neu-Design-Töne angleichen: Pink → Gold */
+  --nx-pk:var(--md-gold);--nx-cy:#7fe3ff;--nx-gold:var(--md-gold);
+  --cy:var(--md-cyan);--gold:var(--md-gold);--red:var(--md-red);
+}
+/* Hintergrund wie im Hauptmenü: Indigo-Verlauf mit schrägen Lichtbahnen und feinen Linien */
+.screen:not(.duel):not(.hm){background:
+  linear-gradient(105deg,transparent 0 18%,rgba(90,120,230,.10) 18% 40%,transparent 40% 47%,rgba(120,150,255,.07) 47% 51%,transparent 51%),
+  repeating-linear-gradient(0deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px),
+  linear-gradient(115deg,#0b1440 0%,#121c50 32%,#080d2a 54%,#130c36 80%,#200d40 100%)}
+/* Kopfzeile: dunkles Glas, Cyan-Linie unten */
+.screen:not(.duel)>.hd{background:linear-gradient(180deg,rgba(6,10,32,.92),rgba(10,16,48,.55));border-bottom:1px solid var(--md-line);box-shadow:0 1px 0 rgba(67,211,255,.18)}
+/* Flächen: Indigo-Glas mit heller Oberkante */
+.screen:not(.duel) .panel,.modal .box{background:var(--md-glass);border:1px solid var(--md-line);box-shadow:inset 0 1px 0 rgba(200,220,255,.16),0 8px 24px rgba(0,0,0,.4)}
+.modal .box{border-color:var(--md-line2)}
+.modal .box>.mh,.modal .box h3:first-child{color:#fff}
+/* Auswahl (Chips, Segmente, Reiter): ausgewählt = Limette mit dunkler Schrift */
+.screen:not(.duel) .chip,.modal .chip{background:rgba(6,10,30,.55);border:1px solid var(--md-line2);color:#e9efff}
+.screen:not(.duel) .chip.on,.modal .chip.on,.seg-b.on,.md-tab.on,.sx-pg.on,.ed .ed-filters .chip.on,.ed .ed-status .chip.on{background:linear-gradient(180deg,#d8ff7a,var(--md-lime) 45%,var(--md-lime2))!important;color:#132000!important;border-color:#e9ffb0!important;text-shadow:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 0 12px rgba(182,242,58,.35)}
+.screen:not(.duel) .chip.ok{color:#9ff0b8}.screen:not(.duel) .chip.bad,.screen:not(.duel) .chip.warn{color:#ffd27a}
+.seg{background:rgba(4,8,26,.6);border-color:var(--md-line)}
+/* Hauptknopf: Eisweiß → Himmelblau, dunkle Schrift (wie „OK“ in Master Duel) */
+.btn.pri,.nx-btn{background:linear-gradient(180deg,#ffffff 0%,var(--md-ice) 42%,#7cc6ff 100%);color:#06163a;border-color:#fff}
+/* Zweitknopf: dunkles Glas mit heller Kante */
+.screen:not(.duel) .btn:not(.pri):not(.red):not(.gold),.modal .btn:not(.pri):not(.red):not(.gold){background:linear-gradient(180deg,rgba(40,60,140,.55),rgba(10,16,46,.85));border-color:var(--md-line2);color:#eef3ff}
+.btn.red{background:linear-gradient(180deg,#ff8a96,var(--md-red) 50%,#c42a44);border-color:#ffc0c8;color:#fff}
+.btn.gold,.su-go{background:linear-gradient(180deg,#ffe9a8,var(--md-gold) 45%,var(--md-gold2));color:#2a1a00;border-color:#fff3c8}
+/* Eingaben */
+.screen:not(.duel) .input,.screen:not(.duel) .search,.modal .input{background:rgba(4,8,26,.7);border:1px solid var(--md-line2);color:#fff}
+.screen:not(.duel) .input:focus,.screen:not(.duel) .search:focus{outline:none;border-color:var(--md-cyan);box-shadow:0 0 0 2px rgba(67,211,255,.25)}
+/* Schalter: an = Cyan-Leuchten */
+.sx-c input:checked+i,.tg input:checked+i{background:linear-gradient(180deg,#7fe3ff,#1a9fe0)!important;box-shadow:0 0 10px rgba(67,211,255,.5)}
+/* Listenzeilen (Decks, Einstellungen): Glas, beim Antippen Cyan-Kante */
+.screen:not(.duel) .md-item:not(.on):not(:hover):not(:active),.screen:not(.duel) .sx-row,.screen:not(.duel) .deckrow,.screen:not(.duel) .dk{background:var(--md-glass)}
+.screen:not(.duel) .md-item:active,.screen:not(.duel) .deckrow:active{box-shadow:inset 3px 0 0 var(--md-cyan),0 0 14px rgba(67,211,255,.25)}
+/* Überschriften-Akzente */
+.md-lbl,.sx-pages+.sx-rows h4,.dsec{color:var(--md-cyan)}
+.tut-h b{color:var(--md-gold)}
+/* ---- Pink ersetzt: Duellbuch, Akademie, Album, Willkommen ---- */
+.nx-av.pk{background:conic-gradient(#fff3c8,var(--md-gold),#ffb347,var(--md-gold),#fff3c8);box-shadow:0 0 18px rgba(243,201,105,.55)}
+.wl-t h1 span{background-image:linear-gradient(90deg,#fff3c8,var(--md-gold) 50%,#7fe3ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.bk-ch{background:linear-gradient(100deg,rgba(182,242,58,.16),rgba(67,120,255,.22))!important;border-color:rgba(182,242,58,.55)!important}.bk-ch b{color:#e9ffb0}
+.bk-acc,.ak-entry .ak-go{color:var(--md-lime)!important}
+.ak-entry{border-color:rgba(182,242,58,.45)!important;background:linear-gradient(100deg,rgba(40,70,170,.55),rgba(20,26,80,.75))!important}
+.al-story{background:rgba(243,201,105,.08);border-left-color:var(--md-gold)}
+.al-bar i{background-image:linear-gradient(90deg,var(--md-cyan),var(--md-lime))}
+.al-hz{color:var(--md-red);filter:drop-shadow(0 0 4px var(--md-red))}
+.ts-t.on{border-color:var(--md-lime)}.ts-t.on .ts-hk{background:var(--md-lime);color:#132000}
+.wl-o.main .wl-ic{border-color:var(--md-lime);color:var(--md-lime);box-shadow:0 0 10px rgba(182,242,58,.5)}
+.wl-k{color:var(--md-cyan)}
+/* Toast im MD-Stil */
+.toast{background:linear-gradient(180deg,rgba(18,30,78,.96),rgba(8,13,38,.96));border:1px solid var(--md-line2);color:#fff;box-shadow:0 0 0 1px rgba(67,211,255,.2),0 8px 24px rgba(0,0,0,.5)}

@@ -7,6 +7,7 @@ import { openModal, confirmBox, showCard } from './ui.js';
 import { go, back, screens } from './nav.js';
 import { store } from './store.js';
 import { backupPanel } from './backup.js';
+import { shareBtn } from './deckshare.js';
 import { ROLE_DE, roleOf } from '../../src/tutor.mjs';
 import { validate, deckPoints, isExtra } from '../../src/decks.mjs';
 import { handtrapPlan } from '../../src/block.mjs';
@@ -40,12 +41,20 @@ screens.home = () => h('div', { class: 'screen home' },
       isApp() ? null : h('button', { class: 'btn ghost sm', style: 'align-self:center;margin-top:4px', onclick: installApp }, '📲  Als App auf dem Handy installieren')),
     h('div', { class: 'home-f muted small' }, `${App.decks.length} Decks · ${App.cards.size.toLocaleString('de-DE')} Karten · offline spielbar`)));
 export const isApp = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-export async function installApp() {
+/** einmal (ab dem 2. Start, nur auf Handys/Tablets im Browser) erklären, warum die Installation wichtig ist */
+export function installNudge() {
+  try {
+    if (isApp() || store.get('ins.seen', false) || !('ontouchstart' in window)) return; const n = store.get('starts', 0); if (n < 2) return;
+    store.set('ins.seen', true); setTimeout(() => installApp('Wichtig: Im Browser darf das Handy (vor allem das iPhone) eure Decks, das Duellbuch und das Album nach einigen Tagen ohne Nutzung löschen. Als App bleiben sie sicher gespeichert.'), 2500);
+  } catch (e) { /* */ }
+}
+export async function installApp(why) {
   if (window.__bip) { const e = window.__bip; window.__bip = null; e.prompt(); try { await e.userChoice; } catch (x) { /* */ } return; }
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const m = openModal({ title: '📲 Als App installieren', center: true, body: h('div', null, ios
     ? h('ol', null, h('li', null, 'Diese Seite in Safari öffnen.'), h('li', null, 'Unten auf das Teilen-Symbol (□↑) tippen.'), h('li', null, '„Zum Home-Bildschirm“ wählen, dann „Hinzufügen“.'))
     : h('ol', null, h('li', null, 'Diese Seite in Chrome öffnen.'), h('li', null, 'Oben rechts auf ⋮ tippen.'), h('li', null, '„App installieren“ bzw. „Zum Startbildschirm hinzufügen“ wählen.')),
+    why ? h('p', { class: 'small', style: 'color:var(--md-gold,#f3c969)' }, why) : null,
     h('p', { class: 'small muted' }, 'Danach startet Duellraum wie eine normale App – schnell und auch ohne Internet (nur das Online-Duell braucht Internet).')), footer: h('button', { class: 'btn pri', onclick: () => m.close() }, 'OK') });
 }
 /** gespeichertes Duell wieder zusammensetzen */
@@ -206,7 +215,7 @@ export function deckDetail(deck, { edit } = {}) {
   }
   if (deck.repairs?.length) root.append(h('details', { class: 'panel', style: 'margin-top:10px' }, h('summary', null, 'Was wurde angepasst? (' + deck.repairs.length + ')'), h('ul', { class: 'small muted' }, deck.repairs.map((r) => h('li', null, r)))));
   root.append(h('div', { class: 'row', style: 'margin-top:12px;flex-wrap:wrap' },
-    h('button', { class: 'btn', onclick: () => testHand(deck) }, '🖐 Probehand ziehen'),
+    h('button', { class: 'btn', onclick: () => testHand(deck) }, '🖐 Probehand ziehen'), shareBtn(() => deck),
     h('button', { class: 'btn', onclick: () => startTest(deck) }, '🧪 Starthand-Test'),
     h('button', { class: 'btn ghost', onclick: () => { const d = { ...structuredClone(deck), id: undefined, name: deck.name + ' (eigene Version)' }; go('editor', { deck: d }); } }, '✎ Im Editor anpassen')));
   const s = store.get('stats', {})[deck.id]; if (s) root.append(h('p', { class: 'small muted' }, `Deine Bilanz mit diesem Deck: ${s.w} Siege, ${s.l} Niederlagen.`));

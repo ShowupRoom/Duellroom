@@ -48,7 +48,7 @@ screens.home = () => {
         mdItem({ ic: '🎓', t: 'Lernen & Regeln', s: 'In wenigen Minuten spielbereit', onclick: () => go('learn') }),
         mdItem({ ic: '⚙', t: 'Einstellungen', s: 'Duell · Kombo-Ansicht · Ton · Karten · Daten', onclick: () => go('settings') }),
         last ? h('button', { class: 'btn ghost sm md-last', onclick: () => { try { go('duel', hydrate(last)); } catch (e) { toast('Das letzte Duell konnte nicht geladen werden.'); } } }, '↻  Letztes Duell wiederholen') : null,
-        isApp() ? null : h('button', { class: 'btn ghost sm md-last', onclick: installApp }, '📲  Als App auf dem Handy installieren')),
+        isApp() ? null : h('button', { class: 'btn ghost sm md-last', onclick: () => installApp() }, '📲  Als App auf dem Handy installieren')),
       h('div', { class: 'home-f muted small' }, `Banlist: ${ban.t} · ${App.decks.length} Decks · ${App.cards.size.toLocaleString('de-DE')} Karten · offline spielbar`)));
 };
 

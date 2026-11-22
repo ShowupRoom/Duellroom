@@ -16,6 +16,7 @@ import './onboard.js';
 import './book.js';
 import './academy.js';
 import { readChallengeFromUrl } from './record.js';
+import { readDeckFromUrl } from './deckshare.js';
 import { libLoop } from './combolib.js';
 import './match.js';
 import { applyLook } from './look.js';
@@ -41,8 +42,14 @@ addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__bi
   } catch (e) { document.body.dataset.error = String((e && e.stack) || e); console.error(e); const s = document.getElementById('boot-s'); if (s) s.textContent = 'Fehler beim Start: ' + (e && e.message || e); }
 })();
 
+// Starts zählen (für den einmaligen Installations-Hinweis)
+try { const k = 'dr.starts'; localStorage.setItem(k, String((+localStorage.getItem(k) || 0) + 1)); } catch (e) { /* */ }
+
 // Kombo-Bibliothek: eigene Decks im Hintergrund durchsuchen (pausiert während eines Duells)
 setTimeout(() => { libLoop().catch(() => {}); }, 6000);
+
+// Deck per Link (…?deck=…): nach Rückfrage bei „Meine Decks“ speichern und im Editor öffnen
+if (new URLSearchParams(location.search).get('deck')) { const t0 = Date.now(); const w = setInterval(() => { if (document.body.dataset.done || Date.now() - t0 > 60000) { clearInterval(w); readDeckFromUrl((d) => import('./nav.js').then((n) => n.go('editor', { deck: d }))).catch(() => {}); } }, 300); }
 
 // Herausforderung per Link (…?ch=…): ins Duellbuch übernehmen
 try { const ch = readChallengeFromUrl(); if (ch) setTimeout(() => { import('./nav.js').then((n) => n.go('book')); }, 1500); } catch (e) { /* */ }

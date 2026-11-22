@@ -1,4 +1,5 @@
 // Deck-Werkstatt: eigene Decks bauen, Ziehen & Ablegen aus allen Karten, Prüfung je Format
+import { shareDeck } from './deckshare.js';
 import { h, $, clear, toast, uid } from './util.js';
 import { App, FORMAT_INFO, FORMATS, fmtById, allDecks, customDecks, saveCustom, deleteCustom, withTutor, nameOf, cardOf, cleanName, count, expand, toFmtCode, toPlainCode, goatMaps, consOf, limitOf, ADV_LISTS, LIST_NAME, descOf, searchName, useDe } from './data.js';
 import { suggest, profile } from '../../src/konsistenz.mjs';
@@ -118,7 +119,13 @@ screens.editor = (params = {}) => {
   const nameIn = h('input', { class: 'input ed-name', value: S.name, maxlength: 40, oninput: (e) => { S.name = e.target.value; S.dirty = true; } });
   const status = h('div', { class: 'ed-status' }); const deckPane = h('div', { class: 'ed-deck ed-scroll', 'data-zone': 'none' }); const poolBox = h('div', { class: 'ed-pool', 'data-zone': 'pool' }); const poolList = h('div', { class: 'ed-grid ed-scroll' }); const dock = h('div', { class: 'ed-dock' });
   const split1 = h('div', { class: 'ed-split s1' }, deckPane, poolBox);
-  root.append(h('div', { class: 'hd' }, h('button', { class: 'ibtn', onclick: () => back() }, '←'), nameIn, h('button', { class: 'btn sm pri', onclick: () => save() }, '💾'), h('button', { class: 'ibtn', onclick: () => menu() }, '⋯')), status, split1, dock);
+  // Hochformat: Umschalter „Deck | Karten“ – jeweils eine Seite bekommt den ganzen Platz
+  let view = count(S.main) + count(S.extra) ? 'deck' : 'pool';
+  const vDeck = h('button', { class: 'ed-vb', onclick: () => setView('deck') }); const vPool = h('button', { class: 'ed-vb', onclick: () => setView('pool') }, '🗂 Karten');
+  const viewBar = h('div', { class: 'ed-view' }, vDeck, vPool);
+  function setView(v) { view = v; split1.classList.toggle('v-deck', v === 'deck'); split1.classList.toggle('v-pool', v === 'pool'); vDeck.classList.toggle('on', v === 'deck'); vPool.classList.toggle('on', v === 'pool'); if (v === 'pool') closeDock(); }
+  const paintView = () => { vDeck.textContent = `🃏 Deck · ${count(S.main)}${count(S.extra) ? ' + ' + count(S.extra) : ''}`; };
+  root.append(h('div', { class: 'hd' }, h('button', { class: 'ibtn', onclick: () => back() }, '←'), nameIn, h('button', { class: 'btn sm pri', onclick: () => save() }, '💾'), h('button', { class: 'ibtn', onclick: () => menu() }, '⋯')), status, viewBar, split1, dock);
 
   // ---- Format-Zeile & Prüfung
   const issues = () => validate({ main: S.main, extra: S.extra, side: S.side }, fmt(), App.cards, App.lists);
@@ -128,7 +135,7 @@ screens.editor = (params = {}) => {
       h('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap' }, h('span', { class: 'chip ' + (count(S.main) >= FORMATS[S.fmt].minMain && count(S.main) <= FORMATS[S.fmt].maxMain ? 'ok' : 'bad') }, `Haupt ${count(S.main)}`), h('span', { class: 'chip ' + (count(S.extra) <= FORMATS[S.fmt].maxExtra ? 'ok' : 'bad') }, `Extra ${count(S.extra)}`), h('span', { class: 'chip ' + (count(S.side) <= FORMATS[S.fmt].maxSide ? 'ok' : 'bad') }, `Side ${count(S.side)}`), S.fmt === 'genesys' ? h('span', { class: 'chip ' + (pts <= 100 ? 'ok' : 'bad') }, `${pts}/100 Punkte`) : null,
         ocgN() ? h('button', { class: 'chip ' + (S.fmt === 'advanced' && S.list === 'tcg' ? 'warn' : ''), onclick: showOcg }, `OCG ${ocgN()}`) : null,
         CONS ? h('button', { class: 'chip ' + CONS.tone, title: 'Konsistenz', onclick: () => showCons() }, '🎯 ' + CONS.score) : null,
-        h('button', { class: 'chip ' + (iss.length ? 'warn' : 'ok'), onclick: () => showIssues() }, iss.length ? `⚠ ${iss.length} Hinweis${iss.length > 1 ? 'e' : ''}` : '✓ spielbar'), h('button', { class: 'chip' + (SORTS.pool.k !== 'auto' || SORTS.deck.k !== 'std' ? ' on' : ''), title: 'Sortieren', onclick: () => sortDialog() }, '⇅ Sortieren'), h('button', { class: 'chip', title: 'Aufteilung Deck / Kartenvorrat', onclick: () => { split = (split + 1) % 3; split1.className = 'ed-split s' + split; } }, '⇕')));
+        h('button', { class: 'chip ' + (iss.length ? 'warn' : 'ok'), onclick: () => showIssues() }, iss.length ? `⚠ ${iss.length} Hinweis${iss.length > 1 ? 'e' : ''}` : '✓ spielbar'), h('button', { class: 'chip' + (SORTS.pool.k !== 'auto' || SORTS.deck.k !== 'std' ? ' on' : ''), title: 'Sortieren', onclick: () => sortDialog() }, '⇅ Sortieren'), h('button', { class: 'chip ed-ratio', title: 'Aufteilung Deck / Kartenvorrat', onclick: () => { split = (split + 1) % 3; split1.className = 'ed-split s' + split + ' v-' + view; } }, '⇕')));
   };
   const ocgCodes = () => [...new Set(['main', 'extra', 'side'].flatMap((z) => S[z].map((e) => e[0])))].filter((c) => isOcg(cardOf(c)));
   const ocgN = () => ocgCodes().reduce((n, c) => n + totalOf(c), 0);
@@ -302,7 +309,7 @@ screens.editor = (params = {}) => {
     const max = FORMATS[S.fmt][to === 'main' ? 'maxMain' : to === 'extra' ? 'maxExtra' : 'maxSide']; if (count(S[to]) >= max) { toast('Dieser Bereich ist voll.'); return; }
     take(S[zone], code, 1); put(S[to], code, 1); S.dirty = true; paint();
   }
-  function paint() { calcCons(); paintStatus(); paintDeck(); refreshPool(); scheduleRec(); if (sel) paintDock(); }
+  function paint() { calcCons(); paintStatus(); paintDeck(); refreshPool(); scheduleRec(); paintView(); if (sel) paintDock(); }
 
   // ---- Dock (Karte antippen)
   function openDock(code, srcZone) { sel = { code, src: srcZone }; paintDock(); }
@@ -338,6 +345,7 @@ screens.editor = (params = {}) => {
       h('button', { class: 'btn', onclick: () => { m.close(); leave(() => go('decks', { fmt: S.fmt, list: S.list, title: 'Deck als Vorlage laden', onPick: (d) => setTimeout(() => replace('editor', { dirty: true, deck: { id: S.saved ? S.id : undefined, name: S.saved || count(S.main) ? S.name : d.name + ' (Kopie)', fmt: S.fmt, list: S.list, main: clone(d.main), extra: clone(d.extra), side: clone(d.side) } }), 60) })); } }, '⧉ Anderes Deck als Vorlage laden'),
       h('button', { class: 'btn', onclick: () => { m.close(); importDialog(S.fmt, (d) => { S.main = d.main; S.extra = d.extra; S.side = d.side; S.dirty = true; paint(); applyFilter(); }); } }, '⇪ .ydk importieren'),
       h('button', { class: 'btn', onclick: () => { m.close(); exportDialog(); } }, '⇩ .ydk exportieren'),
+      h('button', { class: 'btn', onclick: () => { m.close(); if (!count(S.main)) { toast('Das Deck ist noch leer.'); return; } shareDeck({ name: S.name, fmt: S.fmt, list: S.list, main: S.main, extra: S.extra, side: S.side }); } }, '📤 Deck teilen (an das andere Handy)'),
       h('button', { class: 'btn', onclick: () => { m.close(); handTest(); } }, '🧪 Starthand-Test (Combos ausprobieren)'),
       h('button', { class: 'btn', onclick: () => { m.close(); testDeck(); } }, '▶ Speichern & im Duell testen'),
       h('button', { class: 'btn red', onclick: async () => { m.close(); if (await confirmBox('Deck leeren?', 'Alle Karten werden entfernt.', 'Leeren', 'Abbrechen', true)) { S.main = []; S.extra = []; S.side = []; S.dirty = true; paint(); } } }, '🗑 Deck leeren')), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Schließen') });
@@ -366,6 +374,6 @@ screens.editor = (params = {}) => {
     if (!S.dirty || (!count(S.main) && !count(S.extra) && !count(S.side))) { setGuard(null); return true; }
     return new Promise((res) => { const m = openModal({ title: 'Änderungen speichern?', center: true, sticky: true, body: h('p', null, `„${S.name}“ hat ungespeicherte Änderungen.`), footer: [h('button', { class: 'btn ghost', onclick: () => { m.close(); setGuard(null); res(true); } }, 'Verwerfen'), h('button', { class: 'btn', onclick: () => { m.close(); res(false); } }, 'Weiter bearbeiten'), h('button', { class: 'btn pri', onclick: () => { save(true); m.close(); setGuard(null); res(true); } }, 'Speichern')] }); });
   });
-  paintFilters(); paint(); applyFilter();
+  paintFilters(); paint(); applyFilter(); setView(view);
   return root;
 };
