@@ -1,7 +1,7 @@
 // Spielkern im Hintergrund-Thread: die Oberfläche friert nie ein, während der Kern rechnet.
 import { loadCore, Game } from '../../src/core.mjs';
 import { openScripts, openCards, fetchBin } from './pack.js';
-import { comboSearch } from '../../src/combo.mjs';
+import { comboSearch, scoreBoard, GOALS } from '../../src/combo.mjs';
 
 let ready = null, lib = null, readFor = null, cards = null, g = null, cancel = false;
 async function load(v) {
@@ -33,6 +33,7 @@ self.onmessage = async (e) => {
       await (ready || (ready = load(a.v))); cancel = false;
       const opts = { flags: a.flags, decks: a.decks, cards, readScript: readFor(a.scripts), seed: a.seed, startingLP: a.lp, startingDraw: a.hand, stack: a.stack, field: a.field };
       res = await comboSearch(lib, opts, { cards, goal: a.goal, deadline: a.deadline, rseed: a.rseed, worker: a.worker || 0, base: a.base || [], endTurn: a.endTurn || 2, me: a.me || 0, replay: a.replay || null, guides: a.guides || null, stop: () => cancel, onProgress: (info) => self.postMessage({ prog: id, info }) });
+    } else if (op === 'score') { await (ready || (ready = load(a.v))); res = scoreBoard(a.snap, cards, GOALS[a.goal] || GOALS.balance, a.p || 0);
     } else if (op === 'destroy') { drop(); res = true; }
     self.postMessage({ id, res });
   } catch (err) { self.postMessage({ id, err: String((err && err.stack) || err) }); }

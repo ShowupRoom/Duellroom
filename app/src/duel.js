@@ -3,6 +3,8 @@ import { applyLook } from './look.js';
 import { matchModal } from './match.js';
 import { libAdd, libGuides, libPause } from './combolib.js';
 import { buddyMount, buddyUpdate } from './buddy.js';
+import { recStart, recPlay, recAttack, recDamage, recChain, recSnap, recFinish } from './record.js';
+import { scoreSnap } from './engine.js';
 import { bumpDay, fav, artEl, HOME_ICONS, iconEl } from './home.js';
 import { h, clear, sleep, toast, shuffled, beep, rand32, zkey as key } from './util.js';
 import { App, MODES, FORMATS, fmtById, expand, nameOf, cardOf, cleanName, withTutor, descOf } from './data.js';
@@ -106,6 +108,7 @@ class Duel {
   // ---------------------------------------------------------------- Start & Schleife
   async start() {
     try { buddyMount(this); } catch (e) { console.warn('Begleiterin', e); }
+    recStart(this);
     if (this.tutorOn()) warmHelpers(this.tutHelpers()).catch(() => {}); // Rechenkerne für den Tutor schon beim Duellstart laden
     setGuard(async () => { const ok = await confirmBox('Duell verlassen?', this.net ? 'Das Online-Duell wird für beide beendet.' : 'Der Spielstand geht verloren.', 'Verlassen', 'Weiterspielen', true); if (ok) { if (this.net) this.net.send({ t: 'leave' }); this.destroy(); } return ok; });
     this.fit();
@@ -165,7 +168,8 @@ class Duel {
       this.collectHints(evs);
       const ta = performance.now(); await this.present(evs); if (this.demo) this.demo.anim = performance.now() - ta;
       if (this.stopped) return;
-      this.snap = st.snap;
+      this.snap = st.snap; recSnap(this, st.snap);
+      if (this.conf.challenge && this.turnNo >= 2 && !this.chDone) { this.chDone = true; this.render(); await this.challengeEnd(); return; } // Herausforderung: nach dem ersten Zug werten
       if (this.demo && this.found && st.snap.turn % 2 === 0 && this.demo.res !== st.snap.turn) { this.demo.res = st.snap.turn; this.demoNote('Endboard bei der Übergabe: ' + endBoard(this, 0).replace(/^Feld am Zugende: /, '')); } // nach der End Phase (Endphasen-Effekte sind durch)
       if (st.snap.turn && st.snap.turn !== this.turnNo) { this.turnNo = st.snap.turn; this.turnPlayer = st.snap.turnPlayer; if (st.snap.phase) this.phase = st.snap.phase; this.renderTop(); }
       if (r.kind === 'end') { this.render(); await this.finish(r.winner, r.reason); return; }
@@ -197,11 +201,13 @@ class Duel {
           if (!this.bgRun) this.demoBg();
         }
         resp = this.botResponse(msg, st.evs, r.retry);
-        if (this.demo) await this.demoStep(msg, resp, p); else if (this.ai && this.anim) await this.nap(this.botPause(msg));
+        if (this.replayDone) { this.render(); this.setBar('⏹ Ende der Wiederholung', [], 'So weit wurde das Duell aufgezeichnet.'); toast('Ende der Wiederholung'); return; }
+        if (this.demo) await this.demoStep(msg, resp, p); else if ((this.ai || this.conf.replay) && this.anim) await this.nap(this.botPause(msg));
       }
     }
   }
   botResponse(msg, evs, retry) {
+    if (this.conf.replay) { const x = this.conf.replay[this.rpI = (this.rpI || 0)]; this.rpI++; if (x !== undefined) return x; this.replayDone = true; return null; }
     if (this.demo && this.bots[msg.player]) return this.bots[msg.player].respond(msg, { snap: this.snap, evs, retry });
     if (this.demo) return passiveReply(msg, this.pasRnd, App.cards); // gleiche Regel wie in der Suche → gleicher Spielverlauf
     if (this.conf.mode === 'solo') { // Übungsgegner: steht still
@@ -284,10 +290,10 @@ class Duel {
         case MSG.SUMMONING: case MSG.SPSUMMONING: case MSG.FLIPSUMMONING: {
           if (!this.spCount) this.spCount = [0, 0]; if (t === MSG.SPSUMMONING) this.spCount[m.controller]++;
           const k = t === MSG.SUMMONING ? 'Normalbeschwörung' : t === MSG.SPSUMMONING ? 'Spezialbeschwörung' : 'Flipp-Beschwörung';
-          this.addLog(`${this.pname(m.controller)}: ${k} – «${nameOf(m.code)}»`); beep('summon'); await this.banner({ title: k, sub: nameOf(m.code), code: m.code, cls: 'summon', ms: 850 }); break; }
+          recPlay(this, m.controller, m.code); this.addLog(`${this.pname(m.controller)}: ${k} – «${nameOf(m.code)}»`); beep('summon'); await this.banner({ title: k, sub: nameOf(m.code), code: m.code, cls: 'summon', ms: 850 }); break; }
         case MSG.SET: this.addLog(`${this.pname(m.controller)} setzt eine Karte`); beep('tap'); break;
         case MSG.CHAINING: {
-          this.chain.push({ code: m.code, p: m.controller }); const lbl = descText(m.description, m.code, m.triggering_location != null ? m.triggering_location : m.location); const BT = { 16: 'Battle Step', 32: 'Battle Step', 64: 'Damage Step', 128: 'Schadensberechnung' };
+          this.chain.push({ code: m.code, p: m.controller }); recPlay(this, m.controller, m.code); recChain(this); const lbl = descText(m.description, m.code, m.triggering_location != null ? m.triggering_location : m.location); const BT = { 16: 'Battle Step', 32: 'Battle Step', 64: 'Damage Step', 128: 'Schadensberechnung' };
           this.addLog(`Kette ${this.chain.length}: «${nameOf(m.code)}»${lbl && lbl.length < 60 ? ' – ' + lbl : ''} (${this.pname(m.controller)})${BT[this.phase] ? ' · ' + BT[this.phase] : ''}`); this.renderTop(); beep('chain');
           const vw = effectView(m.code, m.description, m.triggering_location != null ? m.triggering_location : m.location); const has = !!(vw.ranges && vw.ranges.length);
           await this.banner({ title: `Kette ${this.chain.length}`, sub: nameOf(m.code), code: m.code, cls: 'chain', pair: this.chain.length > 1 ? this.chain.slice(-2).map((c, i, arr) => ({ ...c, n: this.chain.length - arr.length + i + 1 })) : null, ms: has ? 1100 + Math.min(2400, vw.text.length * 8) : 800, // (Tippen überspringt)
@@ -295,9 +301,9 @@ class Duel {
         case MSG.CHAIN_NEGATED: case MSG.CHAIN_DISABLED: this.addLog('Der Effekt wurde negiert'); await this.banner({ title: 'Negiert!', cls: 'neg', ms: 500 }); break;
         case MSG.CHAIN_END: this.chain = []; this.renderTop(); break;
         case MSG.ATTACK: {
-          const ac = this.cardAt(m.card.controller, m.card.location, m.card.sequence); const an = ac && this.visible(ac) ? nameOf(ac.code) : 'Ein Monster'; const tc = m.target ? this.cardAt(m.target.controller, m.target.location, m.target.sequence) : null; const tg = m.target ? (tc && this.visible(tc) ? nameOf(tc.code) : 'ein verdecktes Monster') : null;
+          const ac = this.cardAt(m.card.controller, m.card.location, m.card.sequence); recAttack(this, ac && ac.code); const an = ac && this.visible(ac) ? nameOf(ac.code) : 'Ein Monster'; const tc = m.target ? this.cardAt(m.target.controller, m.target.location, m.target.sequence) : null; const tg = m.target ? (tc && this.visible(tc) ? nameOf(tc.code) : 'ein verdecktes Monster') : null;
           this.addLog(`${an} greift ${tg ? '«' + tg + '»' : 'direkt'} an`); beep('hit'); await this.banner({ title: '⚔ Angriff', sub: `${an} → ${tg ? tg : 'direkt'}`, cls: 'atk', ms: 700 }); break; }
-        case MSG.DAMAGE: this.addLog(`${this.pname(m.player)} erleidet ${m.amount} Schaden`); this.floats.push({ p: m.player, d: -m.amount }); beep('hit'); break;
+        case MSG.DAMAGE: recDamage(this, m.player, m.amount, this.phase === 8 || (this.phase >= 16 && this.phase <= 128)); this.addLog(`${this.pname(m.player)} erleidet ${m.amount} Schaden`); this.floats.push({ p: m.player, d: -m.amount }); beep('hit'); break;
         case MSG.RECOVER: this.addLog(`${this.pname(m.player)} erhält ${m.amount} LP`); this.floats.push({ p: m.player, d: m.amount }); break;
         case MSG.PAY_LPCOST: this.addLog(`${this.pname(m.player)} zahlt ${m.amount} LP`); this.floats.push({ p: m.player, d: -m.amount }); break;
         case MSG.TOSS_COIN: this.addLog(`Münzwurf: ${m.results.map((x) => (x ? 'Kopf' : 'Zahl')).join(', ')}`); await this.banner({ title: '🪙 Münzwurf', sub: m.results.map((x) => (x ? 'Kopf' : 'Zahl')).join(' · '), ms: 900 }); break;
@@ -337,6 +343,7 @@ class Duel {
     const draw = winner == null || winner > 1; const stats = store.get('stats', {});
     if (!draw && !this.conf.test) for (let p = 0; p < 2; p++) { if (!this.conf.human[p] || (this.net && p !== this.viewer)) continue; const id = this.deckOf(p).id; if (!id) continue; const s = stats[id] || { w: 0, l: 0 }; if (p === winner) s.w++; else s.l++; stats[id] = s; }
     store.set('stats', stats); beep('win');
+    try { recFinish(this, winner, draw); } catch (e) { console.warn('Duellbuch', e); }
     if (this.demo) bumpDay('demos'); else if (!this.conf.test) { bumpDay('duels'); if (!draw && this.conf.human[winner] && !(this.net && winner !== this.viewer)) bumpDay('wins'); }
     const name = draw ? 'Unentschieden' : `${this.pname(winner)} gewinnt!`;
     this.closeSheet(); this.clearBar();
@@ -585,6 +592,10 @@ class Duel {
     const had = this.selKey; this.selKey = null; this.dropFloat();
     if (this.root.classList.contains('land')) { this._sheetSig = null; this.sheet.classList.remove('show'); if (this.snap) this.render(); else clear(this.actsEl); return; } // Querformat: die Karteninfo bleibt stehen
     this.sheet.classList.remove('open'); clear(this.sheet); if (had && this.snap) this.render();
+  }
+  async challengeEnd() {
+    let score = 0; try { const r = await scoreSnap(this.snap, 'balance', 0); score = typeof r === 'number' ? r : (r && r.score) || 0; } catch (e) { console.warn('Wertung', e); }
+    const { challengeResult } = await import('./book.js'); this.stopped = true; challengeResult(this, score, endBoard(this, 0));
   }
   /** Master-Duel-Feld: Karteninfo links ein-/ausblenden */
   toggleInfo() { if (this.sheet.classList.toggle('show') && !this.lastSel) toast('Tippe eine Karte an – dann steht hier ihr Text.'); }

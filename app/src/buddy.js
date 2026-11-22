@@ -53,11 +53,11 @@ export function buddyUpdate(D) {
   if (sig === B.sig) return; B.sig = sig; clear(B.bub);
   const code = keyCode(D, (t.keys || [])[0]); const rows = code ? shortRows(code) : [];
   const canDo = !!(mine && ((t.keys && t.keys.length && D.acts && D.acts.get(t.keys[0])) || (t.ep && D.phaseOpts && D.phaseOpts.EP) || (t.bp && D.phaseOpts && D.phaseOpts.BP)));
-  B.bub.append(h('div', { class: 'bdy-t' }, t.text.replace(/\s+/g, ' ').slice(0, 260)),
+  B.bub.append(...[h('div', { class: 'bdy-t' }, t.text.replace(/\s+/g, ' ').slice(0, 260)),
     rows.length ? h('div', { class: 'bdy-rows' }, rows.map(([ic, x]) => h('div', { class: 'bdy-r' }, h('i', null, ic), x))) : null,
     t.search && t.search.live ? h('div', { class: 'bdy-live' }, `⏳ Ich suche noch nach etwas Besserem … (${t.search.sims} Varianten)`) : null,
     h('div', { class: 'bdy-b' },
       canDo ? h('button', { class: 'bdy-go', onclick: () => { doTip(D); } }, 'Mach ich!') : null,
       h('button', { onclick: () => D.showTip() }, 'Warum?'),
-      h('button', { onclick: () => { D.buddyHidden = true; buddyUpdate(D); } }, 'Selbst spielen')));
+      h('button', { onclick: () => { D.buddyHidden = true; buddyUpdate(D); } }, 'Selbst spielen'))].filter(Boolean));
 }

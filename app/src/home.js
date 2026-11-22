@@ -18,6 +18,8 @@ const IC = {
   online: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3"><circle cx="24" cy="24" r="18"/><ellipse cx="24" cy="24" rx="8" ry="18"/><path d="M7 18h34M7 30h34"/></svg>',
   play: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3"><rect x="5" y="10" width="38" height="28" rx="3"/><path d="M20 17l11 7-11 7z" fill="currentColor"/></svg>',
   menu: '<svg viewBox="0 0 48 48" stroke="currentColor" stroke-width="4" stroke-linecap="round"><path d="M8 12h32M8 24h32M8 36h32"/></svg>',
+  album: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><rect x="9" y="6" width="30" height="36" rx="3"/><rect x="15" y="12" width="8" height="11" rx="1"/><rect x="26" y="12" width="8" height="11" rx="1"/><rect x="15" y="27" width="8" height="10" rx="1"/><path d="M26 32h8"/></svg>',
+  book: '<svg viewBox="0 0 48 48" fill="currentColor"><path d="M24 41s-15-9.2-15-20a8.5 8.5 0 0 1 15-5.5A8.5 8.5 0 0 1 39 21c0 10.8-15 20-15 20z"/></svg>',
   log: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><rect x="6" y="11" width="36" height="26" rx="2"/><path d="M6 13l18 13 18-13"/></svg>',
 };
 export { IC as HOME_ICONS, svg as iconEl };
@@ -98,7 +100,7 @@ screens.home = () => {
       h('div', { class: 'hm-cs' }, circ('duel', 'DUELL', () => go('duelhub')), circ('deck', 'DECK', () => go('deckhub')), circ('learn', 'LERNEN', () => go('learn')), circ('opts', 'OPTIONEN', () => go('settings')))),
     h('div', { class: 'hm-top' },
       h('button', { class: 'hm-pill', onclick: () => go('duelhub'), title: 'Banlist wechseln' }, h('span', { class: 'hm-pi' }, ban.ic), h('span', { class: 'hm-pt' }, ban.t), h('span', { class: 'hm-plus' }, '+')),
-      top('online', 'Online-Duell', () => go('online', { fmt: ban.fmt, list: ban.list })), top('play', 'Kombo-Ansicht', () => go('setup', { fmt: ban.fmt, list: ban.list, demo: true })), top('menu', 'Einstellungen', () => go('settings'))),
+      top('album', 'Karten-Album', () => go('album')), top('book', 'Unser Duellbuch', () => go('book')), top('online', 'Online-Duell', () => go('online', { fmt: ban.fmt, list: ban.list })), top('play', 'Kombo-Ansicht', () => go('setup', { fmt: ban.fmt, list: ban.list, demo: true })), top('menu', 'Einstellungen', () => go('settings'))),
     h('button', { class: 'hm-go', onclick: go2.on }, h('span', { class: 'hm-gk' }, go2.k), h('span', { class: 'hm-gt' }, go2.t)));
 };
 

@@ -54,6 +54,8 @@ export async function searchCombo(args, { ms = 15000, helpers = 0, onProgress = 
 }
 export const stopSearch = () => { if (searching) searching.stop(); };
 
+/** Endboard-Wertung wie in Kombo-Suche und Tutor (für Herausforderungen) */
+export const scoreSnap = (snap, goal, p = 0) => call('score', { snap, goal, p, v: VERSION });
 export class LocalEngine {
   async create(opts) { await prewarm(); await call('create', { ...opts, v: VERSION }); }
   step(resp) { return call('step', resp); }

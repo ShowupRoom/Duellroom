@@ -9,6 +9,8 @@ import './online.js';
 import './md.js';
 import './home.js';
 import './onboard.js';
+import './book.js';
+import { readChallengeFromUrl } from './record.js';
 import { libLoop } from './combolib.js';
 import './match.js';
 import { applyLook } from './look.js';
@@ -36,3 +38,6 @@ addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__bi
 
 // Kombo-Bibliothek: eigene Decks im Hintergrund durchsuchen (pausiert während eines Duells)
 setTimeout(() => { libLoop().catch(() => {}); }, 6000);
+
+// Herausforderung per Link (…?ch=…): ins Duellbuch übernehmen
+try { const ch = readChallengeFromUrl(); if (ch) setTimeout(() => { import('./nav.js').then((n) => n.go('book')); }, 1500); } catch (e) { /* */ }
