@@ -1,5 +1,5 @@
-CardScripts: 2026-11-22 fe743b34
-BabelCDB: 2026-11-22 30c9628
+CardScripts: 2026-11-22 d3ac03be
+BabelCDB: 2026-11-22 65c599c
 LFLists: 2026-11-22 de798a2
 windbot: 2026-08-27 bffe6b6
 de-DE: 2026-11-20 2ec5397
