@@ -1,0 +1,38 @@
+/* Beschwörungs-Animationen für ikonische Karten */
+.ic-ov{position:absolute;inset:0;z-index:60;overflow:hidden;display:grid;place-items:center;cursor:pointer;--ia:#bfe8ff;--ib:#2a7bff;animation:icIn .25s ease both}
+.ic-ov.out{animation:icOut .26s ease both}
+@keyframes icIn{from{opacity:0}to{opacity:1}}@keyframes icOut{to{opacity:0;transform:scale(1.04)}}
+.ic-dim{position:absolute;inset:0;background:radial-gradient(60% 70% at 50% 50%,color-mix(in srgb,var(--ib) 50%,rgba(2,4,14,.6)),rgba(2,4,14,.95) 75%)}
+.ic-rays{position:absolute;left:50%;top:50%;width:200vmax;height:200vmax;margin:-100vmax 0 0 -100vmax;background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--ia) 34%,transparent) 0 4deg,transparent 4deg 18deg);-webkit-mask:radial-gradient(circle,#000 0,transparent 55%);mask:radial-gradient(circle,#000 0,transparent 55%);animation:icSpin 9s linear infinite,icFadeIn .6s ease both}
+@keyframes icSpin{to{transform:rotate(360deg)}}@keyframes icFadeIn{from{opacity:0;transform:scale(.6)}to{opacity:1}}
+.ic-ring{position:absolute;left:50%;top:50%;width:30vmin;height:30vmin;margin:-15vmin 0 0 -15vmin;border-radius:50%;border:3px solid var(--ia);box-shadow:0 0 24px var(--ia),inset 0 0 24px var(--ia);opacity:0;animation:icRing 1.4s cubic-bezier(.2,.7,.3,1) both}
+.ic-ring.r2{animation-delay:.18s}.ic-ring.r3{animation-delay:.36s;border-width:2px}
+@keyframes icRing{0%{opacity:.95;transform:scale(.2)}100%{opacity:0;transform:scale(4.2)}}
+.ic-circle{position:absolute;left:50%;top:50%;width:min(86vmin,560px);height:min(86vmin,560px);margin:calc(min(86vmin,560px)/-2) 0 0 calc(min(86vmin,560px)/-2);border-radius:50%;
+  background:repeating-conic-gradient(var(--ia) 0 1.2deg,transparent 1.2deg 7.5deg);-webkit-mask:radial-gradient(circle,transparent 62%,#000 63%,#000 66%,transparent 67%,transparent 72%,#000 73%,#000 74%,transparent 75%);mask:radial-gradient(circle,transparent 62%,#000 63%,#000 66%,transparent 67%,transparent 72%,#000 73%,#000 74%,transparent 75%);opacity:.8;animation:icSpin 14s linear infinite reverse,icFadeIn .8s ease both}
+.ic-flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,#fff,transparent 60%);mix-blend-mode:screen;animation:icFlash .9s ease-out both .25s;opacity:0}
+@keyframes icFlash{0%{opacity:0}15%{opacity:1}100%{opacity:0}}
+.ic-scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,color-mix(in srgb,var(--ia) 22%,transparent) 0 2px,transparent 2px 6px);animation:icScan 1.6s linear infinite;opacity:.6}
+@keyframes icScan{to{background-position:0 60px}}
+.ic-parts{position:absolute;left:50%;top:50%;width:0;height:0}
+.ic-parts i{position:absolute;left:0;top:0;width:8px;height:8px;margin:-4px;border-radius:50%;background:var(--ia);box-shadow:0 0 10px var(--ia),0 0 20px var(--ib);font-style:normal;font-size:14px;line-height:8px;color:#fff;text-align:center;opacity:0;animation:icPart var(--t) cubic-bezier(.15,.6,.3,1) var(--dl) both}
+.ic-cute .ic-parts i,.ic-magic .ic-parts i{background:none;box-shadow:none;color:var(--ia);text-shadow:0 0 8px var(--ib)}
+@keyframes icPart{0%{opacity:1;transform:rotate(var(--a)) translateX(0) scale(.4)}100%{opacity:0;transform:rotate(var(--a)) translateX(var(--d)) scale(1.2)}}
+.ic-card{position:relative;width:min(46vmin,300px);aspect-ratio:1;border-radius:50%;overflow:hidden;box-shadow:0 0 0 4px color-mix(in srgb,var(--ia) 80%,#fff),0 0 40px 10px var(--ia),0 0 120px 30px var(--ib);animation:icCard 1.1s cubic-bezier(.2,1.4,.4,1) both .12s;margin-top:-8vmin}
+.ic-art{width:100%;height:100%;object-fit:cover;display:block;background:radial-gradient(circle,var(--ib),#000)}
+.ic-shine{position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.65) 48%,transparent 60%);transform:translateX(-120%);animation:icShine 1.1s ease .7s both}
+@keyframes icCard{0%{transform:scale(.15) rotate(-12deg);opacity:0;filter:brightness(3)}60%{opacity:1;filter:brightness(1.4)}100%{transform:none;filter:none}}
+@keyframes icShine{to{transform:translateX(120%)}}
+.ic-dragon .ic-card{animation-name:icCardD}
+@keyframes icCardD{0%{transform:translateY(30vmin) scale(.3);opacity:0;filter:brightness(3)}55%{transform:translateY(-3vmin) scale(1.08);opacity:1}100%{transform:none;filter:none}}
+.ic-god .ic-card{width:min(54vmin,340px)}
+.ic-txt{position:absolute;left:0;right:0;bottom:max(8vh,calc(14px + var(--safe-b)));text-align:center;padding:0 16px;animation:icTxt .7s ease both .45s}
+@keyframes icTxt{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
+.ic-k{font-family:var(--nx-head,inherit);font-weight:800;font-size:clamp(10px,2.6vh,12px);letter-spacing:.4em;color:var(--ia);text-shadow:0 0 10px var(--ib)}
+.ic-n{font-family:var(--nx-head,inherit);font-weight:900;font-size:clamp(22px,7.5vh,44px);line-height:1.1;margin:4px 0;letter-spacing:.02em;background:linear-gradient(180deg,#fff 30%,var(--ia));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 rgba(0,0,0,.7)) drop-shadow(0 0 18px var(--ib))}
+.ic-l{font-size:clamp(11px,3.2vh,15px);color:#eaf1ff;font-weight:600;text-shadow:0 2px 6px #000}
+.ic-ov.fast .ic-rays{animation-duration:5s}.ic-ov.fast .ic-txt{animation-delay:.2s}
+.ic-shake{animation:icShake .55s ease}
+@keyframes icShake{10%,90%{transform:translate(-1px,1px)}20%,80%{transform:translate(3px,-2px)}30%,50%,70%{transform:translate(-5px,2px)}40%,60%{transform:translate(5px,-1px)}}
+@media (orientation:landscape){.ic-card{margin-top:-14vh}.ic-txt{bottom:max(5vh,calc(8px + var(--safe-b)))}}
+@media (prefers-reduced-motion:reduce){.ic-rays,.ic-circle,.ic-scan{animation:none}.ic-shake{animation:none}}

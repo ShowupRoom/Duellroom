@@ -4,6 +4,7 @@ import { matchModal } from './match.js';
 import { libAdd, libGuides, libPause } from './combolib.js';
 import { buddyMount, buddyUpdate } from './buddy.js';
 import { lessonCheck, lessonIntro } from './academy.js';
+import { playIconic, iconicOf, iconicOn } from './iconic.js';
 import { recStart, recPlay, recAttack, recDamage, recChain, recSnap, recFinish } from './record.js';
 import { scoreSnap } from './engine.js';
 import { bumpDay, fav, artEl, HOME_ICONS, iconEl } from './home.js';
@@ -292,7 +293,9 @@ class Duel {
         case MSG.SUMMONING: case MSG.SPSUMMONING: case MSG.FLIPSUMMONING: {
           if (!this.spCount) this.spCount = [0, 0]; if (t === MSG.SPSUMMONING) this.spCount[m.controller]++;
           const k = t === MSG.SUMMONING ? 'Normalbeschwörung' : t === MSG.SPSUMMONING ? 'Spezialbeschwörung' : 'Flipp-Beschwörung';
-          recPlay(this, m.controller, m.code); this.addLog(`${this.pname(m.controller)}: ${k} – «${nameOf(m.code)}»`); beep('summon'); await this.banner({ title: k, sub: nameOf(m.code), code: m.code, cls: 'summon', ms: 850 }); break; }
+          recPlay(this, m.controller, m.code); this.addLog(`${this.pname(m.controller)}: ${k} – «${nameOf(m.code)}»`); beep('summon');
+          if (iconicOn() && iconicOf(m.code) && !this.ff && !(this.demo && this.demo.skipFrom != null && this.turnNo > this.demo.skipFrom)) { await playIconic(this.root, m.code, { fast: this.fxs && this.fxs() < 1, kind: k }); break; } // ikonische Karte: große Animation
+          await this.banner({ title: k, sub: nameOf(m.code), code: m.code, cls: 'summon', ms: 850 }); break; }
         case MSG.SET: if (m.controller === this.viewer) this.akSet = true; this.addLog(`${this.pname(m.controller)} setzt eine Karte`); beep('tap'); break;
         case MSG.CHAINING: {
           this.chain.push({ code: m.code, p: m.controller }); recPlay(this, m.controller, m.code); recChain(this); const lbl = descText(m.description, m.code, m.triggering_location != null ? m.triggering_location : m.location); const BT = { 16: 'Battle Step', 32: 'Battle Step', 64: 'Damage Step', 128: 'Schadensberechnung' };

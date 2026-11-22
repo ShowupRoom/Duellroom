@@ -118,6 +118,7 @@ screens.setup = ({ fmt, demo, list: listP, mode: modeP }) => {
         [['random', 'Zufall'], ['0', st.names[0] || 'Spieler 1'], ['1', st.names[1] || 'Spieler 2']].map(([v, t]) => h('button', { class: 'chip' + (st.first === v ? ' on' : ''), onclick: () => { st.first = v; save(); render(); } }, t)),
         h('span', { class: 'grow' }), h('label', { class: 'chip' }, h('input', { type: 'checkbox', checked: settings.tutor, onchange: (e) => { settings.tutor = e.target.checked; } }), ' Tutor-Tipps'))));
     const ready = dsel[0] && (dsel[1] || (st.mode === 'demo' && st.demoOpp !== 'ai')); const dm = st.mode === 'demo';
+    if (!ready) foot.append(h('button', { class: 'btn gold lg', title: 'Fehlende Decks zufällig wählen', onclick: () => { const P = pool().filter((d) => d.status === 'ok' || d.custom); if (!P.length) return; for (const i of [0, 1]) if (!st.decks[i] || !byId(st.decks[i])) { if (i === 1 && st.mode === 'demo' && st.demoOpp !== 'ai') continue; st.decks[i] = P[Math.floor(Math.random() * P.length)].id; } save(); render(); } }, '🎲 Zufällig'));
     foot.append(h('button', { class: 'btn pri lg grow', disabled: !ready, onclick: start }, ready ? (dm ? '🎬  Vorführung starten' : st.match && (st.mode === 'ai' || st.mode === 'hot') ? '🏆  Match beginnen' : '⚔  Duell beginnen') : dm && st.demoOpp !== 'ai' ? 'Bitte ein Deck wählen' : 'Bitte beide Decks wählen'));
   };
   render();
