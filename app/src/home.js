@@ -94,7 +94,7 @@ screens.home = () => {
     h('button', { class: 'hm-hero', title: 'Bild ändern (Lieblingskarte)', onclick: () => pickCard('Lieblingskarte fürs Hauptmenü', (c) => { fav.hero = c; go('home'); }) },
       svg(RING, 'hm-ring'), artEl(fav.hero, 'hm-art'), h('i', { class: 'hm-spark s1' }), h('i', { class: 'hm-spark s2' }), h('i', { class: 'hm-spark s3' })),
     h('div', { class: 'hm-l' },
-      h('div', { class: 'hm-prof' }, avatar, h('div', { class: 'hm-pn' }, h('div', { class: 'hm-name' }, names[0] || 'Spieler 1'), h('div', { class: 'hm-sub' }, h('span', { class: 'hm-bn' }, ban.ic), h('span', null, 'Duellraum')))),
+      h('div', { class: 'hm-prof' }, avatar, h('div', { class: 'hm-pn' }, h('div', { class: 'hm-name' }, names[0] || 'Spieler 1'), h('div', { class: 'hm-sub' }, h('span', { class: 'hm-bn' }, ban.ic), h('span', null, store.get('unlocks', {}).ak3 ? 'Kettenprofi' : 'Duellraum')))),
       slideBox, dots,
       h('button', { class: 'hm-mis' + (M.done ? ' done' : ''), onclick: () => go('duelhub') }, h('div', { class: 'hm-mh' }, h('b', null, 'AUFGABE'), h('span', null, M.done ? '✓ Geschafft!' : `◷ Noch ${M.left} Std.`)), h('div', { class: 'hm-mt' }, `${M.t} (${M.have}/${M.n})`)),
       h('div', { class: 'hm-cs' }, circ('duel', 'DUELL', () => go('duelhub')), circ('deck', 'DECK', () => go('deckhub')), circ('learn', 'LERNEN', () => go('learn')), circ('opts', 'OPTIONEN', () => go('settings')))),

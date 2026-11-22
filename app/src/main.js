@@ -10,6 +10,7 @@ import './md.js';
 import './home.js';
 import './onboard.js';
 import './book.js';
+import './academy.js';
 import { readChallengeFromUrl } from './record.js';
 import { libLoop } from './combolib.js';
 import './match.js';

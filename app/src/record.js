@@ -17,14 +17,14 @@ export function recDamage(D, victim, amount, inBattle) {
 }
 export function recChain(D) { if (D.rec) D.rec.maxChain = Math.max(D.rec.maxChain, D.chain ? D.chain.length : 0); }
 export function recSnap(D, snap) {
-  if (!D.rec || !snap) return; snap.players.forEach((x, p) => { if (x && x.lp != null) D.rec.minLp[p] = Math.min(D.rec.minLp[p], x.lp); });
+  if (!D.rec || !snap) return; (snap.lp || []).forEach((v, p) => { if (v != null && p < 2) D.rec.minLp[p] = Math.min(D.rec.minLp[p], v); });
   if (!D.rec.hand0 && snap.turn === 1 && snap.players[0].hand && snap.players[0].hand.length) D.rec.hand0 = snap.players[0].hand.map((c) => c && c.code).filter(Boolean);
 }
 
 // ---- nach dem Duell ---------------------------------------------------------------------------------------------------
 const deckRec = (d) => ({ id: d.id, name: d.name, fmt: d.fmt, list: d.list, main: d.main, extra: d.extra || [] });
 export function recFinish(D, winner, draw) {
-  if (!D.rec || D.demo || D.conf.replay || D.conf.challenge) return;
+  if (!D.rec || D.demo || D.conf.replay || D.conf.challenge || D.conf.lesson) return;
   const c = D.conf; const names = c.players.map((x, i) => D.pname(i)); const kind = c.mode === 'hot' ? 'hot' : D.net ? 'net' : c.mode === 'ai' ? 'ai' : c.test ? 'test' : c.mode;
   const g = { t: Date.now(), kind, lp: c.lp || 8000, fmt: c.fmt, list: c.list, names, decks: c.players.map((x) => x.deck.name), human: c.human, viewer: D.viewer, winner: draw ? null : winner, turns: D.turnNo, dur: Date.now() - D.rec.start,
     maxHit: D.rec.maxHit, maxChain: D.rec.maxChain, minLp: D.rec.minLp, plays: D.rec.plays.map((s) => [...s].slice(0, 60)) };

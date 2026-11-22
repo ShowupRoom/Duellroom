@@ -11,7 +11,7 @@ import { settings, deckRow, deckDetail, dataPanels, isApp, installApp, hydrate }
 import { importDialog, toYdk } from './editor.js';
 import { AI_LEVELS } from '../../src/ai.mjs';
 import { VERSION } from './engine.js';
-import { look, FIELDS, SLEEVES, applyLook } from './look.js';
+import { look, FIELDS, SLEEVES, applyLook, unlocked } from './look.js';
 import { libOn, setLibOn, libSummary, libClear } from './combolib.js';
 
 // ---- Banlists -------------------------------------------------------------------------------------------------
@@ -129,7 +129,7 @@ screens.settings = () => {
   };
   const text = (label, note, get, set, max = 30) => h('div', { class: 'sx-row' }, h('div', { class: 'sx-l' }, h('div', { class: 'sx-n' }, label), note ? h('div', { class: 'sx-nt' }, note) : null), h('div', { class: 'sx-c' }, h('input', { class: 'input', value: get(), maxlength: max, oninput: (e) => set(e.target.value) })));
   const picker = (label, note, items, get, set, kind) => h('div', { class: 'sx-row sx-pick' }, h('div', { class: 'sx-l' }, h('div', { class: 'sx-n' }, label), h('div', { class: 'sx-nt' }, note)),
-    h('div', { class: 'pk-grid' }, items.map((it) => h('button', { class: 'pk-t' + (get() === it.id ? ' on' : ''), onclick: () => { set(it.id); applyLook(true); paint(); } },
+    h('div', { class: 'pk-grid' }, items.map((it) => h('button', { class: 'pk-t' + (get() === it.id ? ' on' : '') + (unlocked(it.lock) ? '' : ' lock'), title: unlocked(it.lock) ? it.name : 'Freischalten in der Duell-Akademie', onclick: () => { if (!unlocked(it.lock)) { toast('🔒 Wird in der Duell-Akademie freigeschaltet.'); return; } set(it.id); applyLook(true); paint(); } },
       kind === 'field' ? h('div', { class: 'pk-fd', style: `background:${it.bg};--zl:${it.line}` }, h('i'), h('i'), h('i')) : it.bg ? h('div', { class: 'pk-sl', style: `background:${it.bg} center/100% 100% no-repeat` }) : h('div', { class: 'pk-sl pk-ph' }, it.id === 'random' ? '🎲' : '＝'), h('span', null, it.name)))));
   const lvOpts = Object.entries(AI_LEVELS).map(([id, l]) => [id, l.name]);
   const body = async () => {

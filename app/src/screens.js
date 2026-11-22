@@ -241,6 +241,8 @@ const LEARN = [
 ];
 screens.learn = () => h('div', { class: 'screen' }, hdr('Lernen & Regeln', 'In wenigen Minuten spielbereit'),
   h('div', { class: 'body' }, h('div', { class: 'wrap col' },
+    h('button', { class: 'panel ak-entry', onclick: () => go('academy') }, h('b', null, '🎓 Duell-Akademie'), h('span', null, 'Fünf kurze Lektionen mit vorbereiteter Hand – mit Sternen und Belohnungen'), h('span', { class: 'ak-go' }, 'Starten ›')),
+    h('button', { class: 'panel ak-entry', onclick: () => go('taste') }, h('b', null, '💖 Welche Karten gefallen dir?'), h('span', null, 'Ein erstes Deck nach deinem Geschmack – mit Begleiterin'), h('span', { class: 'ak-go' }, 'Los ›')),
     h('div', { class: 'panel tutor' }, h('div', { class: 'tut-h' }, h('span', { class: 'tut-ic' }, '🎓'), h('b', null, 'So lernst du am schnellsten')), h('p', null, 'Wähle zuerst das Format „Goat“ oder „Edison“ und ein einfaches Deck – hier ist das Spiel langsam und gut zu verstehen. Spiele „Allein üben“, damit der Gegner stillhält. Der Tutor sagt dir bei jedem Deck das Ziel und schlägt dir im Duell Züge vor.')),
     LEARN.map(([t, x], i) => h('details', { class: 'panel', open: i === 0 }, h('summary', null, t), h('p', { class: 'small' }, x))))));
 

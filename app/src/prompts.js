@@ -8,6 +8,7 @@ import { openModal } from './ui.js';
 import { effectView, excerptNode, fullNode, revealMark } from './effecttext.js';
 import { sys, descText, PHASE, RACE_BITS, ATTR_BITS, fill } from './strings.js';
 import { idleTip, battleTip, chainTip } from './tips.js';
+import { lessonTip } from './academy.js';
 
 const M = (D, o) => openModal({ host: D.root, ...o });
 const FIELD = LOC.MZONE | LOC.SZONE;
@@ -64,7 +65,8 @@ function askIdle(D, msg) {
   msg.activates.forEach((c, i) => { const d = descText(c.description, c.code, c.location); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n && d.trim() !== 'Aktivieren' ? ': ' + d.replace(/\s+/g, ' ').slice(0, 90) : ''), r(IA.SELECT_ACTIVATE, i), true); });
   numberDupes(D);
   const n = D.actList.length;
-  D.setTip(D.conf.tutor ? idleTip(D, msg) : null); if (D.conf.tutor) { D.tipBtn.classList.add('pulse'); D.tutorBegin(msg); } // sofort eine Regel-Schätzung, die Suche ersetzt sie in Sekunden
+  const lt = D.conf.lesson ? lessonTip(D, msg, 'idle') : null; // Akademie: feste Schritte statt Suche
+  D.setTip(lt || (D.conf.tutor ? idleTip(D, msg) : null)); if (D.conf.tutor) { D.tipBtn.classList.add('pulse'); if (!lt) D.tutorBegin(msg); } // sofort eine Regel-Schätzung, die Suche ersetzt sie in Sekunden
   // Kampfphase, sobald der Kern sie erlaubt (nicht im ersten Zug). Ohne Monster in Angriffsposition weist das Phasen-Menü darauf hin, sperrt aber nichts.
   const pl = D.snap && D.snap.players[msg.player]; const canHit = !pl || pl.mzone.some((c) => c && (c.position & POS.FACEUP_ATTACK));
   D.bpCore = !!msg.to_bp; D.bpNoHit = !canHit;
@@ -78,7 +80,7 @@ function askBattle(D, msg) {
   msg.attacks.forEach((c, i) => register(D, c, 'attack', 'Angreifen' + (c.can_direct ? ' (direkt möglich)' : ''), r(BA.SELECT_BATTLE, i), true));
   msg.chains.forEach((c, i) => { const d = descText(c.description, c.code, c.location); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n && d.trim() !== 'Aktivieren' ? ': ' + d.slice(0, 90) : ''), r(BA.SELECT_CHAIN, i), true); });
   numberDupes(D);
-  D.setTip(D.conf.tutor ? battleTip(D, msg) : null); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
+  D.setTip((D.conf.lesson && lessonTip(D, msg, 'battle')) || (D.conf.tutor ? battleTip(D, msg) : null)); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
   D.phaseOpts = { M2: msg.to_m2 ? r(BA.TO_M2, null) : null, EP: msg.to_ep ? r(BA.TO_EP, null) : null };
   D.hideBar();
   const p = D.wait('battle'); D.render(); return p;
@@ -183,9 +185,9 @@ function ctxLines(D) { return D.logLines.slice(-2).map((l) => h('div', { class: 
 function askChain(D, msg) {
   if (!msg.selects.length && !msg.forced) return Promise.resolve({ type: R.SELECT_CHAIN, index: null }); // nichts möglich → nicht fragen
   return new Promise((resolve) => {
-    const tip = D.conf.tutor ? chainTip(D, msg) : null;
+    const tip = (D.conf.lesson && lessonTip(D, msg, 'chain')) || (D.conf.tutor ? chainTip(D, msg) : null);
     const fin = (i) => { m.close(); resolve({ type: R.SELECT_CHAIN, index: i }); };
-    const rows = msg.selects.map((s, i) => { const d = descText(s.description, s.code, s.location); const vw = effectView(s.code, s.description, s.location); const ex = excerptNode(vw, 170); return h('div', { class: 'ch-row' }, h('button', { onclick: () => D.info(s.code, vw) }, cardEl(s.code, { cls: 'sm' })), h('div', { class: 'grow' }, h('b', null, cleanName(nameOf(s.code)), tip && tip.pick === i ? h('span', { class: 'chip ok', style: 'margin-left:6px' }, '★ jetzt') : null), ex ? h('div', { class: 'small fx-ex' }, ex) : h('div', { class: 'small muted' }, (d && s.description > 0n ? d : 'Effekt aktivieren').slice(0, 130)), fullNode(vw)), h('button', { class: 'btn sm ' + (tip && tip.pick === i ? 'gold' : 'pri'), onclick: () => fin(i) }, 'Aktivieren')); });
+    const rows = msg.selects.map((s, i) => { const d = descText(s.description, s.code, s.location); const vw = effectView(s.code, s.description, s.location); const ex = excerptNode(vw, 170); return h('div', { class: 'ch-row' + (tip && tip.pick === s.code ? ' ch-pick' : '') }, h('button', { onclick: () => D.info(s.code, vw) }, cardEl(s.code, { cls: 'sm' })), h('div', { class: 'grow' }, h('b', null, cleanName(nameOf(s.code)), tip && tip.pick === i ? h('span', { class: 'chip ok', style: 'margin-left:6px' }, '★ jetzt') : null), ex ? h('div', { class: 'small fx-ex' }, ex) : h('div', { class: 'small muted' }, (d && s.description > 0n ? d : 'Effekt aktivieren').slice(0, 130)), fullNode(vw)), h('button', { class: 'btn sm ' + (tip && tip.pick === i ? 'gold' : 'pri'), onclick: () => fin(i) }, 'Aktivieren')); });
     const body = h('div', { class: 'col' }, ctxLines(D), rows, tip ? h('div', { class: 'tutor panel small' }, '💡 ' + tip.text) : null);
     const m = M(D, { title: msg.forced ? 'Ein Effekt löst aus' : 'Möchtest du antworten?', sticky: true, cls: 'peek', body, footer: msg.forced ? null : h('button', { class: 'btn', onclick: () => fin(null) }, 'Nein, weiter') });
     setTimeout(() => m.el.querySelectorAll('.fx-full').forEach(revealMark), 40);

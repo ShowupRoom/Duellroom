@@ -3,6 +3,7 @@ import { applyLook } from './look.js';
 import { matchModal } from './match.js';
 import { libAdd, libGuides, libPause } from './combolib.js';
 import { buddyMount, buddyUpdate } from './buddy.js';
+import { lessonCheck, lessonIntro } from './academy.js';
 import { recStart, recPlay, recAttack, recDamage, recChain, recSnap, recFinish } from './record.js';
 import { scoreSnap } from './engine.js';
 import { bumpDay, fav, artEl, HOME_ICONS, iconEl } from './home.js';
@@ -169,6 +170,7 @@ class Duel {
       const ta = performance.now(); await this.present(evs); if (this.demo) this.demo.anim = performance.now() - ta;
       if (this.stopped) return;
       this.snap = st.snap; recSnap(this, st.snap);
+      if (this.conf.lesson && lessonCheck(this)) { this.render(); return; }
       if (this.conf.challenge && this.turnNo >= 2 && !this.chDone) { this.chDone = true; this.render(); await this.challengeEnd(); return; } // Herausforderung: nach dem ersten Zug werten
       if (this.demo && this.found && st.snap.turn % 2 === 0 && this.demo.res !== st.snap.turn) { this.demo.res = st.snap.turn; this.demoNote('Endboard bei der Übergabe: ' + endBoard(this, 0).replace(/^Feld am Zugende: /, '')); } // nach der End Phase (Endphasen-Effekte sind durch)
       if (st.snap.turn && st.snap.turn !== this.turnNo) { this.turnNo = st.snap.turn; this.turnPlayer = st.snap.turnPlayer; if (st.snap.phase) this.phase = st.snap.phase; this.renderTop(); }
@@ -185,7 +187,7 @@ class Duel {
         if (this.viewer !== p) await this.handover(p);
         this.render();
         if (r.retry) toast('Das ist nicht erlaubt – bitte noch einmal wählen.');
-        if (!this.introShown[p]) { this.introShown[p] = true; if (this.conf.tutor && !this.conf.test) await this.intro(p); }
+        if (!this.introShown[p]) { this.introShown[p] = true; if (this.conf.lesson) await lessonIntro(this); else if (this.conf.tutor && !this.conf.test && !this.conf.noIntro) await this.intro(p); }
         resp = await ask(this, msg);
         if (this.stopped) return;
       } else {
@@ -291,14 +293,14 @@ class Duel {
           if (!this.spCount) this.spCount = [0, 0]; if (t === MSG.SPSUMMONING) this.spCount[m.controller]++;
           const k = t === MSG.SUMMONING ? 'Normalbeschwörung' : t === MSG.SPSUMMONING ? 'Spezialbeschwörung' : 'Flipp-Beschwörung';
           recPlay(this, m.controller, m.code); this.addLog(`${this.pname(m.controller)}: ${k} – «${nameOf(m.code)}»`); beep('summon'); await this.banner({ title: k, sub: nameOf(m.code), code: m.code, cls: 'summon', ms: 850 }); break; }
-        case MSG.SET: this.addLog(`${this.pname(m.controller)} setzt eine Karte`); beep('tap'); break;
+        case MSG.SET: if (m.controller === this.viewer) this.akSet = true; this.addLog(`${this.pname(m.controller)} setzt eine Karte`); beep('tap'); break;
         case MSG.CHAINING: {
           this.chain.push({ code: m.code, p: m.controller }); recPlay(this, m.controller, m.code); recChain(this); const lbl = descText(m.description, m.code, m.triggering_location != null ? m.triggering_location : m.location); const BT = { 16: 'Battle Step', 32: 'Battle Step', 64: 'Damage Step', 128: 'Schadensberechnung' };
           this.addLog(`Kette ${this.chain.length}: «${nameOf(m.code)}»${lbl && lbl.length < 60 ? ' – ' + lbl : ''} (${this.pname(m.controller)})${BT[this.phase] ? ' · ' + BT[this.phase] : ''}`); this.renderTop(); beep('chain');
           const vw = effectView(m.code, m.description, m.triggering_location != null ? m.triggering_location : m.location); const has = !!(vw.ranges && vw.ranges.length);
           await this.banner({ title: `Kette ${this.chain.length}`, sub: nameOf(m.code), code: m.code, cls: 'chain', pair: this.chain.length > 1 ? this.chain.slice(-2).map((c, i, arr) => ({ ...c, n: this.chain.length - arr.length + i + 1 })) : null, ms: has ? 1100 + Math.min(2400, vw.text.length * 8) : 800, // (Tippen überspringt)
              mark: has ? markNode(vw) : null }); break; }
-        case MSG.CHAIN_NEGATED: case MSG.CHAIN_DISABLED: this.addLog('Der Effekt wurde negiert'); await this.banner({ title: 'Negiert!', cls: 'neg', ms: 500 }); break;
+        case MSG.CHAIN_NEGATED: case MSG.CHAIN_DISABLED: this.akNeg = true; this.addLog('Der Effekt wurde negiert'); await this.banner({ title: 'Negiert!', cls: 'neg', ms: 500 }); break;
         case MSG.CHAIN_END: this.chain = []; this.renderTop(); break;
         case MSG.ATTACK: {
           const ac = this.cardAt(m.card.controller, m.card.location, m.card.sequence); recAttack(this, ac && ac.code); const an = ac && this.visible(ac) ? nameOf(ac.code) : 'Ein Monster'; const tc = m.target ? this.cardAt(m.target.controller, m.target.location, m.target.sequence) : null; const tg = m.target ? (tc && this.visible(tc) ? nameOf(tc.code) : 'ein verdecktes Monster') : null;
@@ -767,7 +769,7 @@ class Duel {
   hideBar() { clear(this.bar); this.bar.classList.add('off'); this.root.classList.remove('baron'); }
   clearBar() { this.hideBar(); }
   /** wartet auf eine Antwort der Oberfläche */
-  wait(kind) { return new Promise((resolve) => { this.pending = { resolve, kind }; }); }
+  wait(kind) { return new Promise((resolve) => { this.pending = { resolve, kind }; setTimeout(() => buddyUpdate(this), 0); }); }
   answer(resp) { const p = this.pending; if (!p) return; this.tutorStop(); this.buddyHidden = false; setTimeout(() => buddyUpdate(this), 0); this.closePhMenu(); this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.dropFloat(); this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
   setTip(t) { this.tip = t; if (t) this.buddyHidden = this.buddyHidden && this.buddyKeep; buddyUpdate(this); }
   tutHelpers() { const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2; return Math.max(1, Math.min(3, cores - 2)); }
