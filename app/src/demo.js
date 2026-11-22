@@ -107,9 +107,14 @@ export function boardText(b) {
 
 /** Spielt die in der Suche gefundene Antwortfolge der Reihe nach ab; weicht das Spiel ab (sollte nie passieren) oder ist die Folge zu Ende, übernimmt die normale KI */
 export class ReplayBot {
-  constructor(rec, fallback) { this.rec = rec; this.i = 0; this.fb = fallback; this.off = false; }
+  constructor(rec, fallback) { this.rec = rec; this.i = 0; this.fb = fallback; this.off = false; this.hist = []; }
   respond(msg, ctx) {
-    if (!this.off && this.i < this.rec.length) { const e = this.rec[this.i]; if (e.t === msg.type) { this.i++; return e.r; } this.off = true; }
-    return this.fb.respond(msg, ctx);
+    let r;
+    if (!this.off && this.i < this.rec.length) { const e = this.rec[this.i]; if (e.t === msg.type) { this.i++; r = e.r; } else this.off = true; }
+    if (r === undefined) { r = this.fb.respond(msg, ctx); this.i++; }
+    this.hist.push({ t: msg.type, r }); // alles, was gespielt wurde: Grundlage für die Suche im nächsten eigenen Zug
+    return r;
   }
+  /** Neue, längere Folge (enthält die bisherigen Antworten als Anfang) */
+  extend(rec) { this.rec = rec; this.off = false; }
 }

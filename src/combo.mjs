@@ -77,18 +77,19 @@ const key = (r) => JSON.stringify(r, (k, v) => (typeof v === 'bigint' ? String(v
 function mulberry(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 /** prefix = bisher gewählte Antworten (werden unverändert gespielt); an Stelle prefix.length wird `force` gespielt bzw. – mit `avoid` – etwas anderes als avoid.r */
-export async function runOnce(lib, opts, cards, { prefix = [], force = null, avoid = null, level = {}, rnd }) {
+export async function runOnce(lib, opts, cards, { prefix = [], force = null, avoid = null, level = {}, rnd, endTurn = 2, from = 0 }) {
   const g = await Game.create(lib, opts);
   const ai = new DuelAI(cards, 'stark', rnd); ai.L = { ...ai.L, chainP: 1, trigP: 1, own: 0.05, ...level };
-  const pas = passiveRng(); const rec = []; let steps = 0, i = 0, ok = false, hand = null;
+  const pas = passiveRng(); const rec = []; let steps = 0, i = 0, ok = false, hand = null, won = false, snapEnd = null;
   try {
     while (steps++ < 4000) {
-      const r = await g.next(); if (r.kind === 'end') break;
+      const r = await g.next();
+      if (r.kind === 'end') { if (r.winner === 0) { ok = won = true; snapEnd = g.snapshot(); } break; } // Sieg im Suchzug (z. B. direkter Angriff auf den stillstehenden Gegner)
       const m = r.msg; const evs = g.events.splice(0);
-      if (g.turn >= 2) { ok = true; break; }
+      if (g.turn >= endTurn) { ok = true; break; }
       let resp;
       if (m.player === 0) {
-        const snap0 = g.snapshot(); if (!hand) hand = snap0.players[0].hand.filter(Boolean).map((c) => c.code);
+        const snap0 = g.snapshot(); if (i === from) hand = snap0.players[0].hand.filter(Boolean).map((c) => c.code);
         resp = ai.respond(m, { snap: snap0, evs, retry: r.retry });
         if (i < prefix.length && prefix[i].t === m.type) resp = prefix[i].r;
         else if (i === prefix.length && !r.retry) {
@@ -103,7 +104,7 @@ export async function runOnce(lib, opts, cards, { prefix = [], force = null, avo
       } else resp = passiveReply(m, pas, cards);
       g.respond(resp);
     }
-    return { ok, rec, hand, snap: ok ? g.snapshot() : null };
+    return { ok, rec, hand, won, snap: ok ? (snapEnd || g.snapshot()) : null };
   } finally { try { lib.destroyDuel(g.handle); } catch (e) { /* schon weg */ } }
 }
 
@@ -120,28 +121,28 @@ export function idleCands(m) {
 /** Sucht für die durch `opts` (Spielaufbau inkl. Startwert) festgelegte Starthand die beste Antwortfolge des ersten Zugs.
  *  cfg: { cards, goal, budgetMs, onProgress(info), stop() } → { rec, board, sims, ms, base } */
 export async function comboSearch(lib, opts, cfg) {
-  const { cards, goal = 'balance', deadline = 0, onProgress = () => {}, stop = () => false, rseed = 20260101, worker = 0 } = cfg; const budgetMs = deadline ? Math.max(500, deadline - Date.now()) : (cfg.budgetMs || 15000); const G = GOALS[goal] || GOALS.balance;
+  const { cards, goal = 'balance', deadline = 0, onProgress = () => {}, stop = () => false, rseed = 20260101, worker = 0, base: B = [], endTurn = 2 } = cfg; const from = B.length; const budgetMs = deadline ? Math.max(500, deadline - Date.now()) : (cfg.budgetMs || 15000); const G = GOALS[goal] || GOALS.balance;
   const rnd = mulberry(rseed); let hand = null; const t0 = Date.now(); let best = null, base = null, sims = 0, fails = 0;
   const left = () => !stop() && Date.now() - t0 < budgetMs;
   /** Ergebnis bewerten; true, wenn es das bisher beste übertrifft */
   const take = (res) => {
     sims++; if (!res.ok) { fails++; return false; }
-    res.board = scoreBoard(res.snap, cards, G, 0); if (!base) base = res.board; if (!hand) hand = res.hand;
+    res.board = scoreBoard(res.snap, cards, G, 0); if (res.won) res.board.score += 500; if (!base) base = res.board; if (!hand) hand = res.hand;
     if (!best || res.board.score > best.board.score || (res.board.score === best.board.score && res.rec.length < best.rec.length)) { const better = !best || res.board.score > best.board.score; best = res; return better; }
     return false;
   };
   const tick = async (improved) => { onProgress({ worker, hand, sims, ms: Date.now() - t0, score: best ? best.board.score : 0, board: best ? best.board : null, base: base ? base.score : 0, improved }); await new Promise((r) => setTimeout(r, 0)); };
   const LV = [{ noise: 2 }, { noise: 6 }, { noise: 14 }, { noise: 30, slip: 0.03 }, { noise: 50, slip: 0.06 }, { noise: 80, slip: 0.1 }];
-  const run = async (o) => { const res = await runOnce(lib, opts, cards, { rnd, ...o }); const imp = take(res); await tick(imp); return res; };
+  const run = async (o) => { const res = await runOnce(lib, opts, cards, { rnd, endTurn, from, ...o, prefix: o.prefix || B }); const imp = take(res); await tick(imp); return res; };
   // 1) Grundläufe der KI mit unterschiedlich viel Zufall
-  for (let k = 0; k < 4 && left(); k++) await run({ level: LV[k % LV.length] });
+  for (let k = 0; k < 4 && left(); k++) await run({ level: LV[k % LV.length] }); // (Zugfolge davor, falls vorhanden, wird unverändert vorgespielt)
   // 2) Vorausschau: an jeder Hauptphasen-Entscheidung alle Möglichkeiten durchspielen (die KI spielt danach weiter) und die beste festhalten
   let cur = best;
   for (let pass = 0; pass < 2 && cur && left(); pass++) {
-    let from = 0;
+    let at = from;
     for (;;) {
       if (!left()) break;
-      const j = cur.rec.findIndex((x, n) => n >= from && x.t === MSG.SELECT_IDLECMD); if (j < 0) break;
+      const j = cur.rec.findIndex((x, n) => n >= at && x.t === MSG.SELECT_IDLECMD); if (j < 0) break;
       const mine = key(cur.rec[j].r); let cands = idleCands(cur.rec[j].m).filter((c) => key(c) !== mine);
       if (cands.length > 14) cands = cands.map((c) => [c, rnd()]).sort((a, b) => a[1] - b[1]).slice(0, 14).map((x) => x[0]);
       let win = null;
@@ -151,14 +152,15 @@ export async function comboSearch(lib, opts, cfg) {
         if (res.ok && res.board.score > (win ? win.board.score : cur.board.score)) win = res;
       }
       if (win) cur = win;
-      from = j + 1;
+      at = j + 1;
     }
   }
   // 3) Verbessern: an einer zufälligen Stelle der bisher besten Folge anders entscheiden und neu weiterspielen
   while (best && left()) {
     const rec = best.rec; let k;
-    const idle = rec.map((x, j) => (x.t === MSG.SELECT_IDLECMD ? j : -1)).filter((j) => j >= 0);
-    if (rnd() < 0.5 && idle.length) k = idle[Math.floor(rnd() * idle.length)]; else k = Math.floor(rnd() * rec.length);
+    const idle = rec.map((x, j) => (x.t === MSG.SELECT_IDLECMD && j >= from ? j : -1)).filter((j) => j >= 0);
+    if (rec.length <= from) break;
+    if (rnd() < 0.5 && idle.length) k = idle[Math.floor(rnd() * idle.length)]; else k = from + Math.floor(rnd() * (rec.length - from));
     await run({ prefix: rec.slice(0, k), avoid: rec[k], level: rnd() < 0.7 ? LV[Math.floor(rnd() * 4)] : { noise: 2 } });
     if (rnd() < 0.06) await run({ level: LV[2 + Math.floor(rnd() * 4)] }); // Neustart gegen Sackgassen
   }

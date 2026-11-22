@@ -106,7 +106,7 @@ class Duel {
       else {
         const mk = (i) => ({ main: expand(conf.players[i].deck.main), extra: expand(conf.players[i].deck.extra) });
         const seed = conf.seed ? conf.seed.map((x) => BigInt(x)) : [BigInt(rand32()), BigInt(rand32()), BigInt(rand32()), BigInt(rand32())]; this.seedUsed = seed.map(Number);
-        const copts = { flags: m.flags, decks: [mk(0), mk(1)], scripts: m.scripts, seed, lp: conf.lp, hand: m.hand, stack: conf.stack, field: conf.field };
+        const copts = this.copts = { flags: m.flags, decks: [mk(0), mk(1)], scripts: m.scripts, seed, lp: conf.lp, hand: m.hand, stack: conf.stack, field: conf.field };
         if (this.demo && conf.demoOpp !== 'ai' && conf.demoMs > 0) { // Kombo-Suche: erst die beste Variante für diese Starthand finden, dann vorspielen
           const found = await this.searchOverlay(copts); if (this.stopped) return;
           if (found) { this.bots[0] = this.ai = new ReplayBot(found.rec, this.bots[0]); this.found = found; }
@@ -152,7 +152,7 @@ class Duel {
       const ta = performance.now(); await this.present(evs); if (this.demo) this.demo.anim = performance.now() - ta;
       if (this.stopped) return;
       this.snap = st.snap;
-      if (this.demo && this.found && st.snap.turn === 2 && !this.demo.res) { this.demo.res = true; this.demoNote('Endboard bei der Übergabe: ' + endBoard(this, 0).replace(/^Feld am Zugende: /, '')); } // nach der End Phase (Endphasen-Effekte sind durch)
+      if (this.demo && this.found && st.snap.turn % 2 === 0 && this.demo.res !== st.snap.turn) { this.demo.res = st.snap.turn; this.demoNote('Endboard bei der Übergabe: ' + endBoard(this, 0).replace(/^Feld am Zugende: /, '')); } // nach der End Phase (Endphasen-Effekte sind durch)
       if (st.snap.turn && st.snap.turn !== this.turnNo) { this.turnNo = st.snap.turn; this.turnPlayer = st.snap.turnPlayer; if (st.snap.phase) this.phase = st.snap.phase; this.renderTop(); }
       if (r.kind === 'end') { this.render(); await this.finish(r.winner, r.reason); return; }
       if (r.kind === 'wait') { this.render(); this.setBar(`⏳ ${this.pname(r.player)} ist dran …`, [], 'Du kannst dir solange Karten ansehen.'); continue; }
@@ -172,6 +172,10 @@ class Duel {
         if (this.stopped) return;
       } else {
         this.render(); if (this.ai && !this.aiBusy) { this.aiBusy = true; this.renderFF(); }
+        if (this.demo && p === 0 && this.ai instanceof ReplayBot && this.turnPlayer === 0 && this.turnNo >= 3 && this.demo.searched !== this.turnNo && this.conf.demoMs > 0) { // jeder eigene Zug: neu suchen, wie weit die Hand (und das Feld) reicht
+          this.demo.searched = this.turnNo; const found = await this.searchOverlay({ ...this.copts, base: this.ai.hist.slice(), endTurn: this.turnNo + 1 }, this.turnNo); if (this.stopped) return;
+          if (found) { this.ai.extend(found.rec); this.found = found; this.demoIntro(this.turnNo); }
+        }
         resp = this.botResponse(msg, st.evs, r.retry);
         if (this.demo) await this.demoStep(msg, resp, p); else if (this.ai && this.anim) await this.nap(this.botPause(msg));
       }
@@ -572,7 +576,7 @@ class Duel {
     const rd = AIP[this.aiPace].rd;
     if (d.auto && d.shownAt) { const rest = d.T - (performance.now() - d.shownAt); if (rest > 60) await this.demoWait(rest); } // Taktung: jede Karte bleibt ≈ 4 s – Animation und Zwischenschritte laufen in dieser Zeit mit
     d.step++; d.notes = []; this.showDemo(ex); d.shownAt = performance.now(); d.T = readMs(ex) * rd;
-    if (ex.end && this.turnNo === 1 && p === 0) { d.auto = false; this.renderDemoCtl(); } // nach dem ersten Zug anhalten: Feld in Ruhe ansehen
+    if (ex.end && p === 0 && (this.turnNo === 1 || this.ai instanceof ReplayBot)) { d.auto = false; this.renderDemoCtl(); } // nach dem ersten Zug anhalten: Feld in Ruhe ansehen
     await this.demoWait(Math.min(1200 * rd, d.T * 0.4)); // kurz ansehen, dann wird die Aktion ausgeführt
     this.selKey = null; this.render();
   }
@@ -587,10 +591,10 @@ class Duel {
   }
   demoNote(t) { const box = this.dmBody.querySelector('.dm-notes'); if (!box) return; this.demo.notes.push(t); box.append(h('div', { class: 'dm-n' }, '↳ ' + t)); }
   /** Such-Fenster: zeigt Starthand, Fortschritt und das beste bisher gefundene Board; „Jetzt vorspielen“ nimmt den Zwischenstand */
-  async searchOverlay(opts) {
+  async searchOverlay(opts, turn = 1) {
     const ms = this.conf.demoMs, goal = this.conf.demoGoal || 'balance'; const G = GOALS[goal] || GOALS.balance;
-    const bar = h('i'); const head = h('div', { class: 'cs-h' }, '🔎 Suche die beste Kombo für diese Starthand …');
-    const hand = h('div', { class: 'cs-hand muted small' }, 'Starthand wird gemischt …'); const best = h('div', { class: 'cs-best' }, 'Erste Versuche laufen …'); const meta = h('div', { class: 'cs-meta muted small' });
+    const bar = h('i'); const head = h('div', { class: 'cs-h' }, turn > 1 ? `🔎 Suche den besten Zug ${turn} …` : '🔎 Suche die beste Kombo für diese Starthand …');
+    const hand = h('div', { class: 'cs-hand muted small' }, turn > 1 ? 'Hand wird geladen …' : 'Starthand wird gemischt …'); const best = h('div', { class: 'cs-best' }, 'Erste Versuche laufen …'); const meta = h('div', { class: 'cs-meta muted small' });
     let discard = false;
     const go = h('button', { class: 'btn pri', onclick: () => stopSearch() }, '▶ Jetzt vorspielen'); const no = h('button', { class: 'btn', onclick: () => { discard = true; stopSearch(); } }, 'Ohne Suche');
     const box = h('div', { class: 'cs-box' }, head, h('div', { class: 'muted small' }, `Ziel: ${G.name}`), hand, h('div', { class: 'cs-bar' }, bar), best, meta, h('div', { class: 'cs-btn' }, go, no));
@@ -600,7 +604,7 @@ class Duel {
     try {
       res = await searchCombo({ ...opts, goal }, { ms, helpers, onProgress: (p) => {
         bar.style.width = Math.min(100, Math.round((1 - p.left / p.total) * 100)) + '%';
-        if (p.hand && !hand.dataset.set) { hand.dataset.set = 1; hand.textContent = 'Starthand: ' + p.hand.map((c) => nameOf(c)).join(' · '); }
+        if (p.hand && !hand.dataset.set) { hand.dataset.set = 1; hand.textContent = (turn > 1 ? 'Hand: ' : 'Starthand: ') + p.hand.map((c) => nameOf(c)).join(' · '); }
         if (p.board) best.textContent = 'Bestes Board bisher: ' + boardText(p.board);
         meta.textContent = `${p.sims} Varianten geprüft${p.workers > 1 ? ` · ${p.workers} Rechenkerne` : ''} · Wertung ${Math.round(p.score)} (Standard-KI: ${Math.round(p.base)})`;
       } });
@@ -613,9 +617,9 @@ class Duel {
     return res;
   }
   /** Erster Text im Erklärfeld nach der Suche */
-  demoIntro() {
+  demoIntro(turn = 1) {
     const f = this.found; if (!f || !this.dmBody) return; const G = GOALS[this.conf.demoGoal || 'balance'] || GOALS.balance;
-    clear(this.dmBody); this.dmBody.append(h('div', { class: 'dm-hint' }, `Ziel „${G.name}“: Aus ${f.sims} geprüften Varianten spielt die KI gleich die beste vor – ${boardText(f.board)}.`));
+    clear(this.dmBody); this.dmBody.append(h('div', { class: 'dm-hint' }, `${turn > 1 ? `Zug ${turn}: ` : ''}Ziel „${G.name}“: Aus ${f.sims} geprüften Varianten spielt die KI gleich die beste vor – ${boardText(f.board)}.`));
   }
   /** Neue Starthand: dasselbe Deck noch einmal anspielen */
   demoRestart() { const conf = { ...this.conf, seed: undefined }; this.destroy(); replace('duel', conf); }
