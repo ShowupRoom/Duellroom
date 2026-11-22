@@ -85,6 +85,17 @@ class Duel {
     const want = inBoard ? this.board : land ? this.colR : this.top;
     if (this.phaseEl.parentNode !== want) { if (want === this.colR) this.colR.insertBefore(this.phaseEl, this.actsEl); else if (want === this.top) this.top.insertBefore(this.phaseEl, this.top.children[1] || null); else want.append(this.phaseEl); }
   }
+  /** Querformat (Master-Duel-Ansicht): LP-Schilder nur so breit wie der freie Platz neben den äußeren Zonen (nach dem Drehen neu) */
+  fitPlates(W, SIDER, sp) {
+    try {
+      const R = this.root, rr = R.getBoundingClientRect(); const zs = [...this.boardWrap.querySelectorAll('.zn')].map((e) => e.getBoundingClientRect()).filter((r) => r.width); if (!zs.length) return;
+      const mid = (Math.min(...zs.map((r) => r.top)) + Math.max(...zs.map((r) => r.bottom))) / 2;
+      const myL = Math.min(...zs.filter((r) => r.top > mid).map((r) => r.left)) - rr.left; const opR = rr.right - Math.max(...zs.filter((r) => r.bottom < mid).map((r) => r.right));
+      const meW = myL - 8 - sp.l - 6, opW = opR - (SIDER + 10 + sp.r) - 6;
+      const st = R.style; st.setProperty('--plme', Math.round(Math.max(112, Math.min(230, meW))) + 'px'); st.setProperty('--plop', Math.round(Math.max(112, Math.min(230, opW))) + 'px');
+      R.classList.toggle('pl-tight', meW < 150 || opW < 150);
+    } catch (e) { /* nur Optik */ }
+  }
   fit() {
     const R = this.root; const W = R.clientWidth, H = R.clientHeight; if (!W || !H) return;
     const land = W / H >= 1.3; R.classList.toggle('land', land); const md = land && this.mdf; R.classList.toggle('mdf', md);
@@ -98,6 +109,7 @@ class Duel {
       const cw = Math.max(30, Math.min(cwH, cwW, 112)); const boardW = cw * (this.mode.cols3 ? 5 : 7) + 18 + 12;
       const st = R.style; st.setProperty('--cw', cw.toFixed(1) + 'px'); st.setProperty('--hpk', (cw * (md ? 0.8 : 1.0)).toFixed(1) + 'px'); st.setProperty('--opk', (cw * 0.34).toFixed(1) + 'px');
       const sidel = Math.max(MINL, W - sp.l - sp.r - boardW - SIDER - 16); st.setProperty('--sidel', sidel.toFixed(0) + 'px'); st.setProperty('--sider', SIDER + 'px'); st.setProperty('--sidew', sidel.toFixed(0) + 'px'); st.setProperty('--barh', '0px');
+      if (md) { this._pl = [W, SIDER, sp]; requestAnimationFrame(() => this.fitPlates(W, SIDER, sp)); setTimeout(() => this.fitPlates(W, SIDER, sp), 350); }
       if (this._land !== true) { this._land = true; this.sheet.classList.remove('open'); this._sheetSig = null; this.renderSheet(true); } return;
     }
     R.style.setProperty('--rh', '1.42');
@@ -297,6 +309,7 @@ class Duel {
           if (iconicOn() && iconicOf(m.code) && !this.ff && !(this.demo && this.demo.skipFrom != null && this.turnNo > this.demo.skipFrom)) { await playIconic(this.root, m.code, { fast: this.fxs && this.fxs() < 1, kind: k }); break; } // ikonische Karte: große Animation
           await this.banner({ title: k, sub: nameOf(m.code), code: m.code, cls: 'summon', ms: 850 }); break; }
         case MSG.SET: if (m.controller === this.viewer) this.akSet = true; this.addLog(`${this.pname(m.controller)} setzt eine Karte`); beep('tap'); break;
+        case MSG.CHAIN_SOLVING: this.solving = this.chain[(m.chain_size || this.chain.length) - 1] || null; break;
         case MSG.CHAINING: {
           this.chain.push({ code: m.code, p: m.controller }); recPlay(this, m.controller, m.code); recChain(this); const lbl = descText(m.description, m.code, m.triggering_location != null ? m.triggering_location : m.location); const BT = { 16: 'Battle Step', 32: 'Battle Step', 64: 'Damage Step', 128: 'Schadensberechnung' };
           this.addLog(`Kette ${this.chain.length}: «${nameOf(m.code)}»${lbl && lbl.length < 60 ? ' – ' + lbl : ''} (${this.pname(m.controller)})${BT[this.phase] ? ' · ' + BT[this.phase] : ''}`); this.renderTop(); beep('chain');
@@ -363,7 +376,8 @@ class Duel {
   visible(c) { return c && (c.controller === this.viewer || (c.position & FACEUP) > 0 || !!c.isPublic); }
   /** Ist eine in einer Auswahl genannte Karte für den Betrachter sichtbar? */
   selVisible(s) { if (s.controller === this.viewer) return true; const c = this.cardAt(s.controller, s.location, s.sequence); if (c) return (c.position & FACEUP) > 0; return s.position !== undefined ? (s.position & FACEUP) > 0 : false; }
-  render() { if (!this.snap) return; this.renderTop(); this.renderStrips(); this.renderBoard(); this.renderHand(); this.renderSheet(); this.renderFloat(); this.renderActs(); }
+  render() {
+    if (this._pl && this.root.classList.contains('mdf')) requestAnimationFrame(() => this._pl && this.fitPlates(...this._pl)); if (!this.snap) return; this.renderTop(); this.renderStrips(); this.renderBoard(); this.renderHand(); this.renderSheet(); this.renderFloat(); this.renderActs(); }
   renderTop() {
     const tp = this.turnPlayer;
     const mineT = tp === this.viewer; clear(this.turnEl); this.turnEl.className = 'd-turn' + (this.turnNo ? (mineT ? ' mine' : ' theirs') : '');

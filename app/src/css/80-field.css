@@ -85,3 +85,17 @@ html[data-field=arena] .duel.land.mdf .zn.chosen,html[data-field=arena] .duel.la
 /* Karten-Info offen: Begleiterin-Blase ausblenden (überlappte den Kartentext) */
 .duel.land.mdf:has(.d-sheet.show) .bdy{visibility:hidden}
 .duel.land.mdf .d-sheet{background:linear-gradient(180deg,#0a1430,#060b20)}
+/* LP-Schilder: so breit wie der freie Platz (von fitPlates() gemessen) – kein Überdecken der Deck-Stapel */
+.duel.land.mdf .d-strip.me{width:var(--plme,clamp(150px,22vw,230px))}
+.duel.land.mdf .d-strip.opp{width:var(--plop,clamp(150px,22vw,230px))}
+.duel.land.mdf.pl-tight .d-strip .lpn{font-size:clamp(18px,5.4vh,26px)}
+.duel.land.mdf.pl-tight .st-av{width:clamp(40px,11vh,54px)}
+/* Begleiterin im Querformat: Blase über dem Bild (Knöpfe frei), kompakt bei wenig Höhe */
+.duel.land.mdf .bdy-bub{margin:0 0 64px 6px}
+@media (orientation:landscape) and (max-height:520px){
+  .duel.land.mdf .bdy{width:min(250px,34vw)}
+  .duel.land.mdf .bdy-bub{padding:7px 10px;font-size:11.5px;line-height:1.35;max-height:calc(100vh - 190px);overflow:auto}
+  .duel.land.mdf .bdy-rows,.duel.land.mdf .bdy-live{display:none}
+  .duel.land.mdf .bdy-b{margin-top:6px}
+  .duel.land.mdf .bdy-b button{padding:6px 9px}
+}

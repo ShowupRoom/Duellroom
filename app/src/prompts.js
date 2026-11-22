@@ -5,6 +5,7 @@ import { OcgResponseType as R, OcgMessageType as MSG, SelectIdleCMDAction as IA,
 import { cardMatchesOpcode } from 'ocgcore-wasm';
 import { cardEl } from './cards.js';
 import { openModal } from './ui.js';
+import { store } from './store.js';
 import { effectView, excerptNode, fullNode, revealMark } from './effecttext.js';
 import { sys, descText, PHASE, RACE_BITS, ATTR_BITS, fill } from './strings.js';
 import { idleTip, battleTip, chainTip } from './tips.js';
@@ -193,7 +194,25 @@ function askChain(D, msg) {
     setTimeout(() => m.el.querySelectorAll('.fx-full').forEach(revealMark), 40);
   });
 }
+// „Toon World the Perfect World“: fragt vor JEDEM aufgelösten Effekt (auch den eigenen), ob ein Toon-Monster kurz verbannt wird.
+// Die Standardfrage „Effekt aktivieren?“ war missverständlich – hier eine klare Erklärung und eine Empfehlung.
+const PERFECT_WORLD = 7293697;
+function askPerfectWorld(D, msg) {
+  return new Promise((resolve) => {
+    const sv = D.solving; const who = sv ? sv.p : null; const mine = who === msg.player; const eff = sv ? cleanName(nameOf(sv.code)) : 'der Effekt';
+    const toons = ((D.snap && D.snap.players[msg.player].mzone) || []).filter((c) => c && c.code && (cardOf(c.code)?.type & 0x400000) && (c.position & 1 || c.position & 4)).map((c) => cleanName(nameOf(c.code)));
+    const fin = (y) => { m.close(); resolve({ type: R.SELECT_EFFECTYN, yes: y }); };
+    const rec = mine ? 'Empfehlung: Nein – das ist dein eigener Effekt, ausweichen bringt meist nichts.' : 'Sinnvoll, wenn dieser Effekt dein Toon-Monster zerstören, verbannen oder annullieren würde.';
+    const m = M(D, { title: 'Toon-Monster ausweichen lassen?', sticky: true, cls: 'peek', body: h('div', null,
+      h('p', { class: 'small', style: 'margin:2px 0 6px' }, `Gleich wird «${eff}» ${mine ? '(dein Effekt)' : '(Effekt des Gegners)'} aufgelöst. «Toon World the Perfect World» erlaubt dir, vorher 1 Toon-Monster${toons.length ? ' (' + toons.slice(0, 3).join(', ') + ')' : ''} kurz zu verbannen.`),
+      h('p', { class: 'small muted', style: 'margin:0 0 6px' }, 'Direkt danach kommt es zurück aufs Feld – du wählst dann die Zone neu. Jeden Monster-Namen kannst du dafür nur einmal pro Zug nutzen.'),
+      h('p', { class: 'small', style: 'margin:0;color:' + (mine ? 'var(--md-cyan,#43d3ff)' : 'var(--md-gold,#f3c969)') }, rec)),
+      footer: mine ? [h('button', { class: 'btn', onclick: () => fin(true) }, 'Ja, verbannen'), h('button', { class: 'btn pri', onclick: () => fin(false) }, 'Nein')] : [h('button', { class: 'btn', onclick: () => fin(false) }, 'Nein'), h('button', { class: 'btn pri', onclick: () => fin(true) }, 'Ja, ausweichen')] });
+  });
+}
 function askEffectYN(D, msg) {
+  if (msg.code === PERFECT_WORLD && BigInt(msg.description || 0) === BigInt(PERFECT_WORLD) * 1048576n + 1n && D.perfectWorldOwn !== 'ask' && D.solving && D.solving.p === msg.player && store.get('pw.auto', false)) return Promise.resolve({ type: R.SELECT_EFFECTYN, yes: false });
+  if (msg.code === PERFECT_WORLD && BigInt(msg.description || 0) === BigInt(PERFECT_WORLD) * 1048576n + 1n) return askPerfectWorld(D, msg);
   return new Promise((resolve) => {
     const name = cleanName(nameOf(msg.code)); const d = descText(msg.description, msg.code, msg.location);
     const text = d ? fill(d, name, name) : `Möchtest du den Effekt von «${name}» aktivieren?`;
