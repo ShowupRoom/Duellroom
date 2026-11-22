@@ -75,3 +75,6 @@ html[data-field=arena] .duel.land.mdf .zn.chosen,html[data-field=arena] .duel.la
 .duel.land.mdf.acts-open .actsb{box-shadow:0 0 0 2px rgba(4,10,30,.9),0 0 18px 4px rgba(127,227,255,.95)}
 .duel.land.mdf .d-r>.d-bar{width:calc(var(--sider) - 6px)}
 .duel.land.mdf .d-r .d-test{position:fixed;left:calc(70px + var(--safe-l));top:calc(8px + var(--safe-t));z-index:9}
+/* Profilbild auf der LP-Leiste nur im Master-Duel-Feld (sonst würde das Bild in voller Größe erscheinen) */
+.duel:not(.mdf) .st-av{display:none}
+.duel:not(.mdf) .ibtn.infob,.duel:not(.mdf) .ibtn.actsb{display:none}
