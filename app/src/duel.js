@@ -118,10 +118,10 @@ class Duel {
         const copts = this.copts = { flags: m.flags, decks: [mk(0), mk(1)], scripts: m.scripts, seed, lp: conf.lp, hand: m.hand, stack: conf.stack, field: conf.field };
         if (this.demo && conf.demoOpp !== 'ai' && conf.demoMs > 0) { // Kombo-Suche: erst die beste Variante für diese Starthand finden, dann vorspielen
           const found = await this.searchOverlay(copts); if (this.stopped) return;
-          if (found) { this.bots[0] = this.ai = new ReplayBot(found.rec, this.bots[0]); this.found = found; }
+          if (found) { this.bots[0] = this.ai = new ReplayBot(found.rec, this.bots[0]); this.found = found; this.bgBest = { 1: found.board.score }; this.bgTurn = 1; }
         }
         this.eng = new LocalEngine(); await this.eng.create(copts);
-        if (this.found) this.demoIntro();
+        if (this.found) { this.demoIntro(); this.demoBg(); }
         if (conf.mode === 'net-host') this.host = new HostLink(this.net, 1 - this.viewer);
       }
     } catch (e) { this.fatal(e); return; }
@@ -183,9 +183,15 @@ class Duel {
         if (this.stopped) return;
       } else {
         this.render(); if (this.ai && !this.aiBusy) { this.aiBusy = true; this.renderFF(); }
-        if (this.demo && p === 0 && this.ai instanceof ReplayBot && this.turnPlayer === 0 && this.turnNo >= 3 && this.demo.searched !== this.turnNo && this.conf.demoMs > 0) { // jeder eigene Zug: neu suchen, wie weit die Hand (und das Feld) reicht
-          this.demo.searched = this.turnNo; const found = await this.searchOverlay({ ...this.copts, base: this.ai.hist.slice(), endTurn: this.turnNo + 1 }, this.turnNo); if (this.stopped) return;
-          if (found) { this.ai.extend(found.rec); this.found = found; this.demoIntro(this.turnNo); }
+        if (this.demo && p === 0 && this.ai instanceof ReplayBot && this.turnPlayer === 0 && this.turnNo >= 3 && this.demo.searched !== this.turnNo && this.conf.demoMs > 0) { // jeder eigene Zug: Plan aus der Hintergrund-Suche, nur notfalls Ladebildschirm
+          this.demo.searched = this.turnNo; const T = this.turnNo;
+          if (this.bgBest && this.bgBest[T] == null && this.bgCur && this.bgCur.T === T) { this.bgNote(`🔎 Zug ${T} wird noch zu Ende berechnet …`); await this.bgCur.p; if (this.stopped) return; }
+          if (this.bgBest && this.bgBest[T] != null) { if (this.bgFound && this.bgFound[T]) this.found = this.bgFound[T]; this.demoIntro(T); }
+          else {
+            const found = await this.searchOverlay({ ...this.copts, base: this.ai.hist.slice(), endTurn: T + 1 }, T); if (this.stopped) return;
+            if (found) { this.ai.extend(found.rec); this.found = found; if (this.bgBest) this.bgBest[T] = found.board.score; this.demoIntro(T); }
+          }
+          if (!this.bgRun) this.demoBg();
         }
         resp = this.botResponse(msg, st.evs, r.retry);
         if (this.demo) await this.demoStep(msg, resp, p); else if (this.ai && this.anim) await this.nap(this.botPause(msg));
@@ -215,7 +221,7 @@ class Duel {
     console.error(e); this.stopped = true; if (this.net) this.net.send({ t: 'leave' });
     openModal({ host: this.root, title: 'Hoppla – ein Fehler', center: true, body: h('div', null, h('p', null, 'Das Duell konnte nicht weiterlaufen. Das tut mir leid! Du kannst ein neues Duell starten.'), h('pre', { class: 'small muted', style: 'white-space:pre-wrap;max-height:30vh;overflow:auto' }, String(e && e.message || e))), footer: h('button', { class: 'btn pri', onclick: () => { this.destroy(); if (this.net) netMenu(); else navRoot('home'); } }, 'Zum Menü') });
   }
-  destroy() { this.tutorStop(); this.stopped = true; if (this.csEl) { stopSearch(); this.csEl.remove(); this.csEl = null; } this.ff = true; for (const f of [...this.naps]) f(); setGuard(null); try { this.ro.disconnect(); } catch (e) { /* */ } try { if (this.eng && this.eng.destroy) this.eng.destroy(); if (this.eng && this.eng.abort) this.eng.abort(); if (this.host) this.host.abort(); } catch (e) { /* */ } this.eng = null; if (this.offNet) this.offNet(); if (this.net) { this.net.wantAwake = false; keepAwake(false); } if (this.pending) { this.pending.resolve(null); this.pending = null; } }
+  destroy() { this.tutorStop(); if (this.bgCtl && this.bgCtl.stop) { try { this.bgCtl.stop(); } catch (e) { /* */ } } this.stopped = true; if (this.csEl) { stopSearch(); this.csEl.remove(); this.csEl = null; } this.ff = true; for (const f of [...this.naps]) f(); setGuard(null); try { this.ro.disconnect(); } catch (e) { /* */ } try { if (this.eng && this.eng.destroy) this.eng.destroy(); if (this.eng && this.eng.abort) this.eng.abort(); if (this.host) this.host.abort(); } catch (e) { /* */ } this.eng = null; if (this.offNet) this.offNet(); if (this.net) { this.net.wantAwake = false; keepAwake(false); } if (this.pending) { this.pending.resolve(null); this.pending = null; } }
 
   // ---------------------------------------------------------------- Übergabe & Einführung
   handover(p) {
@@ -664,6 +670,37 @@ class Duel {
     if (!res) toast('Die Suche hat nichts gefunden – die KI spielt nach Spielwert.', 3500);
     return res;
   }
+  /** Kombo-Ansicht: Suche läuft ununterbrochen im Hintergrund weiter – im eigenen Zug wird die Fortsetzung ab dem bisher Gespielten verbessert,
+   *  im Zug des Gegners (und gegen Ende des eigenen Zugs) wird schon der nächste eigene Zug vorbereitet. Bessere Folgen übernimmt die KI sofort. */
+  async demoBg() {
+    if (this.bgRun || !this.found || !(this.ai instanceof ReplayBot)) return; this.bgRun = true;
+    const goal = this.conf.demoGoal || 'balance'; const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2; const helpers = Math.max(1, Math.min(3, cores - 2));
+    const J = (x) => JSON.stringify(x, (k, v) => (typeof v === 'bigint' ? String(v) : v));
+    while (!this.stopped && !this.ended) {
+      const bot = this.ai; if (!(bot instanceof ReplayBot)) break;
+      // Ziel: der laufende eigene Zug, sonst der nächste. Ist der laufende Zug fast vorbei (Plan zu Ende gespielt), schon den nächsten.
+      const tn = this.turnNo || 1; const mine = this.turnPlayer === 0 || !this.turnNo; const doneNow = bot.i >= bot.rec.length; const next = mine ? tn + 2 : tn + 1;
+      // abwechselnd: laufenden Zug verbessern ↔ nächsten eigenen Zug vorbereiten (der zuerst, solange er noch fehlt)
+      this.bgPh = (this.bgPh || 0) + 1; const needNext = this.bgBest[next] == null;
+      const T = mine && !doneNow && !(needNext && this.bgPh % 2 === 0) ? tn : next;
+      const src = T === tn || bot.hist.length >= bot.rec.length ? bot.hist : bot.rec; const base = src.map((e) => ({ t: e.t, r: e.r }));
+      if (T > tn && !needNext && this.bgPh % 3 !== 0) { await sleep(400); if (!mine || doneNow) await sleep(1200); continue; } // nächster Zug liegt schon vor – ab und zu trotzdem nachbessern
+      const ctl = {}; this.bgCtl = ctl; let res = null; let done; this.bgCur = { T, p: new Promise((r) => { done = r; }) };
+      try { res = await searchCombo({ ...this.copts, goal, base, endTurn: T + 1 }, { ms: T === tn ? 6000 : 9000, helpers, persist: true, useMain: false, ctl }); } catch (e) { res = null; }
+      this.bgCtl = null; if (this.stopped || this.ended) { done(); break; } if (!res || !res.rec) { done(); this.bgCur = null; await sleep(800); continue; }
+      // passt die gefundene Folge noch zu dem, was inzwischen wirklich gespielt wurde?
+      const played = bot.hist; let ok = res.rec.length >= played.length; for (let k = 0; ok && k < played.length; k++) if (res.rec[k].t !== played[k].t || J(res.rec[k].r) !== J(played[k].r)) ok = false;
+      const sc = res.board.score; const prev = this.bgBest[T];
+      if (ok && (prev == null || sc > prev + 0.5)) {
+        if (T === tn) for (const k of Object.keys(this.bgBest)) if (+k > tn) delete this.bgBest[k]; // neuer Plan für diesen Zug → nächster Zug muss neu vorbereitet werden
+        this.bgBest[T] = sc; (this.bgFound = this.bgFound || {})[T] = res; bot.extend(res.rec); if (T === tn || !this.turnNo) this.found = res;
+        if (prev != null && T === tn) toast(`🔎 Bessere Fortsetzung gefunden (Wertung ${Math.round(prev)} → ${Math.round(sc)}) – die KI spielt sie ab jetzt.`, 3000);
+      }
+      done(); this.bgCur = null;
+    }
+    this.bgRun = false;
+  }
+  bgNote(t) { if (!this.dmBody) return; clear(this.dmBody); this.dmBody.append(h('div', { class: 'dm-hint' }, t)); }
   /** Erster Text im Erklärfeld nach der Suche */
   demoIntro(turn = 1) {
     const f = this.found; if (!f || !this.dmBody) return; const G = GOALS[this.conf.demoGoal || 'balance'] || GOALS.balance;
