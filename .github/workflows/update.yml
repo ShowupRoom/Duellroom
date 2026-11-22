@@ -44,6 +44,10 @@ jobs:
         env:
           SRC: ${{ runner.temp }}/src
         run: node test/interrupts.mjs
+      - name: Tutor-Suche mitten im Duell (Nachspielen der Antworten)
+        env:
+          SRC: ${{ runner.temp }}/src
+        run: node test/tutor-replay.mjs
       - name: Geänderte Listen im Repository sichern
         run: |
           git config user.name "duellraum-bot"

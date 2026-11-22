@@ -138,6 +138,8 @@ screens.settings = () => {
       choice('Animationen', 'Banner, Ketten- und Beschwörungsanzeigen. „Schnell“ zeigt sie kürzer, „Aus“ gar nicht.', [['normal', 'Normal'], ['fast', 'Schnell'], ['off', 'Aus']], () => (store.get('anim', true) ? store.get('tempo', 'fast') : 'off'), (v) => { store.set('anim', v !== 'off'); if (v !== 'off') store.set('tempo', v); }),
       choice('Stärke der KI', 'Voreinstellung für „Gegen die KI“ (im Duell-Einrichten änderbar).', lvOpts, () => store.get('cfg.level', 'normal'), (v) => store.set('cfg.level', v)),
       toggle('Tutor-Tipps im Duell', 'Zeigt einen Lampen-Knopf mit Zugvorschlägen.', () => settings.tutor, (v) => { settings.tutor = v; }),
+      toggle('Tutor sucht im Hintergrund', 'Wie in der Kombo-Ansicht: Während du am Zug bist, sucht der Tutor ab deiner Hand den besten Zug und verbessert den Vorschlag laufend. Aus = nur einfache Regel-Tipps.', () => store.get('tutor.bg', true), (v) => store.set('tutor.bg', v)),
+      choice('Suchdauer pro Zug', 'Wie lange der Tutor nach einem besseren Plan sucht (er zeigt schon vorher Zwischenergebnisse).', [[8000, '8 s'], [15000, '15 s'], [30000, '30 s']], () => store.get('tutor.ms', 15000), (v) => store.set('tutor.ms', v)),
       choice('Startlebenspunkte', 'Gilt für alle Formate außer Speed Duell (dort immer 4000).', [[4000, '4000'], [8000, '8000'], [16000, '16000']], () => settings.lp, (v) => { settings.lp = v; }),
       choice('Karten auf dem Feld', 'Ganze Karte wie in den Fenstern oder nur das Kunstbild mit farbigem Rahmen.', [['full', 'Ganze Karte'], ['art', 'Nur Kunst']], () => (fieldCfg.full ? 'full' : 'art'), (v) => setFieldFull(v === 'full')));
     else if (P === 'look') out.push(
@@ -147,7 +149,7 @@ screens.settings = () => {
       picker('Hülle des Gegners', 'Rückseite der gegnerischen Karten. „Zufällig“ würfelt bei jedem Duell neu.', [{ id: 'same', name: 'Wie meine' }, { id: 'random', name: 'Zufällig' }, ...SLEEVES], () => look.sleeveOp, (v) => { look.sleeveOp = v; }));
     else if (P === 'combo') { const C = demoCfg(); const sv = (k, v) => { const c = demoCfg(); c[k] = v; store.set('cfg.demo', c); };
       out.push(choice('Gegner', 'Ob der Gegner still steht oder mitspielt und antwortet.', [['passive', 'Steht still'], ['ai', 'Spielt mit (KI)']], () => demoCfg().opp, (v) => sv('opp', v)),
-        choice('Ziel der Suche', 'Wonach die Kombo-Suche das beste Endboard auswählt.', [['balance', 'Ausgewogen'], ['power', 'Stärkste Monster'], ['inter', 'Meiste Unterbrechungen']], () => demoCfg().goal, (v) => sv('goal', v)),
+        choice('Ziel der Suche', 'Wonach die Kombo-Suche – und der Tutor im Duell – das beste Endboard auswählt.', [['balance', 'Ausgewogen'], ['power', 'Stärkste Monster'], ['inter', 'Meiste Unterbrechungen']], () => demoCfg().goal, (v) => sv('goal', v)),
         choice('Suchdauer pro Starthand', 'Je länger die Suche, desto besser die gefundene Kombo (Deckanalyse, Handtraps, Fallen, mehrfach nutzbare Karten).', [[0, 'Aus'], [8000, 'Kurz · 8 s'], [15000, 'Normal · 15 s'], [30000, 'Gründlich · 30 s']], () => demoCfg().ms, (v) => sv('ms', v)),
         h('div', { class: 'sx-hint' }, 'Die Kombo-Ansicht startest du unter Duell → Banlist wählen → Kombo-Ansicht. Die KI-Geschwindigkeit der Vorführung stellst du unter „Duell“ ein.')); void C; }
     else if (P === 'sound') out.push(toggle('Töne', 'Kleine Effekte bei Aktionen.', () => sound.on, (v) => { sound.on = v; store.set('sound', v); }));

@@ -1,5 +1,7 @@
 // Der Tutor im Duell: schlägt auf Grundlage der Deck-Analyse sinnvolle Aktionen vor
 import { cardOf, nameOf, descOf } from './data.js';
+import { h } from './util.js';
+import { boardText } from './demo.js';
 import { roleOf } from '../../src/tutor.mjs';
 import { blockAdvice, summonAdvice } from '../../src/block.mjs';
 
@@ -61,4 +63,25 @@ export function chainTip(D, msg) {
 }
 export function introText(deck) {
   const t = deck.tutor || {}; return { title: `Dein Ziel mit „${deck.name}“`, goal: t.goal, plan: t.plan || [] };
+}
+
+// ---- Tutor mit Hintergrund-Suche: dieselbe Suche und Bewertung wie in der Kombo-Ansicht, ab der aktuellen Spielsituation ----------------------
+const STEP = { summon: 'Normalbeschwörung von', special: 'Spezialbeschwörung von', set: 'Setze', spellset: 'Setze', activate: 'Aktiviere', pos: 'Positionswechsel von' };
+/** p = Zwischenstand/Ergebnis der Suche: { plan, planBoard|board, sims, score, base, final } */
+export function searchTip(D, msg, p, goalName) {
+  const plan = p.plan || []; if (!plan.length) return null;
+  const f = plan[0]; const steps = plan.filter((x) => x.code).slice(0, 8); const board = p.planBoard || p.board;
+  const keys = f.code ? [`${f.ctrl}:${f.loc}:${f.seq}`] : [];
+  const eff = f.kind === 'activate' ? first(descOf(cardOf(f.code))) : '';
+  const head = f.kind === 'ep' ? 'Nach der Suche gibt es nichts Sinnvolles mehr zu spielen – beende deinen Zug (setze vorher, was noch liegt).'
+    : f.kind === 'bp' ? 'Hier ist in der Hauptphase nichts Sinnvolles mehr zu tun – gehe in die Kampfphase.'
+      : `${STEP[f.kind]} «${nameOf(f.code)}». ${eff}`;
+  const info = { sims: p.sims || 0, score: Math.round(p.planScore ?? p.score ?? 0), base: Math.round(p.base || 0), live: !p.final, goal: goalName };
+  const node = () => h('div', { class: 'tut-s' },
+    h('p', { class: 'tut-g' }, head),
+    steps.length > 1 ? h('div', null, h('div', { class: 'small muted' }, 'Danach (Plan der Suche):'), h('ol', { class: 'tut-p' }, steps.slice(1).map((x) => h('li', null, `${STEP[x.kind]} «${nameOf(x.code)}»`)))) : null,
+    board ? h('p', { class: 'small' }, h('b', null, 'Endboard: '), boardText(board)) : null,
+    h('p', { class: 'small muted' }, info.live ? `⏳ Die Suche läuft im Hintergrund weiter – ${info.sims} Varianten geprüft, der Vorschlag wird laufend besser.` : `✓ ${info.sims} Varianten geprüft · Wertung ${info.score} (Standard-KI: ${info.base}).`),
+    h('p', { class: 'small muted' }, `Ziel „${info.goal}“ wie in der Kombo-Ansicht. Annahme: Der Gegner antwortet in deinem Zug auf nichts – unterbricht er dich, passt der Tutor den Plan neu an.`));
+  return { keys, text: head, bp: f.kind === 'bp', ep: f.kind === 'ep', search: info, node, plan, board };
 }

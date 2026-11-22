@@ -125,3 +125,6 @@ html[data-fx="scan"] .duel::after{background:linear-gradient(180deg,transparent 
 .pk-t.on{border-color:#fff;background:rgba(255,255,255,.14);box-shadow:0 0 0 1px #fff inset}
 .pk-sl{width:46px;height:67px;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.5)}.pk-ph{display:grid;place-items:center;font-size:22px;background:rgba(255,255,255,.06);border:1px dashed var(--line2)}
 .pk-fd{position:relative;width:100%;height:54px;border-radius:3px;overflow:hidden;display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:9px 10px;border:1px solid var(--line)}.pk-fd i{border:1px solid var(--zl);border-radius:2px;background:rgba(0,0,0,.22)}
+
+/* Tutor mit Hintergrund-Suche */
+.tut-s .tut-g{font-size:15px;line-height:1.5}.tut-s .tut-p{margin:2px 0 8px}.tut-s .small{margin:6px 0}

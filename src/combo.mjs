@@ -25,7 +25,7 @@ export function scoreBoard(snap, cards, G, p = 0) {
       mon.push([c.code, a]); mons++; atk += a; inter += v; if (v >= 20) { ints++; ist.push([c.code, v]); }
       score += dead ? 4 : (a < 800 && v < 20 ? G.mon * 0.5 : G.mon) + Math.min(a, 4500) / 100 * G.atk; // Handfallen auf dem Feld sind verschenkt; Mini-Monster zählen halb
     }
-    else { score += 8; mon.push([0, 0]); }
+    else { score += c.code && isHandOnly(c.code, cards) ? 1 : 8; mon.push([0, 0]); } // verdeckte Handtrap (z. B. Geistermädchen) ist auf dem Feld verschenkt
   }
   for (const c of P.szone) {
     if (!c) continue; const v = interruptPts(c.code, cards); inter += v; if (v >= 20) { ints++; ist.push([c.code, v]); }
@@ -69,20 +69,21 @@ const BRANCH = new Set([MSG.SELECT_IDLECMD, MSG.SELECT_CARD, MSG.SELECT_CHAIN, M
 
 /** prefix = bisher gewählte Antworten (werden unverändert gespielt); an Stelle prefix.length wird `force` gespielt bzw. – mit `avoid` – etwas anderes als avoid.r.
  *  level.exhaust: in der Hauptphase nicht aufhören, solange noch etwas Nützliches spielbar ist */
-export async function runOnce(lib, opts, cards, { prefix = [], force = null, avoid = null, level = {}, rnd, endTurn = 2, from = 0 }) {
+export async function runOnce(lib, opts, cards, { prefix = [], force = null, avoid = null, level = {}, rnd, endTurn = 2, from = 0, me = 0, replay = null }) {
   const g = await Game.create(lib, opts);
   const ai = new DuelAI(cards, 'stark', rnd); ai.L = { ...ai.L, chainP: 1, trigP: 1, own: 0.05, reuse: 1, ...level };
-  const pas = passiveRng(); const rec = []; const used = new Map(); let steps = 0, i = 0, ok = false, hand = null, top = null, won = false, snapEnd = null, turnSeen = 0;
+  const pas = passiveRng(); const rec = []; const used = new Map(); let steps = 0, i = 0, ok = false, hand = null, top = null, won = false, snapEnd = null, turnSeen = 0, rp = 0;
   try {
     while (steps++ < 6000) {
       const r = await g.next();
-      if (r.kind === 'end') { if (r.winner === 0) { ok = won = true; snapEnd = g.snapshot(); } break; } // Sieg im Suchzug (z. B. direkter Angriff auf den stillstehenden Gegner)
+      if (r.kind === 'end') { if (r.winner === me && !(replay && rp < replay.length)) { ok = won = true; snapEnd = g.snapshot(); } break; } // Sieg im Suchzug (z. B. direkter Angriff auf den stillstehenden Gegner)
       const m = r.msg; const evs = g.events.splice(0);
+      if (replay && rp < replay.length) { g.respond(replay[rp++]); continue; } // laufendes Duell nachspielen (beide Spieler): bis zur aktuellen Entscheidung
       if (g.turn >= endTurn) { ok = true; break; }
       if (g.turn !== turnSeen) { turnSeen = g.turn; used.clear(); }
       let resp;
-      if (m.player === 0) {
-        const snap0 = g.snapshot(); if (i === from) { hand = snap0.players[0].hand.filter(Boolean).map((c) => c.code); top = g.deckTop(0, 8); }
+      if (m.player === me) {
+        const snap0 = g.snapshot(); if (i === from) { hand = snap0.players[me].hand.filter(Boolean).map((c) => c.code); top = g.deckTop(me, 8); }
         resp = ai.respond(m, { snap: snap0, evs, retry: r.retry });
         if (level.exhaust && m.type === MSG.SELECT_IDLECMD && !r.retry && resp.action !== undefined && (resp.action === IA.TO_EP || resp.action === IA.TO_BP)) { const x = exhaustPick(m, used, cards, rnd); if (x) resp = x; }
         // „Erst alle Effekte, dann das Material verbrauchen“: statt sofort aus dem Extradeck zu beschwören, erst noch offene Aktivierungen spielen (Kitt-/Fraktall-Effekte brauchen ihr Monster noch auf dem Feld)
@@ -102,6 +103,20 @@ export async function runOnce(lib, opts, cards, { prefix = [], force = null, avo
     }
     return { ok, rec, hand, top, won, snap: ok ? (snapEnd || g.snapshot()) : null };
   } finally { try { lib.destroyDuel(g.handle); } catch (e) { /* schon weg */ } }
+}
+
+/** Eine Hauptphasen-Antwort als lesbarer Schritt (für den Tutor): Art, Karte, Ort – so lässt sich die Karte im Duell hervorheben */
+export function idleStep(m, r) {
+  if (r.action === IA.TO_EP) return { kind: 'ep', action: r.action, index: null };
+  if (r.action === IA.TO_BP) return { kind: 'bp', action: r.action, index: null };
+  const L = { [IA.SELECT_SUMMON]: ['summon', m.summons], [IA.SELECT_SPECIAL_SUMMON]: ['special', m.special_summons], [IA.SELECT_ACTIVATE]: ['activate', m.activates], [IA.SELECT_MONSTER_SET]: ['set', m.monster_sets], [IA.SELECT_SPELL_SET]: ['spellset', m.spell_sets], [IA.SELECT_POS_CHANGE]: ['pos', m.pos_changes] }[r.action];
+  const c = L && (L[1] || [])[r.index]; if (!c) return null;
+  return { kind: L[0], code: c.code, ctrl: c.controller, loc: c.location, seq: c.sequence, action: r.action, index: r.index };
+}
+/** Die Hauptphasen-Schritte einer Antwortfolge (höchstens n, bis Kampfphase/Zugende) */
+export function planOf(rec, from = 0, n = 8) {
+  const out = []; for (let j = from; j < rec.length && out.length < n; j++) { const x = rec[j]; if (!x.m || x.t !== MSG.SELECT_IDLECMD) continue; const st = idleStep(x.m, x.r); if (!st) continue; out.push(st); if (st.kind === 'ep' || st.kind === 'bp') break; }
+  return out;
 }
 
 /** Alle erlaubten Antworten auf eine Hauptphasen-Abfrage */
@@ -135,7 +150,7 @@ export function branchCands(m, rnd) {
 /** Sucht für die durch `opts` (Spielaufbau inkl. Startwert) festgelegte Starthand die beste Antwortfolge des Zuges ab `base`.
  *  cfg: { cards, goal, deadline | budgetMs, onProgress(info), stop(), base, endTurn, rseed, worker } → { rec, board, sims, ms, base, hand } */
 export async function comboSearch(lib, opts, cfg) {
-  const { cards, goal = 'balance', deadline = 0, onProgress = () => {}, stop = () => false, rseed = 20260101, worker = 0, base: B = [], endTurn = 2 } = cfg; const from = B.length; const budgetMs = deadline ? Math.max(500, deadline - Date.now()) : (cfg.budgetMs || 15000); const G = GOALS[goal] || GOALS.balance;
+  const { cards, goal = 'balance', deadline = 0, onProgress = () => {}, stop = () => false, rseed = 20260101, worker = 0, base: B = [], endTurn = 2, me = 0, replay = null } = cfg; const from = B.length; const budgetMs = deadline ? Math.max(500, deadline - Date.now()) : (cfg.budgetMs || 15000); const G = GOALS[goal] || GOALS.balance;
   const rnd = mulberry(rseed); let hand = null, top = null; const t0 = Date.now(); let best = null, base = null, sims = 0, fails = 0;
   const left = (f = 1) => !stop() && Date.now() - t0 < budgetMs * f;
   const champs = new Map(); const sigOf = (rec) => { const j = rec.findIndex((x, n) => n >= from && x.m && x.t === MSG.SELECT_IDLECMD); return j < 0 ? '' : key(rec[j].r); };
@@ -143,16 +158,16 @@ export async function comboSearch(lib, opts, cfg) {
   /** Ergebnis bewerten; true, wenn es das bisher beste übertrifft */
   const take = (res) => {
     sims++; if (!res.ok) { fails++; return false; }
-    res.board = scoreBoard(res.snap, cards, G, 0); if (res.won) res.board.score += 500; if (!base) base = res.board; if (!hand) { hand = res.hand; top = res.top; }
+    res.board = scoreBoard(res.snap, cards, G, me); if (res.won) res.board.score += 500; if (!base) base = res.board; if (!hand) { hand = res.hand; top = res.top; }
     const sg = sigOf(res.rec), ch = champs.get(sg); if (!ch || res.board.score > ch.board.score) champs.set(sg, res); // je Eröffnung (erste Hauptphasen-Aktion) die beste Variante merken
     if (!best || res.board.score > best.board.score || (res.board.score === best.board.score && res.rec.length < best.rec.length)) { const better = !best || res.board.score > best.board.score; best = res; return better; }
     return false;
   };
-  const tick = async (improved) => { onProgress({ worker, hand, top, sims, ms: Date.now() - t0, score: best ? best.board.score : 0, board: best ? best.board : null, base: base ? base.score : 0, improved }); await new Promise((r) => setTimeout(r, 0)); };
+  const tick = async (improved) => { onProgress({ worker, hand, top, sims, ms: Date.now() - t0, score: best ? best.board.score : 0, board: best ? best.board : null, base: base ? base.score : 0, improved, plan: improved && best ? planOf(best.rec, from) : undefined }); await new Promise((r) => setTimeout(r, 0)); };
   // Spielstärke der KI in den Läufen: wenig bis viel Zufall; „exhaust“ = nichts liegen lassen
   const LV = [{ noise: 2, exhaust: 1 }, { noise: 2, fx: 0.7, exhaust: 1 }, { noise: 6, exhaust: 1, fx: 0.6 }, { noise: 14, exhaust: 1, fx: 0.85 }, { noise: 30, slip: 0.03, exhaust: 1, fx: 0.5 }, { noise: 50, slip: 0.06 }, { noise: 80, slip: 0.1, exhaust: 1, fx: 0.9 }];
   const lvl = (k) => LV[(k + worker) % LV.length];
-  const run = async (o) => { const res = await runOnce(lib, opts, cards, { rnd, endTurn, from, ...o, prefix: o.prefix || B }); const imp = take(res); await tick(imp); return res; };
+  const run = async (o) => { const res = await runOnce(lib, opts, cards, { rnd, endTurn, from, me, replay, ...o, prefix: o.prefix || B }); const imp = take(res); await tick(imp); return res; };
   // 1) Grundläufe der KI mit unterschiedlich viel Zufall (Zugfolge davor, falls vorhanden, wird unverändert vorgespielt)
   for (let k = 0; k < 4 && left(); k++) await run({ level: lvl(k) });
   // 2) Vorausschau: an jeder Entscheidung alle Möglichkeiten durchspielen (die KI spielt danach weiter) und die beste festhalten –
@@ -195,5 +210,5 @@ export async function comboSearch(lib, opts, cfg) {
     await run({ prefix: rec.slice(0, k), avoid: rec[k], level: rnd() < 0.7 ? lvl(Math.floor(rnd() * 5)) : LV[0] });
     if (rnd() < 0.06) await run({ level: LV[2 + Math.floor(rnd() * 5)] }); // Neustart gegen Sackgassen
   }
-  return best ? { rec: best.rec.map((x) => ({ t: x.t, r: x.r })), board: best.board, hand, top, sims, ms: Date.now() - t0, base: base ? base.score : 0, fails } : null;
+  return best ? { rec: best.rec.map((x) => ({ t: x.t, r: x.r })), plan: planOf(best.rec, from), board: best.board, hand, top, sims, ms: Date.now() - t0, base: base ? base.score : 0, fails } : null;
 }

@@ -64,7 +64,7 @@ function askIdle(D, msg) {
   msg.activates.forEach((c, i) => { const d = descText(c.description, c.code, c.location); register(D, c, 'activate', 'Aktivieren' + (d && c.description > 0n && d.trim() !== 'Aktivieren' ? ': ' + d.replace(/\s+/g, ' ').slice(0, 90) : ''), r(IA.SELECT_ACTIVATE, i), true); });
   numberDupes(D);
   const n = D.actList.length;
-  D.setTip(D.conf.tutor ? idleTip(D, msg) : null); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
+  D.setTip(D.conf.tutor ? idleTip(D, msg) : null); if (D.conf.tutor) { D.tipBtn.classList.add('pulse'); D.tutorBegin(msg); } // sofort eine Regel-Schätzung, die Suche ersetzt sie in Sekunden
   // Kampfphase, sobald der Kern sie erlaubt (nicht im ersten Zug). Ohne Monster in Angriffsposition weist das Phasen-Menü darauf hin, sperrt aber nichts.
   const pl = D.snap && D.snap.players[msg.player]; const canHit = !pl || pl.mzone.some((c) => c && (c.position & POS.FACEUP_ATTACK));
   D.bpCore = !!msg.to_bp; D.bpNoHit = !canHit;

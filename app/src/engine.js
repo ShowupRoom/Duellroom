@@ -19,25 +19,34 @@ export const prewarm = () => (warm = warm || call('init', { v: VERSION }).catch(
 /** Kombo-Suche für eine Starthand. args = Duell-Aufbau (wie bei create) + goal; opt = { ms, helpers, onProgress(info) } → { rec, board, … } oder null.
  *  Mehrere Worker suchen unabhängig voneinander (verschiedene Zufallsfolgen), das beste Ergebnis gewinnt. */
 let searching = null;
-export async function searchCombo(args, { ms = 15000, helpers = 0, onProgress = () => {} } = {}) {
+/** Dauerhafte Hilfs-Worker (z. B. für den Tutor): bleiben zwischen den Suchen am Leben, damit sie nicht jedes Mal neu laden müssen */
+const HELP = [];
+export function warmHelpers(n) {
+  while (HELP.length < n) { try { const x = mkWorker(); HELP.push({ ...x, ready: x.call('init', { v: VERSION }).catch(() => null) }); } catch (e) { break; } }
+  return Promise.all(HELP.slice(0, n).map((x) => x.ready));
+}
+export async function searchCombo(args, { ms = 15000, helpers = 0, onProgress = () => {}, persist = false, useMain = true, ctl = null } = {}) {
   await prewarm();
-  const deadline = Date.now() + ms; const pool = [{ call: (op, a, p) => M().call(op, a, p), tmp: null }];
-  for (let k = 0; k < helpers; k++) { try { const x = mkWorker(); pool.push({ call: x.call, tmp: x.w }); } catch (e) { /* kein weiterer Worker */ } }
-  const last = pool.map(() => null); let stopped = false;
+  const deadline = Date.now() + ms; const pool = useMain ? [{ call: (op, a, p) => M().call(op, a, p), tmp: null, w: M().w }] : [];
+  if (persist) { await warmHelpers(helpers); for (const x of HELP.slice(0, helpers)) pool.push({ call: x.call, tmp: null, w: x.w, ready: x.ready }); }
+  else for (let k = 0; k < helpers; k++) { try { const x = mkWorker(); pool.push({ call: x.call, tmp: x.w, w: x.w }); } catch (e) { /* kein weiterer Worker */ } }
+  if (!pool.length) pool.push({ call: (op, a, p) => M().call(op, a, p), tmp: null, w: M().w });
+  const last = pool.map(() => null); let stopped = false; let bestPlan = null, bestScore = -Infinity, bestBoard = null;
   const merge = () => {
     const f = last.filter(Boolean); if (!f.length) return;
     const top = f.reduce((a, b) => (b.score > a.score ? b : a));
-    onProgress({ sims: f.reduce((n, x) => n + x.sims, 0), ms: Math.max(...f.map((x) => x.ms)), score: top.score, board: top.board, base: f[0].base, hand: (f.find((x) => x.hand) || {}).hand, top: (f.find((x) => x.top) || {}).top, left: Math.max(0, deadline - Date.now()), total: ms, workers: f.length });
+    onProgress({ sims: f.reduce((n, x) => n + x.sims, 0), ms: Math.max(...f.map((x) => x.ms)), score: top.score, board: top.board, base: f[0].base, hand: (f.find((x) => x.hand) || {}).hand, top: (f.find((x) => x.top) || {}).top, left: Math.max(0, deadline - Date.now()), total: ms, workers: f.length, plan: bestPlan, planScore: bestScore, planBoard: bestBoard });
   };
-  searching = { stop: () => { stopped = true; for (const x of pool) { if (x.tmp) x.tmp.postMessage({ op: 'cancel' }); } M().w.postMessage({ op: 'cancel' }); } };
+  const mine = { stop: () => { stopped = true; for (const x of pool) x.w.postMessage({ op: 'cancel' }); } };
+  searching = mine; if (ctl) ctl.stop = mine.stop;
   const jobs = pool.map((x, k) => (async () => {
-    if (x.tmp) await x.call('init', { v: VERSION });
+    if (x.tmp) await x.call('init', { v: VERSION }); else if (x.ready) await x.ready;
     if (stopped) return null;
-    return x.call('search', { ...args, v: VERSION, deadline, rseed: 20260101 + k * 7919, worker: k }, (info) => { last[k] = info; merge(); });
+    return x.call('search', { ...args, v: VERSION, deadline, rseed: 20260101 + k * 7919 + (args.rseedAdd || 0), worker: k }, (info) => { last[k] = info; if (info.plan && info.score > bestScore) { bestPlan = info.plan; bestScore = info.score; bestBoard = info.board; } merge(); });
   })());
   const out = await Promise.allSettled(jobs);
   for (const x of pool) if (x.tmp) x.tmp.terminate();
-  searching = null;
+  if (searching === mine) searching = null;
   const ok = out.filter((r) => r.status === 'fulfilled' && r.value).map((r) => r.value);
   if (!ok.length) { const bad = out.find((r) => r.status === 'rejected'); if (bad && !stopped) throw bad.reason; return null; }
   const best = ok.reduce((a, b) => (b.board.score > a.board.score ? b : a));

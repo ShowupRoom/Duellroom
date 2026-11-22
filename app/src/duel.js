@@ -11,11 +11,11 @@ import { effectView, mergeViews, markNode, revealMark } from './effecttext.js';
 import { screens, back, replace, root as navRoot, setGuard } from './nav.js';
 import { store } from './store.js';
 import { sys, descText, PHASE, PHASE_HELP, victoryText, typeText, levelText, attrName, statsText } from './strings.js';
-import { idleTip, battleTip, introText } from './tips.js';
+import { idleTip, battleTip, introText, searchTip } from './tips.js';
 import { explain, readMs, boardText, ReplayBot, endBoard } from './demo.js';
 import { ask, autoAnswer } from './prompts.js';
 import { settings, handComment } from './screens.js';
-import { LocalEngine, RemoteEngine, HostLink, maskEvents, searchCombo, stopSearch } from './engine.js';
+import { LocalEngine, RemoteEngine, HostLink, maskEvents, searchCombo, stopSearch, warmHelpers } from './engine.js';
 import { passiveReply, passiveRng, GOALS } from '../../src/combo.mjs';
 import { scanDeck, scanLines } from '../../src/deckscan.mjs';
 import { session, keepAwake } from './net.js';
@@ -29,6 +29,7 @@ const FACEUP = 5;
 
 class Duel {
   constructor(conf) {
+    this.hist = []; this.tut = { id: 0, ctl: null, first: true }; this.tipModal = null; // hist: alle Antworten beider Spieler – damit die Tutor-Suche das Duell nachspielen kann
     applyLook(true); this.conf = conf; this.mode = MODES[conf.fmt]; if (this.mode.lp) conf.lp = this.mode.lp; // Speed Duell: fest 4000 LP this.fmtDef = fmtById(conf.fmt, conf.list);
     this.net = conf.mode === 'net-host' || conf.mode === 'net-guest' ? session : null; this.viewer = this.net ? conf.seat : conf.mode === 'demo' ? 0 : (conf.human[0] ? 0 : 1); this.snap = null; this.logLines = []; this.chain = []; this.stopped = false; this.turnNo = 0; this.phase = 0; this.turnPlayer = 0;
     this.actList = []; this.acts = new Map(); this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.tip = null; this.tipKeys = new Set(); this.pending = null; this.hintText = ''; this.introShown = [false, false];
@@ -98,6 +99,7 @@ class Duel {
 
   // ---------------------------------------------------------------- Start & Schleife
   async start() {
+    if (this.tutorOn()) warmHelpers(this.tutHelpers()).catch(() => {}); // Rechenkerne für den Tutor schon beim Duellstart laden
     setGuard(async () => { const ok = await confirmBox('Duell verlassen?', this.net ? 'Das Online-Duell wird für beide beendet.' : 'Der Spielstand geht verloren.', 'Verlassen', 'Weiterspielen', true); if (ok) { if (this.net) this.net.send({ t: 'leave' }); this.destroy(); } return ok; });
     this.fit();
     const { conf } = this; const m = this.mode;
@@ -145,8 +147,10 @@ class Duel {
   async loop() {
     let resp;
     while (!this.stopped) {
+      if (resp !== undefined && resp !== null) this.hist.push(resp);
       const st = await this.eng.step(resp); resp = undefined;
       if (this.stopped || !st) return;
+      if (st.r && st.r.retry) this.hist.pop(); // vom Kern abgelehnte Antwort zählt nicht
       if (st.errors && st.errors.length) console.warn('Lua', st.errors);
       const r = st.r; let evs = st.evs;
       if (this.host) this.host.forward(st);
@@ -207,7 +211,7 @@ class Duel {
     console.error(e); this.stopped = true; if (this.net) this.net.send({ t: 'leave' });
     openModal({ host: this.root, title: 'Hoppla – ein Fehler', center: true, body: h('div', null, h('p', null, 'Das Duell konnte nicht weiterlaufen. Das tut mir leid! Du kannst ein neues Duell starten.'), h('pre', { class: 'small muted', style: 'white-space:pre-wrap;max-height:30vh;overflow:auto' }, String(e && e.message || e))), footer: h('button', { class: 'btn pri', onclick: () => { this.destroy(); if (this.net) netMenu(); else navRoot('home'); } }, 'Zum Menü') });
   }
-  destroy() { this.stopped = true; if (this.csEl) { stopSearch(); this.csEl.remove(); this.csEl = null; } this.ff = true; for (const f of [...this.naps]) f(); setGuard(null); try { this.ro.disconnect(); } catch (e) { /* */ } try { if (this.eng && this.eng.destroy) this.eng.destroy(); if (this.eng && this.eng.abort) this.eng.abort(); if (this.host) this.host.abort(); } catch (e) { /* */ } this.eng = null; if (this.offNet) this.offNet(); if (this.net) { this.net.wantAwake = false; keepAwake(false); } if (this.pending) { this.pending.resolve(null); this.pending = null; } }
+  destroy() { this.tutorStop(); this.stopped = true; if (this.csEl) { stopSearch(); this.csEl.remove(); this.csEl = null; } this.ff = true; for (const f of [...this.naps]) f(); setGuard(null); try { this.ro.disconnect(); } catch (e) { /* */ } try { if (this.eng && this.eng.destroy) this.eng.destroy(); if (this.eng && this.eng.abort) this.eng.abort(); if (this.host) this.host.abort(); } catch (e) { /* */ } this.eng = null; if (this.offNet) this.offNet(); if (this.net) { this.net.wantAwake = false; keepAwake(false); } if (this.pending) { this.pending.resolve(null); this.pending = null; } }
 
   // ---------------------------------------------------------------- Übergabe & Einführung
   handover(p) {
@@ -696,12 +700,31 @@ class Duel {
   clearBar() { this.hideBar(); }
   /** wartet auf eine Antwort der Oberfläche */
   wait(kind) { return new Promise((resolve) => { this.pending = { resolve, kind }; }); }
-  answer(resp) { const p = this.pending; if (!p) return; this.closePhMenu(); this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.dropFloat(); this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
+  answer(resp) { const p = this.pending; if (!p) return; this.tutorStop(); this.closePhMenu(); this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.dropFloat(); this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
   setTip(t) { this.tip = t; }
+  tutHelpers() { const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2; return Math.max(1, Math.min(3, cores - 2)); }
+  tutorOn() { return !!(this.conf.tutor && !this.demo && this.copts && !(this.net && !this.host) && store.get('tutor.bg', true)); }
+  /** Hintergrund-Suche ab der aktuellen Situation (gleiche Suche wie in der Kombo-Ansicht); der Vorschlag verbessert sich laufend, bis du antwortest */
+  tutorBegin(msg) {
+    this.tutorStop(); if (!this.tutorOn()) return;
+    const id = this.tut.id; const ctl = this.tut.ctl = {}; const goal = (store.get('cfg.demo', {}) || {}).goal || 'balance'; const G = GOALS[goal] || GOALS.balance; this.tut.first = true;
+    const turn = (this.snap && this.snap.turn) || this.turnNo;
+    searchCombo({ ...this.copts, goal, me: msg.player, replay: this.hist.slice(), endTurn: turn + 1 }, { ms: store.get('tutor.ms', 15000), helpers: this.tutHelpers(), persist: true, useMain: false, ctl, onProgress: (p) => this.tutorUpdate(id, msg, p, G.name) })
+      .then((res) => { if (res) this.tutorUpdate(id, msg, { ...res, planBoard: res.board, planScore: res.board.score, final: true }, G.name); })
+      .catch((e) => console.warn('Tutor-Suche', e));
+  }
+  tutorStop() { this.tut.id++; if (this.tut.ctl && this.tut.ctl.stop) { try { this.tut.ctl.stop(); } catch (e) { /* */ } } this.tut.ctl = null; }
+  tutorUpdate(id, msg, p, goalName) {
+    if (id !== this.tut.id || this.stopped || !this.pending) return; const t = searchTip(this, msg, p, goalName); if (!t) return;
+    this.setTip(t); if (this.tut.first) { this.tut.first = false; this.tipBtn.classList.add('pulse'); }
+    if (this.tipModal) this.tipModal.fill();
+  }
   showTip() {
-    this.tipBtn.classList.remove('pulse'); const t = this.tip; if (!t) { toast('Gerade gibt es nichts zu raten.'); return; }
-    this.tipKeys = new Set(t.keys || []); this.render();
-    const m = openModal({ host: this.root, title: '💡 Tipp vom Tutor', center: true, cls: 'peek', body: h('p', { class: 'tut-g' }, t.text), footer: h('button', { class: 'btn pri', onclick: () => m.close() }, 'Verstanden') });
+    this.tipBtn.classList.remove('pulse'); if (!this.tip) { toast('Gerade gibt es nichts zu raten.'); return; }
+    const body = h('div'); let keysSig = '';
+    const fill = () => { const t = this.tip; if (!t) return; clear(body); body.append(t.node ? t.node() : h('p', { class: 'tut-g' }, t.text)); const sig = (t.keys || []).join(','); if (sig !== keysSig) { keysSig = sig; this.tipKeys = new Set(t.keys || []); this.render(); } };
+    this.tipModal = { fill }; fill();
+    const m = openModal({ host: this.root, title: '💡 Tipp vom Tutor', center: true, cls: 'peek', body, onClose: () => { this.tipModal = null; }, footer: h('button', { class: 'btn pri', onclick: () => m.close() }, 'Verstanden') });
   }
 }
 
