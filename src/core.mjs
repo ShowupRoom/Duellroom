@@ -164,6 +164,11 @@ export class Game {
   }
 
   /** Vollständiger Feldzustand (beide Seiten). Die Oberfläche blendet verdeckte Information aus. */
+  /** Oberste Karten des Decks von Spieler p (die nächste Ziehkarte zuerst) – die Reihenfolge ist durch den Startwert festgelegt */
+  deckTop(p, n = 6) {
+    const q = this.lib.duelQueryLocation(this.handle, { flags: QUERY, controller: p, location: LOC.DECK });
+    return q.filter(Boolean).map((x) => x.code).reverse().slice(0, n);
+  }
   snapshot() {
     const { lib, handle } = this;
     const out = { lp: [...this.lp], turn: this.turn, phase: this.phase, turnPlayer: this.turnPlayer, players: [] };

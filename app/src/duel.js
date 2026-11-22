@@ -15,6 +15,7 @@ import { ask, autoAnswer } from './prompts.js';
 import { settings, handComment } from './screens.js';
 import { LocalEngine, RemoteEngine, HostLink, maskEvents, searchCombo, stopSearch } from './engine.js';
 import { passiveReply, passiveRng, GOALS } from '../../src/combo.mjs';
+import { scanDeck, scanLines } from '../../src/deckscan.mjs';
 import { session, keepAwake } from './net.js';
 import { netRematch, netMenu } from './online.js';
 
@@ -594,10 +595,12 @@ class Duel {
   async searchOverlay(opts, turn = 1) {
     const ms = this.conf.demoMs, goal = this.conf.demoGoal || 'balance'; const G = GOALS[goal] || GOALS.balance;
     const bar = h('i'); const head = h('div', { class: 'cs-h' }, turn > 1 ? `🔎 Suche den besten Zug ${turn} …` : '🔎 Suche die beste Kombo für diese Starthand …');
-    const hand = h('div', { class: 'cs-hand muted small' }, turn > 1 ? 'Hand wird geladen …' : 'Starthand wird gemischt …'); const best = h('div', { class: 'cs-best' }, 'Erste Versuche laufen …'); const meta = h('div', { class: 'cs-meta muted small' });
+    const hand = h('div', { class: 'cs-hand muted small' }, turn > 1 ? 'Hand wird geladen …' : 'Starthand wird gemischt …'); const topEl = h('div', { class: 'cs-top muted small' });
+    let scan = null; if (turn === 1) { try { scan = scanLines(scanDeck(this.deckOf(0), App.cards), nameOf); } catch (e) { scan = null; } } // Deckliste zuerst lesen: Starter, Handtraps, Fallen als Störer, mehrfach nutzbare Karten
+    const scanEl = scan ? h('details', { class: 'cs-scan small' }, h('summary', null, '📋 Deck-Analyse'), scan.map((t) => h('div', null, '· ' + t))) : null; if (scanEl && window.innerHeight > 620) scanEl.open = true; /* auf flachen Querformat-Fenstern bleibt die Analyse eingeklappt */ const best = h('div', { class: 'cs-best' }, 'Erste Versuche laufen …'); const meta = h('div', { class: 'cs-meta muted small' });
     let discard = false;
     const go = h('button', { class: 'btn pri', onclick: () => stopSearch() }, '▶ Jetzt vorspielen'); const no = h('button', { class: 'btn', onclick: () => { discard = true; stopSearch(); } }, 'Ohne Suche');
-    const box = h('div', { class: 'cs-box' }, head, h('div', { class: 'muted small' }, `Ziel: ${G.name}`), hand, h('div', { class: 'cs-bar' }, bar), best, meta, h('div', { class: 'cs-btn' }, go, no));
+    const box = h('div', { class: 'cs-box' }, head, h('div', { class: 'muted small' }, `Ziel: ${G.name}`), scanEl, hand, topEl, h('div', { class: 'cs-bar' }, bar), best, meta, h('div', { class: 'cs-btn' }, go, no));
     const el = this.csEl = h('div', { class: 'cs-ov' }, box); this.root.append(el);
     const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2; const helpers = Math.max(0, Math.min(2, cores - 2));
     let res = null;
@@ -605,6 +608,7 @@ class Duel {
       res = await searchCombo({ ...opts, goal }, { ms, helpers, onProgress: (p) => {
         bar.style.width = Math.min(100, Math.round((1 - p.left / p.total) * 100)) + '%';
         if (p.hand && !hand.dataset.set) { hand.dataset.set = 1; hand.textContent = (turn > 1 ? 'Hand: ' : 'Starthand: ') + p.hand.map((c) => nameOf(c)).join(' · '); }
+        if (p.top && !topEl.dataset.set) { topEl.dataset.set = 1; topEl.textContent = 'Als Nächstes im Deck (Ziehreihenfolge steht fest): ' + p.top.slice(0, 6).map((c) => nameOf(c)).join(' · '); this.drawPreview = p.top.slice(); }
         if (p.board) best.textContent = 'Bestes Board bisher: ' + boardText(p.board);
         meta.textContent = `${p.sims} Varianten geprüft${p.workers > 1 ? ` · ${p.workers} Rechenkerne` : ''} · Wertung ${Math.round(p.score)} (Standard-KI: ${Math.round(p.base)})`;
       } });

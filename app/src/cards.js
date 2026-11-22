@@ -86,7 +86,7 @@ export function wantImage(img, k, code) {
   const id = imageId(code); const kk = key(k, id); const u = urls.get(kk);
   if (u === 'fail') return;
   img.classList.add('art'); img.onload = () => img.classList.add('ok'); img.onerror = () => img.classList.remove('ok');
-  if (u) { img.src = u; return; }
+  if (u) { img.classList.add('nf'); img.src = u; if (img.complete && img.naturalWidth) img.classList.add('ok'); return; } // schon geladen: sofort zeigen, kein erneutes Einblenden (sonst flackert das Bild bei jedem Neuzeichnen des Felds)
   if (!waiting.has(kk)) { waiting.set(kk, []); queue.push([k, id]); }
   waiting.get(kk).push(img); pump();
 }

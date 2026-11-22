@@ -27,7 +27,7 @@ export async function searchCombo(args, { ms = 15000, helpers = 0, onProgress = 
   const merge = () => {
     const f = last.filter(Boolean); if (!f.length) return;
     const top = f.reduce((a, b) => (b.score > a.score ? b : a));
-    onProgress({ sims: f.reduce((n, x) => n + x.sims, 0), ms: Math.max(...f.map((x) => x.ms)), score: top.score, board: top.board, base: f[0].base, hand: (f.find((x) => x.hand) || {}).hand, left: Math.max(0, deadline - Date.now()), total: ms, workers: f.length });
+    onProgress({ sims: f.reduce((n, x) => n + x.sims, 0), ms: Math.max(...f.map((x) => x.ms)), score: top.score, board: top.board, base: f[0].base, hand: (f.find((x) => x.hand) || {}).hand, top: (f.find((x) => x.top) || {}).top, left: Math.max(0, deadline - Date.now()), total: ms, workers: f.length });
   };
   searching = { stop: () => { stopped = true; for (const x of pool) { if (x.tmp) x.tmp.postMessage({ op: 'cancel' }); } M().w.postMessage({ op: 'cancel' }); } };
   const jobs = pool.map((x, k) => (async () => {

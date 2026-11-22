@@ -40,6 +40,10 @@ jobs:
         env:
           SRC: ${{ runner.temp }}/src
         run: node test/combo-search.mjs ryzeal
+      - name: Störkarten, Deck-Analyse, Ziehvorschau
+        env:
+          SRC: ${{ runner.temp }}/src
+        run: node test/interrupts.mjs
       - name: Geänderte Listen im Repository sichern
         run: |
           git config user.name "duellraum-bot"

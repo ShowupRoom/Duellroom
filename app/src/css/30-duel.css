@@ -277,4 +277,7 @@ mark.fx-mark{background:rgba(246,201,107,.2);color:#ffe3a1;border-radius:3px;pad
 .cs-bar{height:8px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden}.cs-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cy),var(--gold));transition:width .25s linear}
 .cs-best{font-size:13.5px;line-height:1.4;font-weight:700;color:#e8f3ff;overflow-wrap:anywhere}
 .cs-meta{line-height:1.35}
-.cs-btn{display:flex;gap:8px;flex-wrap:wrap}.cs-btn .btn{flex:1 1 140px}
+.cs-scan{flex:0 0 auto;padding:7px 9px;border-radius:9px;background:rgba(255,255,255,.06);line-height:1.35;color:#d7e6ff;overflow-wrap:anywhere}.cs-scan summary{cursor:pointer;color:var(--gold);font-weight:700}.cs-scan div{margin-top:2px}
+.cs-top{line-height:1.4}.cs-hand,.cs-top,.cs-best,.cs-meta{flex:0 0 auto}
+.cs-btn{display:flex;gap:8px;flex-wrap:wrap}.cs-btn .btn{flex:1 1 140px}.cs-btn{position:sticky;bottom:-14px;padding:8px 0 2px;margin-top:2px;background:linear-gradient(180deg,rgba(6,16,40,0),rgba(6,16,40,.97) 30%)}
+@media (max-height:480px){.cs-ov{padding:8px}.cs-box{gap:5px;padding:9px 13px}.cs-h{font-size:15px}.cs-hand,.cs-top,.cs-meta,.cs-scan{font-size:12px!important;line-height:1.3}.cs-best{font-size:12.5px}.cs-btn{bottom:-9px}}

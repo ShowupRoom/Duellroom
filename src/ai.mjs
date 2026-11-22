@@ -8,6 +8,17 @@ const ZONE = { [LOC.HAND]: 'hand', [LOC.MZONE]: 'mzone', [LOC.SZONE]: 'szone', [
 /** Karten, die beide Seiten räumen: nur spielen, wenn der Gegner mehr zu verlieren hat */
 const SYMMETRIC = new Set([53129443 /* Dark Hole */, 19613556 /* Heavy Storm */, 53582587 /* Torrential Tribute */]);
 
+/** Wie oft darf die KI pro Phase dieselbe Aktion einer Karte versuchen? Steht kein „einmal pro Spielzug“ im Text, kann die Karte (mit Hilfe anderer) mehrfach laufen –
+ *  das ist der Hebel für Mehrfach-Kombos (z. B. „Toon Table of Contents“, „Toon World the Perfect World“: 3× pro Zug). Der Kern lässt ohnehin nur Legales zu. */
+const OPT_RE = /once per turn|once per duel|once while|only (?:activate|use|control|Special Summon|Normal Summon|Set|add|banish|send)[^.;]{0,60}\b(?:1|one)\b[^.;]{0,50}per turn|einmal pro (?:Spiel)?zug|einmal pro duell|nur 1 [^.;]{0,60}pro (?:Spiel)?zug/i;
+const MULTI_RE = /thrice|three times|3 times|dreimal|twice per turn|two times per turn|zweimal pro/i;
+const capMemo = new Map();
+export function tryCap(c) {
+  if (!c) return 1; const k = c.code; if (capMemo.has(k)) return capMemo.get(k);
+  const d = c.desc || ''; const cap = MULTI_RE.test(d) ? 3 : OPT_RE.test(d) ? 1 : (c.type & T.SPELL || c.type & T.TRAP) && !(c.type & (T.CONT | T.FIELD)) ? 1 : 4; // einmalige Zauber/Fallen gehen nach dem Einsatz ohnehin weg
+  capMemo.set(k, cap); return cap;
+}
+
 export const AI_LEVELS = {
   leicht: { name: 'Anfänger', noise: 45, chainP: 0.35, trigP: 0.6, slip: 0.22, fear: 0, lazy: 0.2, shy: 0.4 },
   normal: { name: 'Fortgeschritten', noise: 12, chainP: 0.65, trigP: 0.92, slip: 0.03, fear: 1, lazy: 0, shy: 0 },
@@ -91,7 +102,7 @@ export class DuelAI {
     const opTop = Math.max(0, ...opMon.filter((c) => c.position & POS.FACEUP).map((c) => c.attack));
     const free = my.mzone.slice(0, 5).filter((c) => !c).length;
     const cand = [];
-    const add = (kind, c, i, score, extra = '') => { const key = `${kind}|${c.code}|${c.location}|${c.sequence}|${extra}`; if ((this.tried.get(key) || 0) >= 1) return; cand.push({ kind, i, score, key }); };
+    const add = (kind, c, i, score, extra = '') => { const key = `${kind}|${c.code}|${c.location}|${c.sequence}|${extra}`; if ((this.tried.get(key) || 0) >= (this.L.reuse && (kind === 'act' || kind === 'ssum') ? tryCap(this.cards.get(c.code)) : 1)) return; cand.push({ kind, i, score, key }); };
     msg.summons.forEach((c, i) => {
       const inf = this.info(c.code); const lv = inf.level & 0xff; const need = lv >= 7 ? 2 : lv >= 5 ? 1 : 0;
       if (need) {
