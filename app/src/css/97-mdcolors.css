@@ -57,3 +57,9 @@
 .wl-k{color:var(--md-cyan)}
 /* Toast im MD-Stil */
 .toast{background:linear-gradient(180deg,rgba(18,30,78,.96),rgba(8,13,38,.96));border:1px solid var(--md-line2);color:#fff;box-shadow:0 0 0 1px rgba(67,211,255,.2),0 8px 24px rgba(0,0,0,.5)}
+/* ---- Pink als Farbe von Spieler 2 (ihre Farbe) – der Rest bleibt in der Master-Duel-Welt ---- */
+:root{--p2:#ff7ac8;--p2b:#d63c9b}
+.nx-av.pk{background:conic-gradient(#ffe1f2,var(--p2),#f2c86a,var(--p2),#ffe1f2)!important;box-shadow:0 0 18px rgba(255,122,200,.55)!important}
+.bk-v .w{color:var(--p2)!important;text-shadow:0 0 22px rgba(255,122,200,.6)!important}
+.wl-t h1 span{background-image:linear-gradient(90deg,#ffd6f0,var(--p2) 50%,#f2c86a)}
+.al-hz{color:var(--p2);filter:drop-shadow(0 0 4px var(--p2))}
