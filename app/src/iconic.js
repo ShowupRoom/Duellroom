@@ -67,14 +67,42 @@ export const ICONIC = {
   26077387: T('machine', '#ffb8b8', '#a81a2a', 'Himmelsjäger startklar!'),
   63288573: T('machine', '#ff8a6a', '#a81a2a', 'Ass im Anflug!'),
   14558127: T('cute', '#ffd1ea', '#ff7ab8', 'Ein Hauch von Frühling!'),
+  10000: T('dragon', '#ffe08a', '#a86a0a', 'Zehntausend Jahre Macht in einem Drachen!'),
+  57314798: T('god', '#ffe08a', '#3a2a0a', 'Numeron – die Zahl am Anfang aller Zahlen!'),
+  10443957: T('machine', '#bff6ff', '#2a5aa8', 'Unendliche Cyber-Kraft!'),
+  59400890: T('magic', '#d8b8ff', '#3a0a5a', 'Der Magier der Zerstörung erscheint!'),
+  45112597: T('dragon', '#b8f0ff', '#0a4a7a', 'Der Meeresdrache aus der Weltsee!'),
+  63767246: T('light', '#b8f0ff', '#2a2aa8', 'Ein Titan aus Galaxienlicht!'),
+  28400508: T('dark', '#ffd08a', '#5a1a0a', 'Draglubion entfesselt alle Drachen-Nummern!'),
+  84815190: T('light', '#d8ffe6', '#2a8a5a', 'Die Baronin der Blumen zieht ihr Schwert!'),
+  85289965: T('machine', '#ffb8b8', '#5a0a1a', 'Klinge und Revolver – bereit zum Feuern!'),
+  44146295: T('dragon', '#d8f6ff', '#2a6aa8', 'Eiskalte Klingen aus Jade!'),
+  87746184: T('dark', '#ffe0a8', '#5a2a0a', 'Der gebrandmarkte Drache steigt auf!'),
+  22850702: T('light', '#fff2c0', '#5a3ab0', 'Licht und Dunkelheit – ein Engel des Chaos!'),
+  23995346: T('dragon', '#e6f6ff', '#2a7bff', 'Drei Köpfe, eine unaufhaltsame Macht!'),
+  62873545: T('dragon', '#e6f6ff', '#c8901e', 'Der Ritter auf dem ultimativen Drachen!'),
+  41209827: T('dark', '#d8ff8a', '#3a0a5a', 'Gift und Hunger in Drachengestalt!'),
+  16195942: T('dark', '#c8b8ff', '#1a0a3a', 'Rebellion in schwarzen Schwingen!'),
+  1686814: T('light', '#ffe8a8', '#a83a0a', 'Ein Drache, beschworen ohne Material!'),
 };
+// ---- Automatisch: mächtige Bossmonster (auch ohne eigenen Eintrag) ----------------------------------------------------------
+const ATTR = { 1: ['hero', '#ffd08a', '#6a4a1a'], 2: ['dragon', '#b8f0ff', '#0a4a8a'], 4: ['dark', '#ffb86a', '#8a1a0a'], 8: ['light', '#d8ffe6', '#1a8a5a'], 16: ['light', '#fff2c0', '#c8901e'], 32: ['dark', '#d8a8ff', '#2a0a3a'], 64: ['god', '#ffe08a', '#a86a0a'] };
+const KIND = (t, lv) => (t & 0x4000000 ? `Link-${lv} – die Pfeile zeigen auf den Sieg!` : t & 0x800000 ? `Rang ${lv} – überlagert und bereit!` : t & 0x2000 ? 'Die Sterne stimmen sich ein …' : t & 0x40 ? 'Aus der Fusion geboren!' : t & 0x80 ? 'Das Ritual ist vollendet!' : 'Ein Bossmonster betritt das Feld!');
+function bossOf(c) {
+  if (!c || !(c.type & 1)) return null; const t = c.type; const lv = c.level & 0xff; const extra = t & (0x40 | 0x80 | 0x2000 | 0x800000 | 0x4000000);
+  const big = c.attack >= 3000 || (extra && c.attack >= 2500 && ((t & 0x4000000) ? lv >= 4 : lv >= 8));
+  if (!big) return null; let [s, a, b] = ATTR[c.attribute] || ATTR[32];
+  const rc = BigInt(c.race || 0); // Rasse ist im Kartenbestand eine BigInt-Bitmaske
+  if (rc & 0x2000n && s !== 'god') s = 'dragon'; else if (rc & 0x20n) s = 'machine'; else if (rc & 0x2n && s !== 'god') s = 'magic';
+  return { ...T(s, a, b, KIND(t, lv)), boss: true };
+}
 const STYLE_IC = { dragon: '✦', magic: '✧', god: '☀', dark: '✶', machine: '⬡', cute: '♥', hero: '★', light: '✺' };
 export const iconicOn = () => store.get('fx.iconic', true);
-export function iconicOf(code) { const c = cardOf(code); return ICONIC[code] || (c && c.alias && ICONIC[c.alias]) || null; }
+export function iconicOf(code) { const c = cardOf(code); return ICONIC[code] || (c && c.alias && ICONIC[c.alias]) || (store.get('fx.boss', true) ? bossOf(c) : null); }
 
 /** Spielt die Animation; Promise endet nach der Animation oder beim Antippen */
 export function playIconic(host, code, { fast = false, kind = 'Beschwörung' } = {}) {
-  const th = iconicOf(code); if (!th) return Promise.resolve();
+  const th = iconicOf(code); if (!th) return Promise.resolve(); const cc = cardOf(code);
   const ms = fast ? 1500 : 2600;
   return new Promise((res) => {
     const art = h('img', { class: 'ic-art', alt: '' }); wantImage(art, 'crop', cardOf(code) && cardOf(code).alias && ICONIC[cardOf(code).alias] ? cardOf(code).alias : code);
@@ -83,7 +111,7 @@ export function playIconic(host, code, { fast = false, kind = 'Beschwörung' } =
       h('div', { class: 'ic-dim' }), h('div', { class: 'ic-rays' }), h('div', { class: 'ic-ring r1' }), h('div', { class: 'ic-ring r2' }), h('div', { class: 'ic-ring r3' }),
       th.s === 'magic' || th.s === 'god' ? h('div', { class: 'ic-circle' }) : null, th.s === 'machine' ? h('div', { class: 'ic-scan' }) : null, th.s === 'dragon' || th.s === 'god' ? h('div', { class: 'ic-flash' }) : null,
       parts, h('div', { class: 'ic-card' }, art, h('div', { class: 'ic-shine' })),
-      h('div', { class: 'ic-txt' }, h('div', { class: 'ic-k' }, `${STYLE_IC[th.s] || '✦'}  ${kind.toUpperCase()}  ${STYLE_IC[th.s] || '✦'}`), h('div', { class: 'ic-n' }, nameOf(code)), h('div', { class: 'ic-l' }, th.line)));
+      h('div', { class: 'ic-txt' }, h('div', { class: 'ic-k' }, `${STYLE_IC[th.s] || '✦'}  ${th.boss ? 'BOSSMONSTER · ' : ''}${kind.toUpperCase()}  ${STYLE_IC[th.s] || '✦'}`), h('div', { class: 'ic-n' }, nameOf(code)), h('div', { class: 'ic-l' }, th.line), cc && cc.attack != null ? h('div', { class: 'ic-atk' }, `ATK ${cc.attack < 0 ? '?' : cc.attack}`) : null));
     let fin = false; const done = () => { if (fin) return; fin = true; el.classList.add('out'); setTimeout(() => { el.remove(); res(); }, 260); };
     host.append(el); if (th.s === 'god' || th.s === 'dragon') host.classList.add('ic-shake'); setTimeout(() => host.classList.remove('ic-shake'), 700);
     try { if (navigator.vibrate && store.get('sound', true)) navigator.vibrate(th.s === 'god' ? [40, 60, 80] : 30); } catch (e) { /* */ }

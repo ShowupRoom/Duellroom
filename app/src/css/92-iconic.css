@@ -36,3 +36,4 @@
 @keyframes icShake{10%,90%{transform:translate(-1px,1px)}20%,80%{transform:translate(3px,-2px)}30%,50%,70%{transform:translate(-5px,2px)}40%,60%{transform:translate(5px,-1px)}}
 @media (orientation:landscape){.ic-card{margin-top:-14vh}.ic-txt{bottom:max(5vh,calc(8px + var(--safe-b)))}}
 @media (prefers-reduced-motion:reduce){.ic-rays,.ic-circle,.ic-scan{animation:none}.ic-shake{animation:none}}
+.ic-atk{display:inline-block;margin-top:6px;padding:3px 14px;font-family:var(--nx-head,inherit);font-weight:900;font-size:clamp(13px,3.6vh,18px);letter-spacing:.12em;color:#1a1000;background:linear-gradient(180deg,#fff3c8,#f2c86a 50%,#b8821e);clip-path:polygon(8px 0,100% 0,calc(100% - 8px) 100%,0 100%);box-shadow:0 0 18px var(--ia);animation:icTxt .6s ease both .75s}
