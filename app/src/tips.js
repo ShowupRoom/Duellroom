@@ -72,7 +72,7 @@ export function searchTip(D, msg, p, goalName) {
   const plan = p.plan || []; if (!plan.length) return null;
   const f = plan[0]; const steps = plan.filter((x) => x.code).slice(0, 8); const board = p.planBoard || p.board;
   const keys = f.code ? [`${f.ctrl}:${f.loc}:${f.seq}`] : [];
-  const eff = f.kind === 'activate' ? first(descOf(cardOf(f.code))) : '';
+  const eff = (f.kind === 'activate' && first(descOf(cardOf(f.code)))) || '';
   const head = f.kind === 'ep' ? 'Nach der Suche gibt es nichts Sinnvolles mehr zu spielen – beende deinen Zug (setze vorher, was noch liegt).'
     : f.kind === 'bp' ? 'Hier ist in der Hauptphase nichts Sinnvolles mehr zu tun – gehe in die Kampfphase.'
       : `${STEP[f.kind]} «${nameOf(f.code)}». ${eff}`;

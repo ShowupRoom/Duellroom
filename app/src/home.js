@@ -21,6 +21,7 @@ const IC = {
   log: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><rect x="6" y="11" width="36" height="26" rx="2"/><path d="M6 13l18 13 18-13"/></svg>',
 };
 export { IC as HOME_ICONS, svg as iconEl };
+export const nameOfCard = (c) => nameOf(c);
 
 // ---- Lieblingskarten (Profilbild und großes Bild rechts) ---------------------------------------------------------------
 const DEF_HERO = 46986414; // Dunkler Magier
@@ -59,6 +60,7 @@ function slides() {
   const last = store.get('last'); const ban = curBan(); const out = [];
   out.push({ t: settings.dedication || 'Willkommen im Duellraum', s: 'Yu-Gi-Oh! zu zweit', gold: true });
   if (last) out.push({ t: 'Letztes Duell wiederholen', s: 'Gleiche Decks, gleiche Einstellungen', on: () => { try { go('duel', hydrate(last)); } catch (e) { toast('Das letzte Duell konnte nicht geladen werden.'); } } });
+  out.push({ t: 'Neu hier? Leichter Einstieg', s: 'Karten aussuchen, die dir gefallen – mit Begleiterin', on: () => go('taste') });
   out.push({ t: 'Kombo-Ansicht', s: 'Die KI spielt dein Deck vor und erklärt jeden Schritt', on: () => go('setup', { fmt: ban.fmt, list: ban.list, demo: true }) });
   out.push({ t: `Banlist: ${ban.t}`, s: `${App.decks.length} Decks · ${App.cards.size.toLocaleString('de-DE')} Karten · offline spielbar`, on: () => go('duelhub') });
   if (!isApp()) out.push({ t: 'Als App installieren', s: 'Auf dem Startbildschirm, ohne Browser-Leiste', on: installApp });
@@ -66,6 +68,7 @@ function slides() {
 }
 
 screens.home = () => {
+  if (!store.get('onb.done')) return screens.welcome(); // erster Start: Einstieg wählen
   const ban = curBan(); const names = settings.names; const S = slides(); let si = 0; const M = mission();
   const avatar = h('button', { class: 'hm-av', title: 'Profilbild ändern', onclick: () => pickCard('Profilbild wählen', (c) => { fav.avatar = c; go('home'); }) }, artEl(fav.avatar, 'hm-avi'));
   const slideBox = h('div', { class: 'hm-sl' }); const dots = h('div', { class: 'hm-dots' });

@@ -2,6 +2,7 @@
 import { applyLook } from './look.js';
 import { matchModal } from './match.js';
 import { libAdd, libGuides, libPause } from './combolib.js';
+import { buddyMount, buddyUpdate } from './buddy.js';
 import { bumpDay, fav, artEl, HOME_ICONS, iconEl } from './home.js';
 import { h, clear, sleep, toast, shuffled, beep, rand32, zkey as key } from './util.js';
 import { App, MODES, FORMATS, fmtById, expand, nameOf, cardOf, cleanName, withTutor, descOf } from './data.js';
@@ -104,6 +105,7 @@ class Duel {
 
   // ---------------------------------------------------------------- Start & Schleife
   async start() {
+    try { buddyMount(this); } catch (e) { console.warn('Begleiterin', e); }
     if (this.tutorOn()) warmHelpers(this.tutHelpers()).catch(() => {}); // Rechenkerne für den Tutor schon beim Duellstart laden
     setGuard(async () => { const ok = await confirmBox('Duell verlassen?', this.net ? 'Das Online-Duell wird für beide beendet.' : 'Der Spielstand geht verloren.', 'Verlassen', 'Weiterspielen', true); if (ok) { if (this.net) this.net.send({ t: 'leave' }); this.destroy(); } return ok; });
     this.fit();
@@ -755,8 +757,8 @@ class Duel {
   clearBar() { this.hideBar(); }
   /** wartet auf eine Antwort der Oberfläche */
   wait(kind) { return new Promise((resolve) => { this.pending = { resolve, kind }; }); }
-  answer(resp) { const p = this.pending; if (!p) return; this.tutorStop(); this.closePhMenu(); this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.dropFloat(); this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
-  setTip(t) { this.tip = t; }
+  answer(resp) { const p = this.pending; if (!p) return; this.tutorStop(); this.buddyHidden = false; setTimeout(() => buddyUpdate(this), 0); this.closePhMenu(); this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.dropFloat(); this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
+  setTip(t) { this.tip = t; if (t) this.buddyHidden = this.buddyHidden && this.buddyKeep; buddyUpdate(this); }
   tutHelpers() { const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2; return Math.max(1, Math.min(3, cores - 2)); }
   tutorOn() { return !!(this.conf.tutor && !this.demo && this.copts && !(this.net && !this.host) && store.get('tutor.bg', true)); }
   /** Hintergrund-Suche ab der aktuellen Situation (gleiche Suche wie in der Kombo-Ansicht); der Vorschlag verbessert sich laufend, bis du antwortest */

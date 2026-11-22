@@ -8,6 +8,7 @@ import './editor.js';
 import './online.js';
 import './md.js';
 import './home.js';
+import './onboard.js';
 import { libLoop } from './combolib.js';
 import './match.js';
 import { applyLook } from './look.js';
