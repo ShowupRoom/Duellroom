@@ -246,17 +246,21 @@ class Duel {
   botPause(msg) { if (this.demo) return 150; return AIP[this.aiPace].pause[msg.type === MSG.SELECT_IDLECMD || msg.type === MSG.SELECT_BATTLECMD ? 0 : 1]; }
   async banner(o) {
     if (!this.anim || this.ff) return;
-    const el = h('div', { class: 'fx-b ' + (o.cls || '') }, o.code ? cardEl(o.code, { cls: 'md' }) : null, o.back ? cardEl(0, { back: true, cls: 'md' }) : null, h('div', { class: 'fx-bt' }, h('div', { class: 'fx-h' }, o.title), o.sub ? h('div', { class: 'fx-s' }, o.sub) : null, o.mark ? h('div', { class: 'fx-tx' }, o.mark) : null));
+    let pair = null; // Kette ab 2: vorige und neue Karte nebeneinander – je nach Besitzer links (du) oder rechts (Gegner), mit großer Kettennummer (Vorbild MDPro3)
+    if (o.pair) { const mk = (c) => h('div', { class: 'cp-c ' + (c.p === this.viewer ? 'me' : 'op') }, h('div', { class: 'cp-n' }, c.n), cardEl(c.code, { cls: 'md' })); const [a, b] = o.pair; pair = h('div', { class: 'cp' + (a.p === b.p ? ' same' : '') }, ...[a, b].sort((x, y) => (x.p === this.viewer ? 0 : 1) - (y.p === this.viewer ? 0 : 1) || x.n - y.n).map(mk)); }
+    const el = h('div', { class: 'fx-b ' + (o.cls || '') + (pair ? ' pairb' : '') + (o.side ? ' ' + o.side : '') }, pair || (o.code ? cardEl(o.code, { cls: 'md' }) : null), o.back ? cardEl(0, { back: true, cls: 'md' }) : null, h('div', { class: 'fx-bt' }, h('div', { class: 'fx-h' }, o.title), o.sub ? h('div', { class: 'fx-s' }, o.sub) : null, o.mark ? h('div', { class: 'fx-tx' }, o.mark) : null));
     this.fx.append(el); if (o.mark) revealMark(el.querySelector('.fx-tx')); let done; const p = new Promise((r) => { done = r; }); el.addEventListener('pointerdown', () => done());
     await Promise.race([this.nap((o.ms || 750) * 0.7 * (o.mark && this.tempo === 'fast' && !(AIP[this.aiPace].fx && this.watching()) ? 0.6 : this.fxs())), p]); el.classList.add('out'); setTimeout(() => el.remove(), this.tempo === 'fast' ? 110 : 200);
   }
+  /** Banner-Platz wie in MDPro3: Zug/Phase des eigenen Spielers unten (nah), die des Gegners oben (fern) */
+  sideOf(p) { return p === this.viewer ? 'near' : 'far'; }
   seeCard(code, ctrl, pos) { return ctrl === this.viewer || (pos & FACEUP) || pos === undefined; }
   async present(evs) {
     for (const m of evs) {
       const t = m.type;
       switch (t) {
-        case MSG.NEW_TURN: this.spCount = [0, 0]; this.turnNo++; this.turnPlayer = m.player; this.phase = 1; this.addLog(`── Zug ${this.turnNo}: ${this.pname(m.player)}`); this.renderTop(); if (this.demo && this.ff && m.player === 0 && this.turnNo > this.demo.skipFrom) this.setFF(false); beep('chain'); await this.banner({ title: `Zug ${this.turnNo}`, sub: this.pname(m.player), cls: 'turn', ms: 800 }); break;
-        case MSG.NEW_PHASE: this.phase = m.phase; this.renderTop(); if (m.phase === 8) { this.addLog('Kampfphase'); await this.banner({ title: 'Kampfphase', cls: 'phase', ms: 550 }); } break;
+        case MSG.NEW_TURN: this.spCount = [0, 0]; this.turnNo++; this.turnPlayer = m.player; this.phase = 1; this.addLog(`── Zug ${this.turnNo}: ${this.pname(m.player)}`); this.renderTop(); if (this.demo && this.ff && m.player === 0 && this.turnNo > this.demo.skipFrom) this.setFF(false); beep('chain'); await this.banner({ title: `Zug ${this.turnNo}`, sub: this.pname(m.player), cls: 'turn', side: this.sideOf(m.player), ms: 800 }); break;
+        case MSG.NEW_PHASE: this.phase = m.phase; this.renderTop(); if (m.phase === 8) { this.addLog('Kampfphase'); await this.banner({ title: 'Kampfphase', cls: 'phase', side: this.sideOf(this.turnPlayer), ms: 550 }); } else if ((m.phase === 0x100 || m.phase === 0x200) && !this.demo) await this.banner({ title: m.phase === 0x100 ? 'Main Phase 2' : 'Endphase', cls: 'phase', side: this.sideOf(this.turnPlayer), ms: 450 }); break;
         case MSG.DRAW: this.addLog(`${this.pname(m.player)} zieht ${m.drawn.length} Karte${m.drawn.length === 1 ? '' : 'n'}`); if (m.player === this.viewer) { this.newHand += m.drawn.length; beep('tap'); } break;
         case MSG.SUMMONING: case MSG.SPSUMMONING: case MSG.FLIPSUMMONING: {
           if (!this.spCount) this.spCount = [0, 0]; if (t === MSG.SPSUMMONING) this.spCount[m.controller]++;
@@ -267,7 +271,7 @@ class Duel {
           this.chain.push({ code: m.code, p: m.controller }); const lbl = descText(m.description, m.code, m.triggering_location != null ? m.triggering_location : m.location); const BT = { 16: 'Battle Step', 32: 'Battle Step', 64: 'Damage Step', 128: 'Schadensberechnung' };
           this.addLog(`Kette ${this.chain.length}: «${nameOf(m.code)}»${lbl && lbl.length < 60 ? ' – ' + lbl : ''} (${this.pname(m.controller)})${BT[this.phase] ? ' · ' + BT[this.phase] : ''}`); this.renderTop(); beep('chain');
           const vw = effectView(m.code, m.description, m.triggering_location != null ? m.triggering_location : m.location); const has = !!(vw.ranges && vw.ranges.length);
-          await this.banner({ title: `Kette ${this.chain.length}`, sub: nameOf(m.code), code: m.code, cls: 'chain', ms: has ? 1100 + Math.min(2400, vw.text.length * 8) : 800, // (Tippen überspringt)
+          await this.banner({ title: `Kette ${this.chain.length}`, sub: nameOf(m.code), code: m.code, cls: 'chain', pair: this.chain.length > 1 ? this.chain.slice(-2).map((c, i, arr) => ({ ...c, n: this.chain.length - arr.length + i + 1 })) : null, ms: has ? 1100 + Math.min(2400, vw.text.length * 8) : 800, // (Tippen überspringt)
              mark: has ? markNode(vw) : null }); break; }
         case MSG.CHAIN_NEGATED: case MSG.CHAIN_DISABLED: this.addLog('Der Effekt wurde negiert'); await this.banner({ title: 'Negiert!', cls: 'neg', ms: 500 }); break;
         case MSG.CHAIN_END: this.chain = []; this.renderTop(); break;
@@ -326,7 +330,7 @@ class Duel {
   visible(c) { return c && (c.controller === this.viewer || (c.position & FACEUP) > 0 || !!c.isPublic); }
   /** Ist eine in einer Auswahl genannte Karte für den Betrachter sichtbar? */
   selVisible(s) { if (s.controller === this.viewer) return true; const c = this.cardAt(s.controller, s.location, s.sequence); if (c) return (c.position & FACEUP) > 0; return s.position !== undefined ? (s.position & FACEUP) > 0 : false; }
-  render() { if (!this.snap) return; this.renderTop(); this.renderStrips(); this.renderBoard(); this.renderHand(); this.renderSheet(); this.renderActs(); }
+  render() { if (!this.snap) return; this.renderTop(); this.renderStrips(); this.renderBoard(); this.renderHand(); this.renderSheet(); this.renderFloat(); this.renderActs(); }
   renderTop() {
     const tp = this.turnPlayer;
     const mineT = tp === this.viewer; clear(this.turnEl); this.turnEl.className = 'd-turn' + (this.turnNo ? (mineT ? ' mine' : ' theirs') : '');
@@ -349,17 +353,16 @@ class Duel {
     if (this.phMenu) { this.closePhMenu(); return; }
     const o = this.phaseOpts; const list = o ? PH_PILLS.filter((x) => o[x[0]]) : []; if (!list.length) { this.phaseHelp(); return; }
     const lab = { BP: ['⚔ Kampfphase', 'gold'], M2: ['Main Phase 2', 'gold'], EP: ['⏭ Zug beenden', 'red'] };
-    const rr = this.root.getBoundingClientRect(), wr = this.wheel.getBoundingClientRect(); const land = this.root.classList.contains('land');
+    const rr = this.root.getBoundingClientRect(); const land = this.root.classList.contains('land');
     const noBP = !o.BP && this.phase === 4 && this.turnPlayer === this.viewer; // Main Phase 1, aber der Kern erlaubt keine Kampfphase → ausgegraut mit Begründung
     const items = list.map((x) => { const b = h('button', { class: 'btn ' + lab[x[0]][1], onclick: () => { this.closePhMenu(); this.answer(o[x[0]]); } }, lab[x[0]][0]); return x[0] === 'BP' && this.bpNoHit ? h('div', { class: 'ph-dis on' }, b, h('small', null, 'Kein Monster in Angriffsposition – es kann nichts angreifen.')) : b; });
     if (noBP) items.unshift(h('div', { class: 'ph-dis' }, h('button', { class: 'btn ghost', disabled: true }, '⚔ Kampfphase'), h('small', null, this.bpWhy())));
-    const menu = h('div', { class: 'ph-menu' + (land ? ' land' : '') }, h('div', { class: 'ph-menu-t' }, 'Weiter zu …'), ...items);
-    const w = land ? 176 : 210;
-    const cx = wr.left + wr.width / 2 - rr.left; const left = land ? Math.max(4, Math.min(cx - w / 2, rr.width - w - 4)) : Math.max(8, wr.left - rr.left);
-    menu.style.cssText = `width:${w}px;left:${left}px;top:${wr.bottom - rr.top + 8}px;visibility:hidden`;
+    const menu = h('div', { class: 'ph-menu' + (land ? ' land' : '') }, h('div', { class: 'ph-menu-t' }, 'Phase wählen'), ...items);
+    const w = land ? 220 : 250;
+    menu.style.cssText = `width:${w}px;left:${Math.max(4, (rr.width - w) / 2)}px;top:0;visibility:hidden`;
     this.phScrim = h('div', { class: 'ph-scrim', onclick: () => this.closePhMenu() }); this.root.append(this.phScrim, menu); this.phMenu = menu; this.wheel.classList.add('open');
-    // passt das Menü nicht unter das Rad (Rad sitzt mitten im Feld), klappt es nach oben auf
-    const mh = menu.offsetHeight; let top = wr.bottom - rr.top + 8; if (top + mh > rr.height - 4) top = Math.max(4, wr.top - rr.top - 8 - mh); menu.style.top = top + 'px'; menu.style.visibility = '';
+    // Auswahl-Fenster mittig über dem Feld (Vorbild MDPro3: Phasenliste als Popup) – ist das Rad nicht verdeckt genug, bleibt es als Anker sichtbar
+    const mh = menu.offsetHeight; menu.style.top = Math.max(4, (rr.height - mh) / 2) + 'px'; menu.style.visibility = '';
   }
   renderStrips() {
     const s = this.snap; const v = this.viewer, o = 1 - v;
@@ -511,6 +514,25 @@ class Duel {
     const box = this.sheet.querySelector('.sh-t');
     if (box) { if (reveal) setTimeout(() => revealMark(box), 40); else box.scrollTop = keepTop; }
   }
+  /** Runde Aktions-Knöpfe schweben über der angetippten Karte (Vorbild: MDPro3 / Master Duel). Nur im Querformat; die Liste rechts bleibt als Rückfall, falls kein Platz ist. */
+  dropFloat() { if (this.floatEl) { this.floatEl.remove(); this.floatEl = null; } this._floatShown = false; }
+  renderFloat() {
+    this.dropFloat(); const ls = this.lastSel;
+    if (!ls || !this.selKey || ls.k !== this.selKey || !this.snap || !this.root.classList.contains('land')) return;
+    const acts = this.acts.get(ls.k) || []; if (!acts.length || ls.c.controller !== this.viewer || !this.pending || (this.pending.kind !== 'idle' && this.pending.kind !== 'battle')) return;
+    const el = this.root.querySelector(`[data-k="${ls.k}"]`) || this.root.querySelector(`[data-k2="${ls.k}"]`); if (!el) return;
+    const FB = { summon: ['⇧', 'Beschwören', 'sum'], special: ['✦', 'Spezial', 'sp'], set: ['▣', 'Setzen', 'set'], spellset: ['▣', 'Setzen', 'set'], pos: ['⟳', 'Position', 'pos'], activate: ['⚡', 'Aktivieren', 'act'], attack: ['⚔', 'Angriff', 'atk'] };
+    const nAct = acts.filter((a) => a.kind === 'activate').length; let ai = 0, btns0 = 0;
+    const btns = acts.map((a) => {
+      const f = FB[a.kind] || ['●', a.label, 'act']; let lab = f[1]; if (a.kind === 'activate') { ai++; if (nAct > 1) lab = `Effekt ${ai}`; } else if (a.kind === 'pos' && /Flip/.test(a.label)) lab = 'Flip';
+      return h('button', { class: 'fb fb-' + f[2] + (a.pri ? ' pri' : ''), title: a.label, 'aria-label': a.label, style: `animation-delay:${(ai + btns0++) * 25}ms`, onclick: (e) => { e.stopPropagation(); this.closeSheet(); this.answer(a.resp); } }, h('span', { class: 'fb-i' }, f[0]), h('span', { class: 'fb-l' }, lab));
+    });
+    const fl = h('div', { class: 'fl-act' }, btns); const rr = this.root.getBoundingClientRect(); const r = el.getBoundingClientRect();
+    this.root.append(fl); const w = fl.offsetWidth, hh = fl.offsetHeight; const below = r.top - rr.top < hh + 14;
+    const left = Math.max(6, Math.min(rr.width - w - 6, r.left - rr.left + r.width / 2 - w / 2)); const top = below ? r.bottom - rr.top + 6 : r.top - rr.top - hh - 6;
+    fl.style.left = left.toFixed(0) + 'px'; fl.style.top = Math.max(4, Math.min(rr.height - hh - 4, top)).toFixed(0) + 'px'; fl.classList.toggle('below', below);
+    this.floatEl = fl; this._floatShown = true;
+  }
   /** Querformat, rechte Spalte: Aktionen der gewählten Karte – ohne Auswahl eine Übersicht, was in dieser Phase möglich ist */
   renderActs() {
     const el = this.actsEl; clear(el); if (!this.root.classList.contains('land') || !this.snap) return;
@@ -518,7 +540,8 @@ class Duel {
     if (this.selKey && ls && ls.k === this.selKey && cur && cur.code === ls.c.code) {
       const acts = this.acts.get(ls.k) || []; const own = ls.c.controller === this.viewer;
       el.append(h('div', { class: 'ac-h' }, 'Aktionen'));
-      if (acts.length) el.append(...acts.map((a) => h('button', { class: 'btn ' + (a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, a.label)));
+      if (acts.length && this._floatShown) el.append(h('div', { class: 'small muted ac-none' }, `${acts.length === 1 ? 'Ein Knopf' : acts.length + ' Knöpfe'} schweben über der Karte – tippe darauf.`), h('div', { class: 'ac-list' }, acts.map((a) => h('div', { class: 'ac-li' }, '• ' + a.label.replace(/^Aktivieren: ?/, 'Aktivieren – ')))));
+      else if (acts.length) el.append(...acts.map((a) => h('button', { class: 'btn ' + (a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, a.label)));
       else el.append(h('div', { class: 'small muted ac-none' }, own && this.pending && this.pending.kind === 'idle' ? 'Mit dieser Karte ist gerade keine Aktion möglich.' : 'Hier gibt es gerade nichts zu tun.'));
       return;
     }
@@ -530,7 +553,7 @@ class Duel {
     }
   }
   closeSheet() {
-    const had = this.selKey; this.selKey = null;
+    const had = this.selKey; this.selKey = null; this.dropFloat();
     if (this.root.classList.contains('land')) { this._sheetSig = null; if (this.snap) this.render(); else clear(this.actsEl); return; } // Querformat: die Karteninfo bleibt stehen
     this.sheet.classList.remove('open'); clear(this.sheet); if (had && this.snap) this.render();
   }
@@ -662,14 +685,15 @@ class Duel {
 
   // ---------------------------------------------------------------- Prompt-Bereich & Antworten
   setBar(text, buttons = [], sub) {
-    this.bar.classList.remove('off'); this.root.classList.add('baron'); clear(this.bar); this.bar.append(h('div', { class: 'bar-t' }, h('div', { class: 'bar-m' }, text), sub ? h('div', { class: 'bar-s' }, sub) : null), h('div', { class: 'bar-b' }, buttons.map((b) => h('button', { class: 'btn ' + (b.cls || ''), disabled: b.disabled, onclick: b.onclick }, b.label))));
+    const round = this.root.classList.contains('land') && buttons.length > 0 && buttons.length <= 2 && buttons.every((b) => !b.cls || /^(pri|ghost)$/.test(b.cls)) && buttons.some((b) => /^(Bestätigen|Abbrechen|Fertig|Ja|Nein|OK|Weiter|Zurück)/i.test(b.label) || b.cls === 'pri' && buttons.length === 1);
+    this.bar.classList.remove('off'); this.root.classList.add('baron'); clear(this.bar); this.bar.append(h('div', { class: 'bar-t' }, h('div', { class: 'bar-m' }, text), sub ? h('div', { class: 'bar-s' }, sub) : null), h('div', { class: 'bar-b' + (round ? ' rd' : '') }, buttons.map((b) => (round ? h('button', { class: 'rb ' + (/ghost/.test(b.cls || '') ? 'rb-no' : 'rb-ok'), disabled: b.disabled, onclick: b.onclick }, h('span', { class: 'rb-i' }, /ghost/.test(b.cls || '') ? '✕' : '✔'), h('span', { class: 'rb-l' }, b.label)) : h('button', { class: 'btn ' + (b.cls || ''), disabled: b.disabled, onclick: b.onclick }, b.label)))));
   }
   /** Leiste ausblenden – im Zug steuert das Phasenrad Kampf und Zugende */
   hideBar() { clear(this.bar); this.bar.classList.add('off'); this.root.classList.remove('baron'); }
   clearBar() { this.hideBar(); }
   /** wartet auf eine Antwort der Oberfläche */
   wait(kind) { return new Promise((resolve) => { this.pending = { resolve, kind }; }); }
-  answer(resp) { const p = this.pending; if (!p) return; this.closePhMenu(); this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
+  answer(resp) { const p = this.pending; if (!p) return; this.closePhMenu(); this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.dropFloat(); this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
   setTip(t) { this.tip = t; }
   showTip() {
     this.tipBtn.classList.remove('pulse'); const t = this.tip; if (!t) { toast('Gerade gibt es nichts zu raten.'); return; }

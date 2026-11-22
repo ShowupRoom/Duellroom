@@ -153,7 +153,7 @@
 .duel.land.baron .d-r .d-phases{flex:none;margin:4px 0}.duel.land.baron .d-r .ph-wheel{width:62px;height:62px;border-width:3px}.duel.land.baron .d-r .ph-wheel b{font-size:21px}
 .land .d-top{justify-content:center;flex-wrap:nowrap}
 .land .d-top .ibtn{flex:none;width:32px;height:32px;font-size:15px}
-.ph-scrim{position:absolute;inset:0;z-index:70}
+.ph-scrim{position:absolute;inset:0;z-index:70;background:rgba(2,8,24,.5)}
 .ph-menu{position:absolute;z-index:75;display:flex;flex-direction:column;gap:8px;padding:10px;background:linear-gradient(180deg,#14336f,#091735);border:1px solid var(--line2);border-radius:16px;box-shadow:0 14px 34px rgba(0,0,0,.65);animation:phin .14s ease-out}
 .ph-menu-t{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;padding:0 2px}
 .ph-menu .btn{min-height:46px;width:100%;font-size:14px;padding:0 6px;white-space:nowrap}
@@ -281,3 +281,39 @@ mark.fx-mark{background:rgba(246,201,107,.2);color:#ffe3a1;border-radius:3px;pad
 .cs-top{line-height:1.4}.cs-hand,.cs-top,.cs-best,.cs-meta{flex:0 0 auto}
 .cs-btn{display:flex;gap:8px;flex-wrap:wrap}.cs-btn .btn{flex:1 1 140px}.cs-btn{position:sticky;bottom:-14px;padding:8px 0 2px;margin-top:2px;background:linear-gradient(180deg,rgba(6,16,40,0),rgba(6,16,40,.97) 30%)}
 @media (max-height:480px){.cs-ov{padding:8px}.cs-box{gap:5px;padding:9px 13px}.cs-h{font-size:15px}.cs-hand,.cs-top,.cs-meta,.cs-scan{font-size:12px!important;line-height:1.3}.cs-best{font-size:12.5px}.cs-btn{bottom:-9px}}
+
+/* Schwebende Aktions-Knöpfe über der angetippten Karte (Vorbild MDPro3 / Master Duel) */
+.fl-act{position:absolute;z-index:70;display:flex;gap:10px;align-items:flex-start;pointer-events:none;max-width:calc(100% - 12px);flex-wrap:wrap;justify-content:center}
+.fb{pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;padding:0;color:#fff;font:inherit;cursor:pointer;transform:scale(0);animation:flpop .12s ease-out forwards;-webkit-tap-highlight-color:transparent}
+.fb-i{width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;border:2px solid rgba(255,255,255,.85);box-shadow:0 3px 12px rgba(0,0,0,.6),0 0 0 3px rgba(8,18,44,.55),inset 0 2px 6px rgba(255,255,255,.28);background:radial-gradient(circle at 35% 28%,#5fc2ff,#1c5fb8 70%)}
+.fb-sum .fb-i{background:radial-gradient(circle at 35% 28%,#ffe08a,#c58a1c 72%)}.fb-sp .fb-i{background:radial-gradient(circle at 35% 28%,#d6a8ff,#6d35c0 72%)}.fb-set .fb-i{background:radial-gradient(circle at 35% 28%,#aab9d6,#4a5b82 72%)}.fb-pos .fb-i{background:radial-gradient(circle at 35% 28%,#8be8b5,#1e8a56 72%)}.fb-atk .fb-i{background:radial-gradient(circle at 35% 28%,#ff9a8c,#c02b25 72%)}
+.fb.pri .fb-i{border-color:#ffe08a;box-shadow:0 3px 12px rgba(0,0,0,.6),0 0 0 3px rgba(246,201,107,.45),inset 0 2px 6px rgba(255,255,255,.3)}
+.fb:active .fb-i{transform:scale(.92);filter:brightness(1.15)}
+.fb-l{font-size:11.5px;font-weight:700;line-height:1.1;padding:2px 8px;border-radius:99px;background:rgba(4,10,28,.88);border:1px solid rgba(255,255,255,.25);white-space:nowrap}
+@keyframes flpop{from{transform:scale(0)}to{transform:scale(1)}}
+.duel.land .d-acts .ac-list{display:flex;flex-direction:column;gap:3px;font-size:11.5px;line-height:1.3;color:var(--mut)}
+@media (prefers-reduced-motion:reduce){.fb{animation:none;transform:none}}
+
+/* Ketten-Anzeige mit Kartenpaar (links du, rechts Gegner, große Kettennummer) */
+.fx-b.pairb{gap:16px}
+.cp{display:flex;align-items:center;gap:22px;position:relative}
+.cp:not(.same)::before{content:"";position:absolute;left:18%;right:18%;top:50%;height:3px;background:linear-gradient(90deg,#6fd0ff,#ffe08a);box-shadow:0 0 10px rgba(111,208,255,.8);z-index:0;border-radius:3px}
+.cp-c{position:relative;z-index:1}.cp-c .card,.cp-c .fcard{box-shadow:0 4px 16px rgba(0,0,0,.65)}
+.cp-n{position:absolute;z-index:2;top:-12px;left:-12px;min-width:34px;height:34px;padding:0 6px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;background:radial-gradient(circle at 35% 28%,#ffe08a,#c58a1c 75%);border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.6),0 0 14px rgba(246,201,107,.7)}
+.cp-c.op .cp-n{left:auto;right:-12px;background:radial-gradient(circle at 35% 28%,#ff9a8c,#c02b25 75%)}
+/* Runde Bestätigen-/Abbrechen-Knöpfe bei der Auswahl (Querformat) */
+.land .bar-b.rd{flex-direction:row;justify-content:center;gap:14px}
+.rb{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;color:#fff;font:inherit;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.rb-i{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;border:2px solid rgba(255,255,255,.85);box-shadow:0 3px 10px rgba(0,0,0,.55),inset 0 2px 6px rgba(255,255,255,.28)}
+.rb-ok .rb-i{background:radial-gradient(circle at 35% 28%,#8be8b5,#1e8a56 72%)}.rb-no .rb-i{background:radial-gradient(circle at 35% 28%,#ff9a8c,#c02b25 72%)}
+.rb-l{font-size:11.5px;font-weight:700;line-height:1.1;padding:2px 8px;border-radius:99px;background:rgba(4,10,28,.88);border:1px solid rgba(255,255,255,.25)}
+.rb:disabled{opacity:.4;filter:grayscale(.7)}.rb:not(:disabled):active .rb-i{transform:scale(.92)}
+
+/* Banner nah/fern (Vorbild MDPro3: Zug/Phase des eigenen Spielers unten, des Gegners oben) */
+.fx-b.near,.fx-b.far{position:relative}
+.fx-b.near{top:24%}.fx-b.far{top:-24%}
+.land .fx-b.near{top:20%}.land .fx-b.far{top:-20%}
+/* Phasen-Auswahl als Fenster in der Feldmitte */
+.ph-menu{border-color:var(--gold);box-shadow:0 18px 50px rgba(0,0,0,.75),0 0 30px rgba(246,201,107,.25)}
+.ph-menu-t{text-align:center;font-size:12px;color:var(--gold);padding:2px 0 4px}
+.ph-menu .btn{border-radius:12px}

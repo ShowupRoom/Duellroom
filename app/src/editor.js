@@ -98,7 +98,7 @@ export function parseYdk(text, fmtId) {
   return { deck: d, unknown };
 }
 export const toYdk = (d) => { const p = (l) => expand(l).map((c) => toPlainCode(c)).join('\n'); return `#created by Duellraum\n#main\n${p(d.main)}\n#extra\n${p(d.extra)}\n!side\n${p(d.side)}\n`; };
-function importDialog(fmtId, done) {
+export function importDialog(fmtId, done) {
   const ta = h('textarea', { class: 'input', style: 'width:100%;height:160px;padding:10px', placeholder: 'Hier den Inhalt einer .ydk-Datei einfügen …' });
   const file = h('input', { type: 'file', accept: '.ydk,.txt', style: 'display:none', onchange: async (e) => { const f = e.target.files[0]; if (f) ta.value = await f.text(); } });
   const m = openModal({ title: '.ydk importieren', body: h('div', { class: 'col' }, h('p', { class: 'small muted' }, 'Wähle eine Datei oder füge den Text ein. Karten, die es nicht gibt, werden übersprungen.'), file, h('button', { class: 'btn', onclick: () => file.click() }, '📂 Datei wählen'), ta), footer: h('button', { class: 'btn pri', onclick: () => { const r = parseYdk(ta.value, fmtId); if (!count(r.deck.main) && !count(r.deck.extra)) { toast('Keine Karten gefunden.'); return; } m.close(); if (r.unknown.length) toast(`${r.unknown.length} unbekannte Karte(n) übersprungen`); done({ name: 'Importiertes Deck', fmt: fmtId, list: fmtId === 'advanced' ? 'tcg' : fmtId, ...r.deck }); } }, 'Importieren') });
@@ -106,7 +106,7 @@ function importDialog(fmtId, done) {
 
 // ---- Editor ----------------------------------------------------------------------------------------------------------
 screens.editor = (params = {}) => {
-  const src = params.deck || {}; const S = { id: src.id || 'my-' + uid(), saved: !!src.id && customDecks().some((d) => d.id === src.id), name: src.name || 'Mein Deck', fmt: src.fmt || params.fmt || 'advanced', list: src.list || 'tcg', main: clone(src.main), extra: clone(src.extra), side: clone(src.side), dirty: params.dirty ?? !src.id };
+  const src = params.deck || {}; const S = { id: src.id || 'my-' + uid(), saved: !!src.id && customDecks().some((d) => d.id === src.id), name: src.name || 'Mein Deck', fmt: src.fmt || params.fmt || 'advanced', list: src.list || params.list || 'tcg', main: clone(src.main), extra: clone(src.extra), side: clone(src.side), dirty: params.dirty ?? !src.id };
   if (S.fmt === 'goat') { for (const k of ['main', 'extra', 'side']) S[k] = S[k].map(([c, n]) => [toFmtCode(c, 'goat'), n]); }
   try { const sv = store.get('ed.sort', null); if (sv && sv.pool && sv.deck) { Object.assign(SORTS.pool, sv.pool); Object.assign(SORTS.deck, sv.deck); } } catch (e) { /* Standard */ }
   const F = { q: '', type: 'all', attr: 0, lvl: 'all', sub: 'all', legal: true, more: false, ocg: 'all', rec: false, ht: 0, eng: null }; let split = 1; let sel = null;
@@ -347,7 +347,7 @@ screens.editor = (params = {}) => {
   }
   function save(silent) {
     if (!S.name.trim()) S.name = 'Mein Deck'; const iss = issues();
-    saveCustom({ id: S.id, name: S.name.trim(), fmt: S.fmt, list: fmt().list, main: S.main, extra: S.extra, side: S.side, src: 'Eigenes Deck', status: iss.length ? 'angepasst' : 'ok', repairs: [], sub: FORMAT_INFO[S.fmt].title }); S.saved = true; S.dirty = false;
+    saveCustom({ id: S.id, name: S.name.trim(), fmt: S.fmt, list: fmt().list, main: S.main, extra: S.extra, side: S.side, src: 'Eigenes Deck', status: iss.length ? 'angepasst' : 'ok', repairs: [], sub: FORMAT_INFO[S.fmt].title }); store.set('banlist', S.fmt === 'advanced' ? (S.list || 'tcg') : S.fmt); /* Deck-Zentrale springt zur Banlist des gespeicherten Decks */ S.saved = true; S.dirty = false;
     if (!silent) toast(iss.length ? 'Gespeichert – das Deck hat noch Hinweise.' : 'Deck gespeichert ✓'); return true;
   }
   function handTest() {

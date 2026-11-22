@@ -37,8 +37,8 @@ screens.home = () => h('div', { class: 'screen home' },
       h('button', { class: 'btn lg ghost', onclick: () => go('settings') }, '⚙  Einstellungen'),
       isApp() ? null : h('button', { class: 'btn ghost sm', style: 'align-self:center;margin-top:4px', onclick: installApp }, '📲  Als App auf dem Handy installieren')),
     h('div', { class: 'home-f muted small' }, `${App.decks.length} Decks · ${App.cards.size.toLocaleString('de-DE')} Karten · offline spielbar`)));
-const isApp = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-async function installApp() {
+export const isApp = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+export async function installApp() {
   if (window.__bip) { const e = window.__bip; window.__bip = null; e.prompt(); try { await e.userChoice; } catch (x) { /* */ } return; }
   const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const m = openModal({ title: '📲 Als App installieren', center: true, body: h('div', null, ios
@@ -47,7 +47,7 @@ async function installApp() {
     h('p', { class: 'small muted' }, 'Danach startet Duellraum wie eine normale App – schnell und auch ohne Internet (nur das Online-Duell braucht Internet).')), footer: h('button', { class: 'btn pri', onclick: () => m.close() }, 'OK') });
 }
 /** gespeichertes Duell wieder zusammensetzen */
-function hydrate(l) {
+export function hydrate(l) {
   const find = (id) => allDecks().find((d) => d.id === id) || (() => { throw new Error('Deck fehlt'); })();
   return { ...l, players: l.players.map((p) => ({ name: p.name, deck: withTutor(find(p.deck)) })) };
 }
@@ -67,10 +67,10 @@ const MODES = [
   { id: 'solo', t: 'Allein üben', d: 'Der Gegner steht still. Ideal, um die eigene Combo zu lernen.' },
   { id: 'demo', t: '🎬 Kombo ansehen', d: 'Die KI spielt das Deck langsam vor und erklärt jeden Schritt: Starter, Verlängerer, Ziel. Du schaust nur zu – mit Pause, Einzelschritt und Vorspulen.' },
 ];
-screens.setup = ({ fmt, demo }) => {
-  const saved = store.get('setup.' + fmt, {}); const info = FORMAT_INFO[fmt];
-  let st = { mode: demo ? 'demo' : (saved.mode === 'bot' || saved.mode === 'demo' ? 'ai' : (saved.mode || 'hot')), demoOpp: saved.demoOpp || 'passive', demoGoal: saved.demoGoal || 'balance', demoMs: saved.demoMs === undefined ? 15000 : saved.demoMs, level: saved.level || 'normal', names: saved.names || settings.names, decks: saved.decks || [null, null], list: saved.list || 'tcg', first: saved.first || 'random' };
-  const pool = () => allDecks(fmt).filter((d) => d.status !== 'entwurf' && (fmt !== 'advanced' || st.list === 'none' || d.list === st.list || d.custom));
+screens.setup = ({ fmt, demo, list: listP, mode: modeP }) => {
+  const saved = store.get('setup.' + fmt, {}); const info = FORMAT_INFO[fmt]; const G = store.get('cfg.demo', {}); // Kombo-Ansicht und KI-Stärke stehen auch in den Einstellungen – dort gilt dasselbe
+  let st = { mode: demo ? 'demo' : (modeP || (saved.mode === 'bot' || saved.mode === 'demo' ? 'ai' : (saved.mode || 'hot'))), demoOpp: G.opp || saved.demoOpp || 'passive', demoGoal: G.goal || saved.demoGoal || 'balance', demoMs: G.ms !== undefined ? G.ms : (saved.demoMs === undefined ? 15000 : saved.demoMs), level: store.get('cfg.level', null) || saved.level || 'normal', names: saved.names || settings.names, decks: saved.decks || [null, null], list: listP || saved.list || 'tcg', first: saved.first || 'random' };
+  const pool = () => allDecks(fmt).filter((d) => d.status !== 'entwurf' && (fmt !== 'advanced' || st.list === 'none' || (d.custom ? (d.list || 'tcg') === st.list : d.list === st.list)));
   const byId = (id) => id && allDecks(fmt).find((d) => d.id === id);
   const start = () => {
     const ds = st.decks.map(byId); if (st.mode === 'demo' && st.demoOpp !== 'ai') ds[1] = ds[0]; // der stille Gegner braucht nur irgendein Deck
@@ -84,9 +84,9 @@ screens.setup = ({ fmt, demo }) => {
     store.set('last', { ...conf, players: pl.map((p) => ({ name: p.name, deck: p.deck.id })) });
     go('duel', conf);
   };
-  const root = h('div', { class: 'screen' }, hdr(info.title + ' – Duell einrichten', info.sub));
+  const root = h('div', { class: 'screen' }, hdr(demo ? 'Kombo-Ansicht einrichten' : 'Duell einrichten', info.title + (fmt === 'advanced' ? ' · ' + LIST_NAME[listP || saved.list || 'tcg'] : ' · ' + info.sub)));
   const body = h('div', { class: 'body' }); const foot = h('div', { class: 'ft' }); root.append(body, foot);
-  const save = () => { store.set('setup.' + fmt, st); settings.names = st.names; };
+  const save = () => { store.set('setup.' + fmt, st); settings.names = st.names; store.set('cfg.demo', { opp: st.demoOpp, goal: st.demoGoal, ms: st.demoMs }); store.set('cfg.level', st.level); if (fmt === 'advanced') store.set('banlist', st.list); };
   const render = () => {
     clear(body); clear(foot);
     if ((st.mode === 'ai' || (st.mode === 'demo' && st.demoOpp === 'ai')) && !byId(st.decks[1])) { const p = pool(); if (p.length) { st.decks[1] = p[rand32() % p.length].id; save(); } }
@@ -130,7 +130,7 @@ function deckMini(d) {
 const GROUP_ORDER = ['Meine Decks', 'Beliebte Decks', 'Turnier-Decks', 'Archetypen', 'Mechaniken', 'Master Duel', 'Anime', 'Structure Decks', 'Promo-Decks', 'Starter Decks', 'Weltmeisterschaft', 'Entwürfe'];
 export function deckArt(d) { const t = withTutor(d).tutor; return (t.keys?.bosses?.[0]) || (t.keys?.starters?.[0]) || d.main[0]?.[0]; }
 screens.decks = ({ fmt, list, title, onPick }) => {
-  const f = FORMATS[fmt]; let decks = allDecks(fmt).filter((d) => fmt !== 'advanced' || d.custom || list === 'none' || d.list === list);
+  const f = FORMATS[fmt]; let decks = allDecks(fmt).filter((d) => fmt !== 'advanced' || list === 'none' || (d.custom ? (d.list || 'tcg') === list : d.list === list));
   const groups = GROUP_ORDER.filter((g) => decks.some((d) => d.grp === g));
   let grp = groups.includes('Beliebte Decks') ? 'Beliebte Decks' : (decks.some((d) => d.custom) ? 'Meine Decks' : groups.includes('Turnier-Decks') ? 'Turnier-Decks' : groups[0]);
   let sub = null, q = ''; let sortBy = 'name';
@@ -241,18 +241,10 @@ screens.learn = () => h('div', { class: 'screen' }, hdr('Lernen & Regeln', 'In w
     LEARN.map(([t, x], i) => h('details', { class: 'panel', open: i === 0 }, h('summary', null, t), h('p', { class: 'small' }, x))))));
 
 // ---- Einstellungen ----------------------------------------------------------------------------------
-screens.settings = () => {
-  const root = h('div', { class: 'screen' }, hdr('Einstellungen')); const body = h('div', { class: 'body' }); root.append(body);
-  const paint = async () => {
-    clear(body); const n = await idbCount(); const si = await storageInfo(); const mbOf = (x) => Math.round(x / 1048576); const deckCodes = () => { const s = new Set(); for (const d of allDecks()) for (const sec of ['main', 'extra', 'side']) for (const [c] of (d[sec] || [])) s.add(c); return s; };
-    const tog = (label, sub, get, set) => h('label', { class: 'panel row set-row' }, h('div', { class: 'grow' }, h('div', null, label), h('div', { class: 'muted small' }, sub)), h('input', { type: 'checkbox', class: 'sw', checked: get(), onchange: (e) => { set(e.target.checked); } }));
-    body.append(h('div', { class: 'wrap col' },
-      tog('Kartenbilder', 'Bilder werden bei Internet einmal geladen und auf dem Gerät gemerkt. Ohne Bilder erscheinen gezeichnete Karten.', () => imgCfg.images, (v) => setImages(v)),
-      tog('Tutor-Tipps im Duell', 'Zeigt einen Lampen-Knopf mit Zugvorschlägen.', () => settings.tutor, (v) => { settings.tutor = v; }),
-      App.de ? tog('Kartentexte auf Deutsch', 'Kartennamen und Effekttexte in deutscher Sprache (aus), um die englischen Originale zu sehen.', () => App.lang !== 'en', (v) => { App.lang = v ? 'de' : 'en'; store.set('lang', App.lang); }) : null,
-      tog('Töne', 'Kleine Effekte bei Aktionen.', () => sound.on, (v) => { sound.on = v; store.set('sound', v); }),
-      h('div', { class: 'panel col' }, h('b', null, 'Startlebenspunkte'), h('div', { class: 'row' }, [4000, 8000, 16000].map((v) => h('button', { class: 'chip' + (settings.lp === v ? ' on' : ''), onclick: () => { settings.lp = v; paint(); } }, v)))),
-      h('div', { class: 'panel col' }, h('b', null, 'Widmung auf dem Startbildschirm'), h('input', { class: 'input', value: settings.dedication, maxlength: 60, oninput: (e) => { settings.dedication = e.target.value; } })),
+/** Daten-Bereich der Einstellungen: Bilder für den Offline-Betrieb vorladen, eigene Decks löschen (n = gespeicherte Bilder, si = Speicherstatus) */
+export const dataPanels = (n, si, paint) => {
+  const mbOf = (x) => Math.round(x / 1048576); const deckCodes = () => { const s = new Set(); for (const d of allDecks()) for (const sec of ['main', 'extra', 'side']) for (const [c] of (d[sec] || [])) s.add(c); return s; };
+  return [
       h('div', { class: 'panel col' }, h('b', null, 'Bilder für Offline-Betrieb vorladen'), h('div', { class: 'muted small' }, `${n} Bilder auf diesem Gerät gespeichert. Lade alle Karten auf einmal (unabhängig vom Format) oder nur die Beliebt-/Turnier-Decks eines Formats (ca. 15 KB je Karte).`),
         h('div', { class: 'small', style: 'color:' + (si.persisted ? 'var(--ok,#6c6)' : 'var(--warn,#e9b44c)') }, si.persisted ? '🔒 Speicher dauerhaft gesichert – der Browser löscht die Bilder nicht von selbst.' : '⚠️ Speicher nicht gesichert – der Browser darf Bilder bei Platzmangel oder nach einigen Tagen ohne Nutzung löschen. Auf dem iPhone: Seite über „Teilen → Zum Home-Bildschirm“ als App ablegen, dann bleibt alles erhalten.'), si.quota ? h('div', { class: 'muted small' }, `Belegt: ${mbOf(si.used)} MB von ca. ${mbOf(si.quota)} MB erlaubt.`) : null,
         h('div', { class: 'row', style: 'flex-wrap:wrap' }, [['Alle Decks aller Formate', 'alle Karten, die in irgendeinem Deck vorkommen', () => deckCodes()], ['Wirklich alle Karten', 'alle Karten der Datenbank – für eigene Decks mit beliebigen Karten', () => { const s = deckCodes(); for (const c of App.cards.values()) if (!(c.type & 0x4000)) s.add(c.code); return s; }]].map(([label, what, get]) => h('button', { class: 'btn sm pri', onclick: async (e) => {
@@ -264,8 +256,6 @@ screens.settings = () => {
         } }, label))),
         h('div', { class: 'row', style: 'flex-wrap:wrap' }, ['goat', 'edison', 'advanced', 'genesys', 'speed'].map((f) => h('button', { class: 'btn sm', onclick: async (e) => { const b = e.currentTarget; const codes = new Set(); for (const d of allDecks(f).filter((x) => x.grp === 'Beliebte Decks' || x.grp === 'Turnier-Decks' || x.custom || f === 'speed')) for (const s of ['main', 'extra']) for (const [c] of d[s]) codes.add(c); b.disabled = true; const r = await preload([...codes], (a, t) => { b.textContent = `${a}/${t}`; }); b.textContent = FORMAT_INFO[f].title; b.disabled = false; toast(`${r.ok} von ${r.total} Bildern gespeichert` + (r.ok < r.total ? ' – ohne Internet nicht möglich?' : '')); paint(); } }, FORMAT_INFO[f].title)))),
       h('div', { class: 'panel col' }, h('b', null, 'Eigene Decks'), h('div', { class: 'muted small' }, customDecks().length + ' gespeichert (nur auf diesem Gerät).'),
-        h('button', { class: 'btn red sm', onclick: async () => { if (await confirmBox('Alle eigenen Decks löschen?', 'Das kann nicht rückgängig gemacht werden.', 'Löschen', 'Abbrechen', true)) { customDecks().forEach((d) => deleteCustom(d.id)); paint(); } } }, 'Alle eigenen Decks löschen')),
-      h('div', { class: 'muted small', style: 'padding:6px' }, 'Spielkern: EDOPro-Kern (ocgcore) als WebAssembly · Regeln und Kartenskripte stammen aus dem Project-Ignis-Projekt · Deck-Sammlungen aus frei zugänglichen Quellen.')));
-  };
-  paint(); return root;
+        h('button', { class: 'btn red sm', onclick: async () => { if (await confirmBox('Alle eigenen Decks löschen?', 'Das kann nicht rückgängig gemacht werden.', 'Löschen', 'Abbrechen', true)) { customDecks().forEach((d) => deleteCustom(d.id)); paint(); } } }, 'Alle eigenen Decks löschen'))
+  ];
 };

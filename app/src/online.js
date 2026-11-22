@@ -14,16 +14,17 @@ const slim = (d) => (d ? { id: d.id, name: d.name, fmt: d.fmt, list: d.list, mai
 const fmtTitle = (s) => (s.fmt ? FORMAT_INFO[s.fmt].title + (s.fmt === 'advanced' ? ' · ' + (s.list === 'none' ? 'ohne Banlist' : (s.list || 'tcg').toUpperCase()) : '') : '–');
 
 // ---- Einstieg -------------------------------------------------------------------------------------------------
-screens.online = () => {
+screens.online = (P = {}) => {
   const name = h('input', { class: 'input', value: myName() || settings.names?.[0] || '', placeholder: 'Dein Name', maxlength: 20, oninput: (e) => setMyName(e.target.value.trim()) });
   const code = h('input', { class: 'input code-in', placeholder: 'CODE', maxlength: 5, autocapitalize: 'characters', autocomplete: 'off', oninput: (e) => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); } });
   const need = () => { const n = name.value.trim(); if (!n) { toast('Bitte zuerst deinen Namen eintragen.'); name.focus(); return null; } setMyName(n); return n; };
   return h('div', { class: 'screen' }, hdr('Online spielen', 'Jeder an seinem eigenen Handy'),
     h('div', { class: 'body' }, h('div', { class: 'wrap col' },
+      P.fmt ? h('div', { class: 'ban-pill' }, h('span', { class: 'muted small' }, 'Banlist'), h('b', null, fmtTitle({ fmt: P.fmt, list: P.list }))) : null,
       h('p', { class: 'muted' }, 'Ihr spielt gegeneinander, jeder sieht nur seine eigenen Handkarten. Am besten seid ihr im selben WLAN.'),
       h('label', { class: 'small muted' }, 'Dein Name'), name,
       h('div', { class: 'panel col' }, h('b', null, '1) Einer eröffnet den Raum'), h('p', { class: 'small muted' }, 'Du bekommst einen Code (z. B. K7P2Q), den du deiner Mitspielerin sagst oder per Link schickst.'),
-        h('button', { class: 'btn pri lg', onclick: () => { if (need()) hostRoom(); } }, '🏠  Raum eröffnen')),
+        h('button', { class: 'btn pri lg', onclick: () => { if (need()) { if (P.fmt) store.set('online.host', { ...store.get('online.host', {}), fmt: P.fmt, list: P.list || (P.fmt === 'advanced' ? 'tcg' : P.fmt) }); hostRoom(); } } }, '🏠  Raum eröffnen')),
       h('div', { class: 'panel col' }, h('b', null, '2) Die andere tritt bei'), code,
         h('button', { class: 'btn lg', onclick: () => { if (!need()) return; const c = code.value.trim(); if (c.length !== 5) { toast('Der Code hat 5 Zeichen.'); return; } joinRoom(c); } }, '🔗  Raum beitreten')))));
 };

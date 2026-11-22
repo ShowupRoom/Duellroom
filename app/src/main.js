@@ -6,6 +6,7 @@ import './screens.js';
 import './duel.js';
 import './editor.js';
 import './online.js';
+import './md.js';
 import { joinRoom } from './online.js';
 import { prewarm } from './engine.js';
 import { myName } from './net.js';
