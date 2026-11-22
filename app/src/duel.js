@@ -1,6 +1,7 @@
 // Duell-Oberfläche: Spielfeld, Hand, Ereignisse, Übergabe zwischen den Spielern
 import { applyLook } from './look.js';
 import { matchModal } from './match.js';
+import { bumpDay, fav, artEl, HOME_ICONS, iconEl } from './home.js';
 import { h, clear, sleep, toast, shuffled, beep, rand32, zkey as key } from './util.js';
 import { App, MODES, FORMATS, fmtById, expand, nameOf, cardOf, cleanName, withTutor, descOf } from './data.js';
 import { DuelAI } from '../../src/ai.mjs';
@@ -46,7 +47,10 @@ class Duel {
     this.turnEl = h('div', { class: 'd-turn' }); this.chainEl = h('button', { class: 'd-chainb', onclick: () => this.showChain() });
     this.tipBtn = h('button', { class: 'ibtn tipb', title: 'Tutor-Tipp', onclick: () => this.showTip() }, '💡');
     this.ffBtn = h('button', { class: 'ibtn ffb', title: 'Vorspulen bis zu deiner nächsten Entscheidung', onclick: () => this.setFF(!this.ff) }, '⏩'); this.ffBtn.style.display = 'none';
-    this.top = h('div', { class: 'd-top' }, h('button', { class: 'ibtn', onclick: () => this.menu() }, '☰'), this.turnb = h('button', { class: 'd-turnb', onclick: () => this.phaseHelp() }, this.turnEl), this.chainEl, this.tipBtn, h('button', { class: 'ibtn', onclick: () => this.showLog() }, '📜'), this.ffBtn);
+    this.mdf = store.get('layout', 'md') !== 'classic' && !this.demo; // Spielfeld wie Master Duel (schräg, LP-Plaketten, runde Knöpfe); „Klassisch“ = alte Ansicht
+    this.infoBtn = h('button', { class: 'ibtn infob', title: 'Karteninfo', onclick: () => this.toggleInfo() }, 'i');
+    this.actsBtn = h('button', { class: 'ibtn actsb', title: 'Was ist gerade möglich?', onclick: () => this.root.classList.toggle('acts-open') }, '!');
+    this.top = h('div', { class: 'd-top' }, h('button', { class: 'ibtn menub', onclick: () => this.menu() }, '☰'), this.turnb = h('button', { class: 'd-turnb', onclick: () => this.phaseHelp() }, this.turnEl), this.chainEl, this.tipBtn, this.infoBtn, this.actsBtn, h('button', { class: 'ibtn logb', onclick: () => this.showLog() }, '📜'), this.ffBtn);
     this.oppBar = h('div', { class: 'd-strip opp' }); this.meBar = h('div', { class: 'd-strip me' });
     this.boardWrap = h('div', { class: 'd-board' }); this.board = h('div', { class: 'bd' }); this.ohand = h('div', { class: 'd-ohand' }); this.boardWrap.append(this.board, this.ohand);
     this.wheel = h('button', { class: 'ph-wheel', title: 'Phase wählen', onclick: () => this.phaseTap() }, h('b', null, '–'), h('small', null, ''));
@@ -70,23 +74,23 @@ class Duel {
   /** Wo Phasenrad und Zugschild stehen: Querformat mit Extra-Monsterzonen = Rad mittig im Feld zwischen den beiden Link-Feldern,
    *  sonst über den Aktionen rechts; Zugschild immer über den Aktionen. Hochformat: beides in der Kopfzeile. */
   place(land) {
-    const inBoard = land && !!this.mode.emz;
+    const inBoard = land && !!this.mode.emz && !this.mdf;
     if (land) { if (this.turnb.parentNode !== this.colR) this.colR.insertBefore(this.turnb, this.actsEl); } else if (this.turnb.parentNode !== this.top) this.top.insertBefore(this.turnb, this.chainEl);
     const want = inBoard ? this.board : land ? this.colR : this.top;
     if (this.phaseEl.parentNode !== want) { if (want === this.colR) this.colR.insertBefore(this.phaseEl, this.actsEl); else if (want === this.top) this.top.insertBefore(this.phaseEl, this.top.children[1] || null); else want.append(this.phaseEl); }
   }
   fit() {
     const R = this.root; const W = R.clientWidth, H = R.clientHeight; if (!W || !H) return;
-    const land = W / H >= 1.3; R.classList.toggle('land', land);
+    const land = W / H >= 1.3; R.classList.toggle('land', land); const md = land && this.mdf; R.classList.toggle('mdf', md);
     this.place(land);
     if (land) {
       // Querformat: die Kartengröße richtet sich nach der Höhe (5 Reihen + herausschauende Hand + Gegnerhand)
       const sp = this.safe(); const RH = 1.1; // Querformat: Zonen fast quadratisch (Kartenausschnitt) – so wird das Feld größer
       const rowsH = this.mode.emz ? 5 * RH : 4 * RH + 0.32; const gaps = 4 * 3 + 6; R.style.setProperty('--rh', RH);
-      const SIDER = this.demo ? (this.mode.emz ? 64 : 132) : 156, MINL = this.demo ? 240 : 176; // rechts: senkrechte Symbolleiste + Aktionen, links bekommt den Rest für die Karteninfo
-      const cwH = (H - sp.t - sp.b - gaps - 4) / (rowsH + 0.34 + 1.0); const cwW = (W - sp.l - sp.r - SIDER - MINL - 18 - 12 - 16) / (this.mode.cols3 ? 5 : 7);
+      const SIDER = md ? 70 : this.demo ? (this.mode.emz ? 64 : 132) : 156, MINL = md ? (this.demo ? 240 : 0) : this.demo ? 240 : 176; // rechts: senkrechte Symbolleiste + Aktionen, links bekommt den Rest für die Karteninfo
+      const cwH = md ? (H - sp.t - sp.b - gaps - 4) / (rowsH * 0.95 + 0.3 + 0.68) : (H - sp.t - sp.b - gaps - 4) / (rowsH + 0.34 + 1.0); const cwW = (W - sp.l - sp.r - SIDER - MINL - 18 - 12 - (md ? 60 : 16)) / (this.mode.cols3 ? 5 : 7);
       const cw = Math.max(30, Math.min(cwH, cwW, 112)); const boardW = cw * (this.mode.cols3 ? 5 : 7) + 18 + 12;
-      const st = R.style; st.setProperty('--cw', cw.toFixed(1) + 'px'); st.setProperty('--hpk', (cw * 1.0).toFixed(1) + 'px'); st.setProperty('--opk', (cw * 0.34).toFixed(1) + 'px');
+      const st = R.style; st.setProperty('--cw', cw.toFixed(1) + 'px'); st.setProperty('--hpk', (cw * (md ? 0.8 : 1.0)).toFixed(1) + 'px'); st.setProperty('--opk', (cw * 0.34).toFixed(1) + 'px');
       const sidel = Math.max(MINL, W - sp.l - sp.r - boardW - SIDER - 16); st.setProperty('--sidel', sidel.toFixed(0) + 'px'); st.setProperty('--sider', SIDER + 'px'); st.setProperty('--sidew', sidel.toFixed(0) + 'px'); st.setProperty('--barh', '0px');
       if (this._land !== true) { this._land = true; this.sheet.classList.remove('open'); this._sheetSig = null; this.renderSheet(true); } return;
     }
@@ -324,6 +328,7 @@ class Duel {
     const draw = winner == null || winner > 1; const stats = store.get('stats', {});
     if (!draw && !this.conf.test) for (let p = 0; p < 2; p++) { if (!this.conf.human[p] || (this.net && p !== this.viewer)) continue; const id = this.deckOf(p).id; if (!id) continue; const s = stats[id] || { w: 0, l: 0 }; if (p === winner) s.w++; else s.l++; stats[id] = s; }
     store.set('stats', stats); beep('win');
+    if (this.demo) bumpDay('demos'); else if (!this.conf.test) { bumpDay('duels'); if (!draw && this.conf.human[winner] && !(this.net && winner !== this.viewer)) bumpDay('wins'); }
     const name = draw ? 'Unentschieden' : `${this.pname(winner)} gewinnt!`;
     this.closeSheet(); this.clearBar();
     if (this.conf.match) { matchModal(this, winner, victoryText(reason)); return; } // Match (Best of 3): Spielstand, Side Decking, nächstes Spiel
@@ -377,18 +382,25 @@ class Duel {
       const lp = s.lp[p]; const pl = s.players[p]; const max = Math.max(this.conf.lp, lp);
       const cur = this.lpShown[p]; const fl = this.floats.filter((f) => f.p === p); this.floats = this.floats.filter((f) => f.p !== p);
       clear(bar); bar.classList.toggle('turn', !!this.turnNo && this.turnPlayer === p); const hb = h('div', { class: 'lpbar' }, h('i', { style: `width:${Math.max(0, Math.min(100, (lp / max) * 100))}%` }));
-      const num = h('div', { class: 'lpn' }, String(cur)); bar.append(h('div', { class: 'st-n' + (this.turnPlayer === p ? ' act' : '') }, this.pname(p)), h('div', { class: 'lpw' }, hb, num),
+      const num = h('div', { class: 'lpn' }, String(cur)); bar.append(h('div', { class: 'st-av' }, artEl(this.avatarOf(p), 'st-avi')), h('div', { class: 'st-n' + (this.turnPlayer === p ? ' act' : '') }, this.pname(p)), h('div', { class: 'lpw' }, hb, num),
         h('div', { class: 'st-c' }, p === o ? h('span', { class: 'hbacks' }, Array.from({ length: Math.min(pl.hand.length, 12) }, () => h('i'))) : null, h('span', { class: 'chip' }, `🂠 ${pl.deck}`), p === o ? h('span', { class: 'chip' }, `✋ ${pl.hand.length}`) : null, p === o && pl.hand.some((c) => c && c.isPublic) ? h('button', { class: 'chip pubh', onclick: () => this.showHand(o) }, '👁 Hand offen') : null));
       if (p === o) { clear(this.ohand); for (let i = 0; i < Math.min(pl.hand.length, 14); i++) this.ohand.append(h('i')); }
       this.tweenLp(p, num, cur, lp); this.lpShown[p] = lp;
       for (const f of fl) { const e = h('div', { class: 'lpf ' + (f.d < 0 ? 'neg' : 'pos') }, (f.d > 0 ? '+' : '') + f.d); bar.append(e); setTimeout(() => e.remove(), this.tempo === 'fast' ? 900 : 1600); }
     }
   }
+  /** Profilbild auf der LP-Plakette: deins = Lieblingskarte aus dem Hauptmenü, sonst die erste Karte des Decks */
+  avatarOf(p) {
+    if (this._av && this._av[p]) return this._av[p]; this._av = this._av || [];
+    const d = this.deckOf(p) || {}; let first = 0, best = -1; for (const e of [...(d.extra || []), ...(d.main || [])]) { const c = Array.isArray(e) ? (e.length > 2 ? e[e.length - 1] : e[0]) : e; const k = cardOf(c); if (k && (k.type & 1) && k.attack > best) { best = k.attack; first = c; } } // stärkstes Monster des Decks
+    const mine = this.conf.human[p] && (p === this.viewer || !this.conf.human[1 - p]) && (p === 0 || !this.conf.human[0]);
+    return (this._av[p] = mine ? fav.avatar : first || fav.avatar);
+  }
   tweenLp(p, el, from, to) { if (from === to || !this.anim) { el.textContent = String(to); return; } const t0 = performance.now(); const dur = 700 * this.fxs(); const step = (t) => { const k = Math.min(1, (t - t0) / dur); el.textContent = String(Math.round(from + (to - from) * k)); if (k < 1 && el.isConnected) requestAnimationFrame(step); }; requestAnimationFrame(step); }
 
   zone(p, l, s, row, col, opt = {}) {
     const k = key(p, l, s); const c = this.cardAt(p, l, s);
-    const z = h('div', { class: 'zn' + (opt.cls ? ' ' + opt.cls : ''), style: `grid-row:${row};grid-column:${col}`, 'data-k': k });
+    const z = h('div', { class: 'zn ' + (p === this.viewer ? 'zme' : 'zop') + (opt.cls ? ' ' + opt.cls : ''), style: `grid-row:${row};grid-column:${col}`, 'data-k': k });
     if (opt.label) z.append(h('span', { class: 'zl' }, opt.label));
     if (c) z.append(this.cardNode(c)); this.mark(z, k); return z;
   }
@@ -493,7 +505,7 @@ class Duel {
   /** Karte antippen: Hochformat = Blatt von unten; Querformat = Karteninfo links bleibt stehen (zuletzt gewählte Karte), Aktionen rechts unter dem Phasenrad */
   openSheet(c, k) {
     this.selKey = k; this.lastSel = { c: { ...c }, k }; this._sheetSig = null;
-    if (!this.root.classList.contains('land')) this.sheet.classList.add('open');
+    if (!this.root.classList.contains('land')) this.sheet.classList.add('open'); else this.sheet.classList.add('show');
     this.render(); this.renderSheet(true);
   }
   renderSheet(reveal = false) {
@@ -512,7 +524,7 @@ class Duel {
     const actBtns = acts.map((a) => h('button', { class: 'btn ' + (a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, a.label));
     const none = !acts.length && own && this.selKey === k && this.pending && this.pending.kind === 'idle' ? h('div', { class: 'small muted', style: 'margin-top:6px' }, 'Mit dieser Karte ist gerade keine Aktion möglich.') : null;
     if (land) {
-      this.sheet.append(head, txt || h('div', { class: 'sh-t muted' }, 'Der Gegner hat diese Karte verdeckt gelegt.'));
+      this.sheet.append(h('button', { class: 'sh-x mdx', onclick: () => this.sheet.classList.remove('show') }, '✕'), head, txt || h('div', { class: 'sh-t muted' }, 'Der Gegner hat diese Karte verdeckt gelegt.'));
     } else {
       this.sheet.append(h('button', { class: 'sh-x', onclick: () => this.closeSheet() }, '✕'), head, txt);
       if (actBtns.length) this.sheet.append(h('div', { class: 'sh-acts' }, actBtns)); else if (none) this.sheet.append(none);
@@ -561,9 +573,11 @@ class Duel {
   }
   closeSheet() {
     const had = this.selKey; this.selKey = null; this.dropFloat();
-    if (this.root.classList.contains('land')) { this._sheetSig = null; if (this.snap) this.render(); else clear(this.actsEl); return; } // Querformat: die Karteninfo bleibt stehen
+    if (this.root.classList.contains('land')) { this._sheetSig = null; this.sheet.classList.remove('show'); if (this.snap) this.render(); else clear(this.actsEl); return; } // Querformat: die Karteninfo bleibt stehen
     this.sheet.classList.remove('open'); clear(this.sheet); if (had && this.snap) this.render();
   }
+  /** Master-Duel-Feld: Karteninfo links ein-/ausblenden */
+  toggleInfo() { if (this.sheet.classList.toggle('show') && !this.lastSel) toast('Tippe eine Karte an – dann steht hier ihr Text.'); }
   phaseHelp() { const t = PHASE_HELP[this.phase === 16 || this.phase === 32 || this.phase === 64 || this.phase === 128 ? 8 : this.phase]; if (t) toast(t, 5000); }
   showChain() {
     if (!this.chain.length) return;

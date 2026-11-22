@@ -143,6 +143,7 @@ screens.settings = () => {
       choice('Startlebenspunkte', 'Gilt für alle Formate außer Speed Duell (dort immer 4000).', [[4000, '4000'], [8000, '8000'], [16000, '16000']], () => settings.lp, (v) => { settings.lp = v; }),
       choice('Karten auf dem Feld', 'Ganze Karte wie in den Fenstern oder nur das Kunstbild mit farbigem Rahmen.', [['full', 'Ganze Karte'], ['art', 'Nur Kunst']], () => (fieldCfg.full ? 'full' : 'art'), (v) => setFieldFull(v === 'full')));
     else if (P === 'look') out.push(
+      choice('Spielfeld-Ansicht', 'Master Duel: schräges Feld, LP-Plaketten in den Ecken, runde Knöpfe, Karteninfo über „i“. Klassisch: flaches Feld mit Karteninfo links (nur Querformat).', [['md', 'Master Duel'], ['classic', 'Klassisch']], () => store.get('layout', 'md'), (v) => store.set('layout', v)),
       picker('Spielfeld-Design', 'Hintergrund und Zonen im Duell – auch das Hauptmenü übernimmt die Farben.', FIELDS, () => look.field, (v) => { look.field = v; }, 'field'),
       toggle('Bewegte Hintergründe', 'Funkelnde Sterne, Glut oder Scan-Linien bei passenden Designs. Aus spart Akku.', () => look.fx, (v) => { look.fx = v; applyLook(); }),
       picker('Meine Kartenhülle', 'Rückseite deiner Karten – auf dem Feld, im Friedhof-Stapel, im Deck.', SLEEVES, () => look.sleeve, (v) => { look.sleeve = v; }),

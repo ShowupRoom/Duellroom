@@ -7,6 +7,7 @@ import './duel.js';
 import './editor.js';
 import './online.js';
 import './md.js';
+import './home.js';
 import './match.js';
 import { applyLook } from './look.js';
 import { joinRoom } from './online.js';

@@ -1,0 +1,27 @@
+/* Deck-Werkstatt im Master-Duel-Aufbau: zwei gerahmte Fenster, links das Deck, rechts die Kartenliste mit Reiter */
+.ed{background:linear-gradient(118deg,#060a1c 0%,#0c1434 45%,#150d38 75%,#22103e 100%)}
+.ed .ed-split{gap:10px;padding:6px 10px calc(2px + var(--safe-b))}
+.ed .ed-deck,.ed .ed-pool{background:linear-gradient(180deg,#121a2c,#0b1120);border:3px solid #3c4659;border-radius:3px;box-shadow:inset 0 0 0 1px #1b2232,0 6px 18px rgba(0,0,0,.45)}
+.ed .ed-deck{border-right:3px solid #3c4659}
+/* Kopf eines Deckbereichs: dunkle Leiste wie „Main Deck  48 · EX 15“ */
+.ed .dz{border:0;padding:0;background:none}
+.ed .dz-h{display:flex;align-items:center;gap:10px;margin:0 -4px 6px;padding:6px 12px;background:linear-gradient(90deg,#1e2638,#161d2d);border-top:1px solid #2c3548;border-bottom:1px solid #0b0f19}
+.ed .dz-h b{flex:1;color:#e8eefb;font-weight:700;font-size:15px;letter-spacing:.02em}
+.ed .dz-h b::before{content:"";display:inline-block;width:14px;height:18px;margin-right:10px;vertical-align:-3px;border:2px solid #cfd8ea;border-radius:2px;box-shadow:inset 0 -6px 0 rgba(207,216,234,.35)}
+.ed .dz-h span{color:#e8eefb!important;font-weight:700;font-size:15px}
+/* Kartenliste: grüner Reiter oben */
+.ed .ed-pool{padding-top:0;overflow:hidden}
+.ed .ed-pool-h{background:none;padding-top:0}
+.ed .ed-pool-h::before{content:"🗂  Kartenliste";display:block;margin:0 -8px 6px;padding:7px 14px;font-weight:800;font-size:15px;color:#132000;background:linear-gradient(180deg,#c6f04c,#93c71c);clip-path:polygon(0 0,calc(100% - 12px) 0,100% 100%,0 100%);width:58%;box-shadow:0 2px 0 #4c6a08}
+.ed .search,.ed .ed-pool-h .input{background:linear-gradient(180deg,#5a5f69,#43474f);border:2px solid #6f7580;border-radius:3px;color:#fff;font-weight:600}
+.ed .search::placeholder,.ed .ed-pool-h .input::placeholder{color:#c9ccd3}
+.ed .ed-filters .chip{background:#000;border:2px solid #d9dde6;border-radius:16px;color:#fff;font-weight:700}
+.ed .ed-filters .chip.on{background:linear-gradient(180deg,#c6f04c,#93c71c);color:#132000;border-color:#e3ff8a}
+/* Kopfzeile: Deckname mit Stift, runde Knöpfe */
+.ed .hd{background:none}
+.ed .ed-name{background:rgba(0,0,0,.35);border:0;border-bottom:2px solid #6f7a90;border-radius:0;padding-left:30px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e8eefb'%3E%3Cpath d='M3 17.2V21h3.8l11-11-3.8-3.8zM20.7 7a1 1 0 000-1.4l-2.3-2.3a1 1 0 00-1.4 0l-1.8 1.8 3.8 3.8z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:6px 50%;background-size:18px}
+.ed .hd .ibtn,.ed .hd .btn{border-radius:10px;background:#000;border:2px solid #d9dde6;color:#fff;clip-path:none}
+.ed .ed-status .chip{background:rgba(0,0,0,.55);border-color:#3c4659}
+.ed .ed-status .chip.on{background:linear-gradient(180deg,#c6f04c,#93c71c);color:#132000;border-color:#e3ff8a}
+/* Karten im Raster mit leichtem Rahmen */
+.ed .ed-grid .card{box-shadow:0 0 0 1px #0a0e18,0 2px 6px rgba(0,0,0,.5)}

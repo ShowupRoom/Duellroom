@@ -23,6 +23,7 @@ export const SLEEVES = [
 ];
 /** Spielfeld-Designs: Hintergrund, Zonenlinie, Zonenfüllung, Leuchten; fx = bewegte Ebene (Sterne, Glut, Scan) */
 export const FIELDS = [
+  { id: 'arena', name: 'Arena (Master-Duel-Stil)', bg: 'radial-gradient(60% 40% at 8% 8%,rgba(60,120,50,.55),transparent 70%),radial-gradient(60% 40% at 92% 6%,rgba(60,120,50,.5),transparent 70%),linear-gradient(180deg,#4b5a33 0%,#6b6a48 22%,#3d4030 44%,#2a1230 52%,#4a1846 72%,#24091f 100%)', line: 'rgba(214,160,80,.8)', fill: 'rgba(70,20,60,.5)', glow: 'rgba(255,80,120,.16)' },
   { id: 'md', name: 'Standard', bg: 'radial-gradient(90% 60% at 50% 50%,#0c2756 0%,#061230 55%,#02060f 100%)', line: 'rgba(190,225,255,.34)', fill: 'rgba(14,38,90,.28)', glow: 'rgba(111,214,255,.1)' },
   { id: 'ember', name: 'Drachenglut', bg: 'radial-gradient(70% 55% at 50% 105%,rgba(255,110,40,.42),transparent 70%),radial-gradient(90% 60% at 50% 40%,#3a0d0d 0%,#1a0505 60%,#070202 100%)', line: 'rgba(255,165,95,.5)', fill: 'rgba(90,20,10,.4)', glow: 'rgba(255,120,50,.14)', fx: 'ember' },
   { id: 'night', name: 'Nachthimmel', bg: 'radial-gradient(60% 50% at 72% 18%,rgba(130,90,255,.4),transparent 70%),linear-gradient(180deg,#0b0733,#170b45 55%,#050318)', line: 'rgba(190,175,255,.45)', fill: 'rgba(40,20,100,.3)', glow: 'rgba(150,120,255,.14)', fx: 'stars' },
@@ -34,7 +35,7 @@ export const FIELDS = [
 ];
 
 export const look = {
-  get field() { return store.get('look.field', 'md'); }, set field(v) { store.set('look.field', v); },
+  get field() { return store.get('look.field', 'arena'); }, set field(v) { store.set('look.field', v); },
   get sleeve() { return store.get('look.sleeve', 'classic'); }, set sleeve(v) { store.set('look.sleeve', v); },
   get sleeveOp() { return store.get('look.sleeveOp', 'same'); }, set sleeveOp(v) { store.set('look.sleeveOp', v); },
   get fx() { return store.get('look.fx', true); }, set fx(v) { store.set('look.fx', !!v); },

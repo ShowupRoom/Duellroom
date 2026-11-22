@@ -1,0 +1,77 @@
+/* Spielfeld im Master-Duel-Aufbau (nur Querformat, Einstellung „Spielfeld-Ansicht“). Eigene Zeichnung, angelehnt an Aufbau und Wirkung. */
+.duel.land.mdf{--mdblue:#2ea8ff;--mdring:#7fe3ff;padding-left:var(--safe-l);padding-right:var(--safe-r)}
+/* linke Spalte löst sich auf: LP-Plaketten in den Ecken, Karteninfo als ausklappbares Fenster */
+.duel.land.mdf>.d-l{position:absolute;inset:0;width:auto;flex:none;padding:0;display:block;pointer-events:none;z-index:auto}
+.duel.land.mdf>.d-l>*{pointer-events:auto}
+.duel.land.mdf .d-c{flex:1 1 auto;min-width:0;padding-bottom:calc(var(--hpk)*.85 + var(--safe-b))}
+/* Feld schräg wie auf einem Tisch */
+.duel.land.mdf .d-board{perspective:calc(var(--cw)*16);perspective-origin:50% 30%;flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:0;padding-top:calc(var(--cw)*.2)}
+.duel.land.mdf .bd{transform:rotateX(24deg);transform-origin:50% 62%;transform-style:flat;margin-top:calc(var(--cw)*-.45);margin-bottom:calc(var(--cw)*-.25);filter:drop-shadow(0 10px 18px rgba(0,0,0,.5))}
+.duel.land.mdf .d-ohand{position:absolute;top:calc(2px + var(--safe-t));left:50%;transform:translateX(-50%);z-index:3}
+/* Zonen */
+.duel.land.mdf .zn{border-radius:2px}
+html[data-field=arena] .duel.land.mdf{background:var(--field-bg)}
+html[data-field=arena] .duel.land.mdf .zn.zme{border:2px solid #c9893a;background:#3a1636 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M0 0h100v100H0z' fill='%23401a3e'/%3E%3Cpath d='M0 0l14 0 0 14zM100 0l-14 0 0 14zM0 100l14 0 0-14zM100 100l-14 0 0-14z' fill='%23d84a6a'/%3E%3Cpath d='M50 7 93 50 50 93 7 50z' fill='%23602456' stroke='%23e04a66' stroke-width='3'/%3E%3Cpath d='M50 24 76 50 50 76 24 50z' fill='%2348193f' stroke='%23ff6a84' stroke-width='2.5'/%3E%3Cpath d='M50 38 62 50 50 62 38 50z' fill='none' stroke='%23c03454' stroke-width='2'/%3E%3C/svg%3E") center/100% 100% no-repeat;box-shadow:inset 0 0 0 1px #5a2a10,0 2px 0 #2a0c1c}
+html[data-field=arena] .duel.land.mdf .zn.zop{border:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M30 6h40l24 24v40L70 94H30L6 70V30z' fill='%23d9d0b0' stroke='%23a39b7b' stroke-width='3'/%3E%3Cpath d='M38 24h24l14 14v24L62 76H38L24 62V38z' fill='%23cfc6a4' stroke='%23aaa282' stroke-width='3'/%3E%3Crect x='41' y='41' width='18' height='18' fill='none' stroke='%23a69e7e' stroke-width='2.5'/%3E%3Cpath d='M12 64q14-6 22 6M70 18q10 4 16 14' stroke='%236f9b4a' stroke-width='4' fill='none' opacity='.55'/%3E%3C/svg%3E") center/100% 100% no-repeat;box-shadow:none}
+html[data-field=arena] .duel.land.mdf .zn .zl{color:rgba(255,230,200,.55);text-shadow:0 1px 2px #000}
+html[data-field=arena] .duel.land.mdf .zn.zop .zl{color:rgba(80,70,40,.6);text-shadow:none}
+html[data-field=arena] .duel.land.mdf .bd{background:linear-gradient(180deg,rgba(120,150,80,.25),rgba(80,90,60,.15) 45%,rgba(30,6,24,.55) 55%,rgba(60,14,52,.6));border-radius:6px;padding:calc(var(--cw)*.08);box-shadow:0 0 0 2px rgba(201,137,58,.0)}
+/* Markierungen bleiben gut sichtbar */
+html[data-field=arena] .duel.land.mdf .zn.hl{box-shadow:0 0 0 2px #58e0a8,0 0 14px 3px rgba(88,224,168,.85)}
+html[data-field=arena] .duel.land.mdf .zn.cand,html[data-field=arena] .duel.land.mdf .zn.zsel{box-shadow:0 0 0 3px #7fe3ff,0 0 20px 4px rgba(127,227,255,.9)}
+html[data-field=arena] .duel.land.mdf .zn.sel{box-shadow:0 0 0 3px #fff,0 0 16px 3px rgba(255,255,255,.75)}
+html[data-field=arena] .duel.land.mdf .zn.chosen,html[data-field=arena] .duel.land.mdf .zn.zchosen{box-shadow:0 0 0 3px var(--gold),0 0 20px 4px rgba(246,201,107,.9)}
+/* LP-Plaketten */
+.duel.land.mdf .d-strip{position:absolute;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"av n" "av lp" "av c";column-gap:0;align-items:center;width:clamp(150px,22vw,230px);padding:0;border:0;background:none;box-shadow:none;border-radius:0;clip-path:none}
+.duel.land.mdf .d-strip{z-index:4}
+.duel.land.mdf .d-strip.me{left:calc(8px + var(--safe-l));bottom:calc(6px + var(--safe-b))}
+.duel.land.mdf .d-strip.opp{right:calc(var(--sider) + 10px + var(--safe-r));top:calc(4px + var(--safe-t));grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n av" "lp av" "c av"}
+.duel.land.mdf .st-av{grid-area:av;position:relative;z-index:2;width:clamp(46px,13vh,62px);aspect-ratio:1;border-radius:50%;padding:3px;background:conic-gradient(#f9e39a,#a8741e,#f6d77a,#8a5a14,#f9e39a);box-shadow:0 0 0 2px #2a1a04,0 0 12px rgba(255,200,90,.35)}
+.duel.land.mdf .d-strip.opp .st-av{border-radius:14%;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);padding:3px}
+.duel.land.mdf .st-avi{width:100%;height:100%;object-fit:cover;border-radius:inherit;clip-path:inherit;display:block;background:radial-gradient(circle,#4b3aa8,#120c35)}
+.duel.land.mdf .d-strip.opp .st-avi{clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.duel.land.mdf .d-strip .st-n{grid-area:n;margin:0 0 0 -10px;padding:2px 10px 2px 16px;background:linear-gradient(90deg,#000,rgba(0,0,0,.75));color:#fff;font-weight:700;font-size:clamp(11px,3vh,14px);border-top:2px solid #2e7bff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.duel.land.mdf .d-strip.opp .st-n{margin:0 -10px 0 0;padding:2px 16px 2px 10px;border-top-color:#e8334a;text-align:right}
+.duel.land.mdf .d-strip .lpw{grid-area:lp;margin:0 0 0 -10px;padding:0 10px 0 16px;background:linear-gradient(90deg,rgba(10,14,40,.92),rgba(10,14,40,.55));display:flex;flex-direction:row;align-items:baseline;gap:6px;height:auto;min-width:0}
+.duel.land.mdf .d-strip.opp .lpw{margin:0 -10px 0 0;padding:0 16px 0 10px;justify-content:flex-end}
+.duel.land.mdf .d-strip.turn{box-shadow:none}
+.duel.land.mdf .d-strip .lpw::before{content:"LP";font-weight:800;font-size:clamp(10px,2.6vh,13px);color:#cfd8ff;order:-1}
+.duel.land.mdf .d-strip .lpbar{display:none}
+.duel.land.mdf .d-strip .lpn{font-size:clamp(20px,6.4vh,32px);font-weight:800;color:#fff;letter-spacing:.02em;text-shadow:0 2px 0 #000;line-height:1.1}
+.duel.land.mdf .d-strip .st-c{grid-area:c;margin-left:4px;display:flex;gap:4px;flex-wrap:wrap}
+.duel.land.mdf .d-strip.opp .st-c{justify-content:flex-end;margin:0 4px 0 0}
+.duel.land.mdf .d-strip .st-c .chip{font-size:10.5px;padding:1px 6px;background:rgba(0,0,0,.6)}
+.duel.land.mdf .d-strip .hbacks{display:none}
+.duel.land.mdf .d-strip.turn .st-av{box-shadow:0 0 0 2px #2a1a04,0 0 18px 4px rgba(120,220,255,.85);animation:pulse 1.6s infinite}
+.duel.land.mdf .d-strip .lpf{position:absolute;top:-20px;left:60px}
+/* Karteninfo links (ausklappbar) */
+.duel.land.mdf .d-sheet{position:absolute;left:calc(6px + var(--safe-l));top:calc(8px + var(--safe-t));bottom:calc(82px + var(--safe-b));width:min(34vw,300px);max-height:none;transform:translateX(calc(-100% - 20px));transition:transform .22s ease;visibility:visible;background:linear-gradient(180deg,rgba(6,12,32,.96),rgba(4,8,22,.96));border:1.5px solid rgba(200,220,255,.45);border-radius:6px;z-index:9;padding:8px 10px}
+.duel.land.mdf .d-sheet.show{transform:none}
+.duel.land.mdf .d-sheet .mdx{position:absolute;top:4px;right:4px;z-index:2}
+.duel.land.mdf .d-sheet:empty::before{content:none}
+/* rechte Spalte: runde Knöpfe */
+.duel.land.mdf .d-r{position:relative;flex:0 0 var(--sider);width:var(--sider);padding:calc(8px + var(--safe-t)) 0 calc(8px + var(--safe-b));align-items:center;justify-content:center;gap:8px;z-index:6}
+.duel.land.mdf .d-r>.d-top{position:static;width:auto;display:flex;flex-direction:column;align-items:center;gap:clamp(6px,2vh,12px);padding:0}
+.duel.land.mdf .d-turnb{display:none}
+.duel.land.mdf .d-top .ibtn{width:clamp(38px,11.5vh,52px);height:clamp(38px,11.5vh,52px);border-radius:50%;padding:0;display:grid;place-items:center;font-size:clamp(16px,5vh,22px);font-weight:800;color:#e6f7ff;
+  background:radial-gradient(circle at 50% 35%,#2b8fe6,#0b3f8f 62%,#071f52);border:2.5px solid var(--mdring);box-shadow:0 0 0 2px rgba(4,10,30,.9),0 0 12px rgba(90,200,255,.55);clip-path:none}
+.duel.land.mdf .d-top .ibtn.infob,.duel.land.mdf .d-top .ibtn.actsb{font-family:Georgia,serif;font-size:clamp(18px,6vh,26px)}
+.duel.land.mdf .d-top .ibtn.menub{position:fixed;left:calc(10px + var(--safe-l));top:calc(8px + var(--safe-t));z-index:9;background:radial-gradient(circle at 50% 35%,#1d4ea0,#0a2050 70%)}
+.duel.land.mdf .d-sheet.show~.d-strip,.duel.land.mdf:has(.d-sheet.show) .menub{visibility:hidden}
+.duel.land.mdf .d-chainb{border-radius:50%;width:clamp(38px,11.5vh,52px);height:clamp(38px,11.5vh,52px);padding:0}
+/* Phasen-Sechseck an der rechten Feldkante */
+.duel.land.mdf .d-r .d-phases{position:absolute;right:calc(var(--sider) + 4px);top:50%;transform:translateY(-58%);margin:0;flex:none;z-index:6}
+.duel.land.mdf .ph-wheel{width:clamp(64px,19vh,92px);height:clamp(58px,17vh,82px);border:0;border-radius:0;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);
+  background:linear-gradient(180deg,#fbe08a,#c8901e 45%,#8a5a0c);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:none;position:relative}
+.duel.land.mdf .ph-wheel::before{content:"";position:absolute;inset:4px;clip-path:inherit;background:radial-gradient(circle at 50% 30%,#d63a32,#8f1414 60%,#5a0808)}
+.duel.land.mdf .ph-wheel>*{position:relative;color:#fff;text-shadow:0 1px 0 #3a0000}
+.duel.land.mdf .ph-wheel b{font-size:clamp(15px,5vh,24px);line-height:1}
+.duel.land.mdf .ph-wheel small{font-size:clamp(9px,2.6vh,12px);opacity:.9;margin-top:1px}
+.duel.land.mdf .ph-pills{display:none}
+/* „Jetzt möglich“ als Fenster beim !-Knopf */
+.duel.land.mdf .d-r>.d-acts{display:none}
+.duel.land.mdf.acts-open .d-r>.d-acts:not(:empty){display:flex;position:absolute;right:calc(var(--sider) + 6px);top:calc(8px + var(--safe-t));width:180px;max-height:70%;background:rgba(6,12,32,.95);border:1.5px solid rgba(200,220,255,.45);border-radius:6px;padding:8px;z-index:9}
+.duel.land.mdf .d-acts:not(:empty)~.d-bar{}
+.duel.land.mdf.acts-open .actsb{box-shadow:0 0 0 2px rgba(4,10,30,.9),0 0 18px 4px rgba(127,227,255,.95)}
+.duel.land.mdf .d-r>.d-bar{width:calc(var(--sider) - 6px)}
+.duel.land.mdf .d-r .d-test{position:fixed;left:calc(70px + var(--safe-l));top:calc(8px + var(--safe-t));z-index:9}
