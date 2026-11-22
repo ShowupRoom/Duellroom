@@ -56,6 +56,10 @@ jobs:
         env:
           SRC: ${{ runner.temp }}/src
         run: node test/opt-limit.mjs
+      - name: Schiedsrichter-Fälle (Regelprüfung)
+        env:
+          SRC: ${{ runner.temp }}/src
+        run: node test/rulings.mjs
       - name: Geänderte Listen im Repository sichern
         run: |
           git config user.name "duellraum-bot"
