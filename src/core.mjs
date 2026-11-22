@@ -24,6 +24,8 @@ const PROMPTS = new Set([
   MSG.SELECT_SUM, MSG.SELECT_DISFIELD, MSG.SORT_CARD, MSG.SELECT_UNSELECT_CARD, MSG.ANNOUNCE_RACE, MSG.ANNOUNCE_ATTRIB,
   MSG.ANNOUNCE_CARD, MSG.ANNOUNCE_NUMBER, MSG.ROCK_PAPER_SCISSORS,
 ]);
+/** die ersten n gesetzten Bits (Karten wie Earthshaker verlangen mehrere Ansagen) */
+function someBits(avail, n, big) { const out = []; const v = BigInt(avail); for (let i = 0n; i < 64n && out.length < Math.max(1, n || 1); i++) { const b = 1n << i; if (v & b) out.push(big ? b : Number(b)); } return out.length ? out : [big ? 1n : 1]; }
 export const isPrompt = (m) => PROMPTS.has(m.type);
 
 /**
@@ -257,8 +259,8 @@ export function randomResponse(msg, rnd, ctx = {}) {
       return { type: R.SELECT_COUNTER, counters };
     }
     case MSG.SORT_CARD: case MSG.SORT_CHAIN: return { type: R.SORT_CARD, order: null };
-    case MSG.ANNOUNCE_RACE: return { type: R.ANNOUNCE_RACE, races: [msg.available ? firstBit(msg.available) : 1n].flat() };
-    case MSG.ANNOUNCE_ATTRIB: return { type: R.ANNOUNCE_ATTRIB, attributes: [firstBit(msg.available)] };
+    case MSG.ANNOUNCE_RACE: return { type: R.ANNOUNCE_RACE, races: msg.available ? someBits(msg.available, msg.count, typeof msg.available === 'bigint') : [1n] };
+    case MSG.ANNOUNCE_ATTRIB: return { type: R.ANNOUNCE_ATTRIB, attributes: someBits(msg.available, msg.count, false) };
     case MSG.ANNOUNCE_NUMBER: return { type: R.ANNOUNCE_NUMBER, value: 0 };
     case MSG.ANNOUNCE_CARD: return { type: R.ANNOUNCE_CARD, card: announceCard(msg, rnd, ctx) };
     case MSG.ROCK_PAPER_SCISSORS: return { type: R.ROCK_PAPER_SCISSORS, value: 1 };

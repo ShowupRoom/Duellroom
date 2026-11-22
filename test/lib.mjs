@@ -1,6 +1,7 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { readCdb } from '../src/cdb-node.mjs';
+import { applyFix } from '../sources/script-fixes.mjs';
 export const SP = '/tmp/claude-0/-home-claude/fdbbce0a-44a7-56cd-85ff-0f0cc9a17a48/scratchpad';
 /** Wurzel der Rohdaten (ProjectIgnis-Repos); in GitHub Actions per SRC gesetzt */
 export const SRC = process.env.SRC || SP;
@@ -23,7 +24,7 @@ export function scriptReader(mode = 'official') {
     if (/^c\d+\.lua$/.test(name)) {
       for (const dir of mode === 'goat' ? ['goat', 'pre-errata', 'official'] : mode === 'edison' ? ['pre-errata', 'official', 'pre-release'] : ['official', 'pre-release', 'pre-errata']) {
         const f = path.join(SCRIPTS, dir, name);
-        if (existsSync(f)) return readFileSync(f, 'utf-8');
+        if (existsSync(f)) return dir === 'official' ? applyFix(name, readFileSync(f, 'utf-8')).text : readFileSync(f, 'utf-8');
       }
       return '';
     }

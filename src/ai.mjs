@@ -275,8 +275,9 @@ export class DuelAI {
       for (const c of op.mzone) if (c && (c.position & POS.FACEUP)) { const v = key === 'race' ? this.info(c.code).race : this.info(c.code).attribute; tally.set(v, (tally.get(v) || 0) + 1); }
       const bits = []; const lim = msg.type === MSG.ANNOUNCE_RACE ? 64n : 16n;
       for (let i = 0n; i < lim; i++) { const b = 1n << i; if (BigInt(avail) & b) bits.push(msg.type === MSG.ANNOUNCE_RACE ? b : Number(b)); }
-      let pick = bits[0]; let top = -1; for (const b of bits) { const c = tally.get(b) || 0; if (c > top) { top = c; pick = b; } }
-      return msg.type === MSG.ANNOUNCE_RACE ? { type: R.ANNOUNCE_RACE, races: [pick] } : { type: R.ANNOUNCE_ATTRIB, attributes: [pick] };
+      // so viele ansagen, wie die Karte verlangt (z. B. Earthshaker: 2 Attribute); die beim Gegner häufigsten zuerst
+      const n = Math.max(1, Math.min(bits.length, msg.count || 1)); const picks = [...bits].sort((a, b) => (tally.get(b) || 0) - (tally.get(a) || 0)).slice(0, n);
+      return msg.type === MSG.ANNOUNCE_RACE ? { type: R.ANNOUNCE_RACE, races: picks } : { type: R.ANNOUNCE_ATTRIB, attributes: picks };
     }
     return this.fallback(msg);
   }

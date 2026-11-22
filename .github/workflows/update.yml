@@ -60,6 +60,12 @@ jobs:
         env:
           SRC: ${{ runner.temp }}/src
         run: node test/rulings.mjs
+      - name: Skript-Korrekturen und Abgleich Kartentext/Skript
+        env:
+          SRC: ${{ runner.temp }}/src
+        run: |
+          node test/script-fixes.mjs
+          node test/opt-audit.mjs
       - name: Geänderte Listen im Repository sichern
         run: |
           git config user.name "duellraum-bot"

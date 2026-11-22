@@ -4,6 +4,7 @@ mkdirSync('app/dist', { recursive: true });
 import { gzipSync } from 'node:zlib';
 import path from 'node:path';
 import { loadCards, SCRIPTS } from '../test/lib.mjs';
+import { applyFix } from '../sources/script-fixes.mjs';
 
 function clean(src) {
   const out = []; let close = null;
@@ -16,17 +17,17 @@ function clean(src) {
   }
   return out.join('\n');
 }
-const parts = []; const index = {}; let off = 0; let rawTotal = 0, outTotal = 0;
+let fixedN = 0; const parts = []; const index = {}; let off = 0; let rawTotal = 0, outTotal = 0;
 const add = (key, text) => { const b = Buffer.from(text, 'latin1'); parts.push(b); index[key] = [off, b.length]; off += b.length; };
 for (const f of readdirSync(SCRIPTS)) { const p = path.join(SCRIPTS, f); if (statSync(p).isFile() && f.endsWith('.lua')) { const t = readFileSync(p, 'utf-8'); rawTotal += t.length; const c = clean(t); outTotal += c.length; add(f, c); } }
 for (const [dir, pre] of [['official', 'o'], ['pre-release', 'p'], ['pre-errata', 'e'], ['goat', 'g']]) {
-  for (const f of readdirSync(path.join(SCRIPTS, dir))) { if (!f.endsWith('.lua')) continue; const t = readFileSync(path.join(SCRIPTS, dir, f), 'utf-8'); rawTotal += t.length; const c = clean(t); outTotal += c.length; add(`${pre}/${f}`, c); }
+  for (const f of readdirSync(path.join(SCRIPTS, dir))) { if (!f.endsWith('.lua')) continue; let t = readFileSync(path.join(SCRIPTS, dir, f), 'utf-8'); if (dir === 'official') { const r = applyFix(f, t); if (r.fixed) fixedN++; t = r.text; } rawTotal += t.length; const c = clean(t); outTotal += c.length; add(`${pre}/${f}`, c); }
 }
 const head = Buffer.from(JSON.stringify(index) + '\n', 'latin1');
 const blob = Buffer.concat([Buffer.from(String(head.length).padStart(10, '0'), 'latin1'), head, ...parts]);
 const gz = gzipSync(blob, { level: 9 });
 writeFileSync('app/dist/scripts.gz', gz);
-console.log('Skripte', Object.keys(index).length, 'roh', (rawTotal / 1e6).toFixed(1), 'MB → bereinigt', (outTotal / 1e6).toFixed(1), 'MB → gz', (gz.length / 1e6).toFixed(2), 'MB');
+console.log('Korrigierte Skripte', fixedN); console.log('Skripte', Object.keys(index).length, 'roh', (rawTotal / 1e6).toFixed(1), 'MB → bereinigt', (outTotal / 1e6).toFixed(1), 'MB → gz', (gz.length / 1e6).toFixed(2), 'MB');
 
 // Karten
 const cards = loadCards(); const rows = [];

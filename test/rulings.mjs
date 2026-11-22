@@ -6,7 +6,7 @@ import { loadCards, scriptReader, mulberry } from './lib.mjs';
 
 const cards = loadCards(); const lib = await loadCore();
 const UP = 1, DEF = 4, SET = 8; // Positionen: offen Angriff, offen Verteidigung, verdeckt
-const C = { rota: 32807846, ash: 14558127, celtic: 91152256, mirror: 44095762, luster: 11091375, gaia: 6368038, elf: 15025844, kuriboh: 40640057, bewd: 89631139, dmg: 38033121, pot: 55144522, reborn: 83764718, imperm: 10045474, grave: 32864, alex: 43096270, dm: 46986414, gamma: 38814750, lord: 17985575, betd: 53183600, tworld: 15259703, veiler: 97268402 };
+const C = { rota: 32807846, ash: 14558127, celtic: 91152256, mirror: 44095762, luster: 11091375, gaia: 6368038, elf: 15025844, kuriboh: 40640057, bewd: 89631139, dmg: 38033121, pot: 55144522, reborn: 83764718, imperm: 10045474, grave: 32864, alex: 43096270, dm: 46986414, gamma: 38814750, lord: 17985575, betd: 53183600, tworld: 15259703, veiler: 97268402, tenma: 33837653 };
 const FILL = Array(30).fill(C.grave); const deck = (...cs) => ({ main: [...cs, ...FILL], extra: [] });
 
 async function run({ decks, field = [], stack = [[], []], policy = () => undefined, until = 3 }) {
@@ -138,6 +138,22 @@ T('«Effektschleier» aus der Hand im Zug des Gegners gegen ein Effektmonster', 
   let offered = false; await run({ decks: [deck(C.lord), deck(C.veiler)], stack: [[C.lord], [C.veiler]], until: 1,
     policy: (m) => { if (m.type === MSG.SELECT_IDLECMD && m.player === 0) return summon(m, C.lord) ?? { type: R.SELECT_IDLECMD, action: IA.TO_EP, index: null }; if (m.type === MSG.SELECT_CHAIN && m.player === 1 && (m.selects || []).some((c) => c.code === C.veiler)) offered = true; } });
   return [offered === true, `angeboten: ${offered}`];
+});
+
+T('Korrigiertes Skript: «Tenma the Sky Star» – Spezialbeschwörung aus der Hand nur 1× pro Zug (auch mit 2 Kopien)', async () => {
+  const st = { first: 0, reborn: 0, again: null, tenmaSS: 0 }; const ZANKI = 30090452;
+  const { log } = await run({ decks: [deck(C.tenma, ZANKI, ZANKI, C.reborn), deck(C.grave)], stack: [[C.tenma, ZANKI, ZANKI, C.reborn], []], field: [[1, C.luster, LOC.MZONE, 1, UP], [0, C.tenma, LOC.GRAVE, 0, UP]], until: 1,
+    policy: (m) => {
+      if (m.type === MSG.SELECT_IDLECMD && m.player === 0) { if (!st.first) return summon(m, C.tenma); if (!st.reborn) { const r = act(m, C.reborn); if (r) { st.reborn = 1; return r; } } return { type: R.SELECT_IDLECMD, action: IA.TO_EP, index: null }; }
+      if (m.type === MSG.SELECT_CARD && m.player === 0 && st.reborn && !st.picked) { const i = (m.selects || []).findIndex((c) => c.code === C.tenma); if (i >= 0) { st.picked = 1; return { type: R.SELECT_CARD, indicies: [i] }; } }
+      if ((m.type === MSG.SELECT_EFFECTYN || m.type === MSG.SELECT_CHAIN) && m.player === 0) {
+        const has = m.type === MSG.SELECT_EFFECTYN ? m.code === C.tenma : (m.selects || []).some((c) => c.code === C.tenma);
+        if (!st.first && has) { st.first = 1; return m.type === MSG.SELECT_EFFECTYN ? { type: R.SELECT_EFFECTYN, yes: true } : chainWith(m, C.tenma); }
+        if (st.first && st.reborn && st.picked && has) st.again = true;
+      }
+    } });
+  const tenmaOnField = log.filter((e) => e.t === 'SPSUMMONING' && e.code === C.tenma).length;
+  return [st.first === 1 && tenmaOnField >= 1 && st.again !== true, `erster Effekt genutzt: ${st.first}, 2. Tenma per Wiedergeburt gerufen: ${tenmaOnField >= 1}, Effekt erneut angeboten: ${st.again === true}`];
 });
 
 let fail = 0;
