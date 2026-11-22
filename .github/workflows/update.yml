@@ -48,6 +48,10 @@ jobs:
         env:
           SRC: ${{ runner.temp }}/src
         run: node test/tutor-replay.mjs
+      - name: Kombo-Bibliothek (gespeicherte Kombo wird sofort wiedergefunden)
+        env:
+          SRC: ${{ runner.temp }}/src
+        run: node test/combo-guides.mjs
       - name: Geänderte Listen im Repository sichern
         run: |
           git config user.name "duellraum-bot"

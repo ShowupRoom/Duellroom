@@ -32,7 +32,7 @@ self.onmessage = async (e) => {
       // Kombo-Suche für eine feste Starthand: eigene Duelle, das laufende Duell `g` bleibt unberührt
       await (ready || (ready = load(a.v))); cancel = false;
       const opts = { flags: a.flags, decks: a.decks, cards, readScript: readFor(a.scripts), seed: a.seed, startingLP: a.lp, startingDraw: a.hand, stack: a.stack, field: a.field };
-      res = await comboSearch(lib, opts, { cards, goal: a.goal, deadline: a.deadline, rseed: a.rseed, worker: a.worker || 0, base: a.base || [], endTurn: a.endTurn || 2, me: a.me || 0, replay: a.replay || null, stop: () => cancel, onProgress: (info) => self.postMessage({ prog: id, info }) });
+      res = await comboSearch(lib, opts, { cards, goal: a.goal, deadline: a.deadline, rseed: a.rseed, worker: a.worker || 0, base: a.base || [], endTurn: a.endTurn || 2, me: a.me || 0, replay: a.replay || null, guides: a.guides || null, stop: () => cancel, onProgress: (info) => self.postMessage({ prog: id, info }) });
     } else if (op === 'destroy') { drop(); res = true; }
     self.postMessage({ id, res });
   } catch (err) { self.postMessage({ id, err: String((err && err.stack) || err) }); }

@@ -1,6 +1,7 @@
 // Duell-Oberfläche: Spielfeld, Hand, Ereignisse, Übergabe zwischen den Spielern
 import { applyLook } from './look.js';
 import { matchModal } from './match.js';
+import { libAdd, libGuides, libPause } from './combolib.js';
 import { bumpDay, fav, artEl, HOME_ICONS, iconEl } from './home.js';
 import { h, clear, sleep, toast, shuffled, beep, rand32, zkey as key } from './util.js';
 import { App, MODES, FORMATS, fmtById, expand, nameOf, cardOf, cleanName, withTutor, descOf } from './data.js';
@@ -31,7 +32,7 @@ const FACEUP = 5;
 class Duel {
   constructor(conf) {
     this.hist = []; this.tut = { id: 0, ctl: null, first: true }; this.tipModal = null; // hist: alle Antworten beider Spieler – damit die Tutor-Suche das Duell nachspielen kann
-    applyLook(true); this.conf = conf; this.mode = MODES[conf.fmt]; if (this.mode.lp) conf.lp = this.mode.lp; // Speed Duell: fest 4000 LP this.fmtDef = fmtById(conf.fmt, conf.list);
+    libPause(); applyLook(true); this.conf = conf; this.mode = MODES[conf.fmt]; if (this.mode.lp) conf.lp = this.mode.lp; // Speed Duell: fest 4000 LP this.fmtDef = fmtById(conf.fmt, conf.list);
     this.net = conf.mode === 'net-host' || conf.mode === 'net-guest' ? session : null; this.viewer = this.net ? conf.seat : conf.mode === 'demo' ? 0 : (conf.human[0] ? 0 : 1); this.snap = null; this.logLines = []; this.chain = []; this.stopped = false; this.turnNo = 0; this.phase = 0; this.turnPlayer = 0;
     this.actList = []; this.acts = new Map(); this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.tip = null; this.tipKeys = new Set(); this.pending = null; this.hintText = ''; this.introShown = [false, false];
     this.lpShown = [conf.lp, conf.lp]; this.floats = []; this.prevHand = [0, 0]; this.newHand = 0; this.anim = store.get('anim', true); this.tempo = store.get('tempo', 'fast'); this.aiPace = AIP[store.get('aipace', 'relaxed')] ? store.get('aipace', 'relaxed') : 'relaxed'; this.ff = false; this.naps = new Set(); this.aiBusy = false; // Effekt-Tempo: schnell (Standard) oder normal
@@ -655,7 +656,7 @@ class Duel {
     const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2; const helpers = Math.max(0, Math.min(2, cores - 2));
     let res = null;
     try {
-      res = await searchCombo({ ...opts, goal }, { ms, helpers, onProgress: (p) => {
+      res = await searchCombo({ ...opts, goal, guides: libGuides(this.deckOf(0)) }, { ms, helpers, onProgress: (p) => {
         bar.style.width = Math.min(100, Math.round((1 - p.left / p.total) * 100)) + '%';
         if (p.hand && !hand.dataset.set) { hand.dataset.set = 1; hand.textContent = (turn > 1 ? 'Hand: ' : 'Starthand: ') + p.hand.map((c) => nameOf(c)).join(' · '); }
         if (p.top && !topEl.dataset.set) { topEl.dataset.set = 1; topEl.textContent = 'Als Nächstes im Deck (Ziehreihenfolge steht fest): ' + p.top.slice(0, 6).map((c) => nameOf(c)).join(' · '); this.drawPreview = p.top.slice(); }
@@ -664,6 +665,7 @@ class Duel {
       } });
     } catch (e) { console.warn('Kombo-Suche', e); res = null; }
     if (this.stopped) return null;
+    if (res && turn === 1) libAdd(this.deckOf(0), res);
     if (res && !discard) { head.textContent = '✅ Beste Variante gefunden'; bar.style.width = '100%'; best.textContent = boardText(res.board); go.style.display = no.style.display = 'none'; meta.textContent = `${res.sims} Varianten geprüft · Wertung ${Math.round(res.board.score)} statt ${Math.round(res.base)} bei der Standard-KI`; await sleep(this.anim ? 1600 : 300); }
     el.remove(); this.csEl = null;
     if (discard) { toast('Ohne Suche: Die KI spielt nach Spielwert.'); return null; }
@@ -686,13 +688,14 @@ class Duel {
       const src = T === tn || bot.hist.length >= bot.rec.length ? bot.hist : bot.rec; const base = src.map((e) => ({ t: e.t, r: e.r }));
       if (T > tn && !needNext && this.bgPh % 3 !== 0) { await sleep(400); if (!mine || doneNow) await sleep(1200); continue; } // nächster Zug liegt schon vor – ab und zu trotzdem nachbessern
       const ctl = {}; this.bgCtl = ctl; let res = null; let done; this.bgCur = { T, p: new Promise((r) => { done = r; }) };
-      try { res = await searchCombo({ ...this.copts, goal, base, endTurn: T + 1 }, { ms: T === tn ? 6000 : 9000, helpers, persist: true, useMain: false, ctl }); } catch (e) { res = null; }
+      try { res = await searchCombo({ ...this.copts, goal, base, endTurn: T + 1, guides: libGuides(this.deckOf(0)) }, { ms: T === tn ? 6000 : 9000, helpers, persist: true, useMain: false, ctl }); } catch (e) { res = null; }
       this.bgCtl = null; if (this.stopped || this.ended) { done(); break; } if (!res || !res.rec) { done(); this.bgCur = null; await sleep(800); continue; }
       // passt die gefundene Folge noch zu dem, was inzwischen wirklich gespielt wurde?
       const played = bot.hist; let ok = res.rec.length >= played.length; for (let k = 0; ok && k < played.length; k++) if (res.rec[k].t !== played[k].t || J(res.rec[k].r) !== J(played[k].r)) ok = false;
       const sc = res.board.score; const prev = this.bgBest[T];
       if (ok && (prev == null || sc > prev + 0.5)) {
         if (T === tn) for (const k of Object.keys(this.bgBest)) if (+k > tn) delete this.bgBest[k]; // neuer Plan für diesen Zug → nächster Zug muss neu vorbereitet werden
+        if (T === 1) libAdd(this.deckOf(0), res);
         this.bgBest[T] = sc; (this.bgFound = this.bgFound || {})[T] = res; bot.extend(res.rec); if (T === tn || !this.turnNo) this.found = res;
         if (prev != null && T === tn) toast(`🔎 Bessere Fortsetzung gefunden (Wertung ${Math.round(prev)} → ${Math.round(sc)}) – die KI spielt sie ab jetzt.`, 3000);
       }
@@ -760,8 +763,8 @@ class Duel {
     this.tutorStop(); if (!this.tutorOn()) return;
     const id = this.tut.id; const ctl = this.tut.ctl = {}; const goal = (store.get('cfg.demo', {}) || {}).goal || 'balance'; const G = GOALS[goal] || GOALS.balance; this.tut.first = true;
     const turn = (this.snap && this.snap.turn) || this.turnNo;
-    searchCombo({ ...this.copts, goal, me: msg.player, replay: this.hist.slice(), endTurn: turn + 1 }, { ms: store.get('tutor.ms', 15000), helpers: this.tutHelpers(), persist: true, useMain: false, ctl, onProgress: (p) => this.tutorUpdate(id, msg, p, G.name) })
-      .then((res) => { if (res) this.tutorUpdate(id, msg, { ...res, planBoard: res.board, planScore: res.board.score, final: true }, G.name); })
+    const deck = this.deckOf(msg.player); searchCombo({ ...this.copts, goal, me: msg.player, replay: this.hist.slice(), endTurn: turn + 1, guides: libGuides(deck) }, { ms: store.get('tutor.ms', 15000), helpers: this.tutHelpers(), persist: true, useMain: false, ctl, onProgress: (p) => this.tutorUpdate(id, msg, p, G.name) })
+      .then((res) => { if (res && turn <= 2 && id === this.tut.id) libAdd(deck, res); if (res) this.tutorUpdate(id, msg, { ...res, planBoard: res.board, planScore: res.board.score, final: true }, G.name); })
       .catch((e) => console.warn('Tutor-Suche', e));
   }
   tutorStop() { this.tut.id++; if (this.tut.ctl && this.tut.ctl.stop) { try { this.tut.ctl.stop(); } catch (e) { /* */ } } this.tut.ctl = null; }

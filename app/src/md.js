@@ -12,6 +12,7 @@ import { importDialog, toYdk } from './editor.js';
 import { AI_LEVELS } from '../../src/ai.mjs';
 import { VERSION } from './engine.js';
 import { look, FIELDS, SLEEVES, applyLook } from './look.js';
+import { libOn, setLibOn, libSummary, libClear } from './combolib.js';
 
 // ---- Banlists -------------------------------------------------------------------------------------------------
 export const BANS = [
@@ -151,6 +152,7 @@ screens.settings = () => {
     else if (P === 'combo') { const C = demoCfg(); const sv = (k, v) => { const c = demoCfg(); c[k] = v; store.set('cfg.demo', c); };
       out.push(choice('Gegner', 'Ob der Gegner still steht oder mitspielt und antwortet.', [['passive', 'Steht still'], ['ai', 'Spielt mit (KI)']], () => demoCfg().opp, (v) => sv('opp', v)),
         choice('Ziel der Suche', 'Wonach die Kombo-Suche – und der Tutor im Duell – das beste Endboard auswählt.', [['balance', 'Ausgewogen'], ['power', 'Stärkste Monster'], ['inter', 'Meiste Unterbrechungen']], () => demoCfg().goal, (v) => sv('goal', v)),
+        toggle('Kombo-Bibliothek im Hintergrund', (() => { const S = libSummary(); return `Beim Start der App werden deine eigenen Decks immer wieder mit neuen Starthänden durchsucht (nicht während eines Duells). Tutor und Kombo-Ansicht probieren die gefundenen Kombos zuerst aus. Bisher: ${S.combos} Kombos aus ${S.runs} Suchläufen für ${S.withLib} von ${S.decks} eigenen Decks.`; })(), () => libOn(), (v) => setLibOn(v)),
         choice('Suchdauer pro Starthand', 'Je länger die Suche, desto besser die gefundene Kombo (Deckanalyse, Handtraps, Fallen, mehrfach nutzbare Karten).', [[0, 'Aus'], [8000, 'Kurz · 8 s'], [15000, 'Normal · 15 s'], [30000, 'Gründlich · 30 s']], () => demoCfg().ms, (v) => sv('ms', v)),
         h('div', { class: 'sx-hint' }, 'Die Kombo-Ansicht startest du unter Duell → Banlist wählen → Kombo-Ansicht. Die KI-Geschwindigkeit der Vorführung stellst du unter „Duell“ ein.')); void C; }
     else if (P === 'sound') out.push(toggle('Töne', 'Kleine Effekte bei Aktionen.', () => sound.on, (v) => { sound.on = v; store.set('sound', v); }));

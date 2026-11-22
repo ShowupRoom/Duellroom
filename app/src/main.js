@@ -8,6 +8,7 @@ import './editor.js';
 import './online.js';
 import './md.js';
 import './home.js';
+import { libLoop } from './combolib.js';
 import './match.js';
 import { applyLook } from './look.js';
 import { joinRoom } from './online.js';
@@ -31,3 +32,6 @@ addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.__bi
     if (j && /^[A-Z0-9]{5}$/i.test(j)) { history.replaceState(null, '', location.pathname + (new URLSearchParams(location.search).get('peer') ? '?peer=' + new URLSearchParams(location.search).get('peer') : '')); if (myName()) joinRoom(j.toUpperCase()); else { go('online'); setTimeout(() => { const c = document.querySelector('.code-in'); if (c) c.value = j.toUpperCase(); }, 50); } }
   } catch (e) { document.body.dataset.error = String((e && e.stack) || e); console.error(e); const s = document.getElementById('boot-s'); if (s) s.textContent = 'Fehler beim Start: ' + (e && e.message || e); }
 })();
+
+// Kombo-Bibliothek: eigene Decks im Hintergrund durchsuchen (pausiert während eines Duells)
+setTimeout(() => { libLoop().catch(() => {}); }, 6000);
