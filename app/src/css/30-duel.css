@@ -268,3 +268,13 @@ mark.fx-mark{background:rgba(246,201,107,.2);color:#ffe3a1;border-radius:3px;pad
 .duel.land.demo .d-strip{padding:4px 9px;gap:1px}.duel.land.demo .d-strip .lpn{font-size:21px}.duel.land.demo .d-strip .st-n{font-size:12px}
 .duel.land.demo .d-r>.d-turnb{display:none}
 .duel.land.demo .d-r .ph-wheel{width:72px;height:72px}.duel.land.demo .d-r .ph-wheel b{font-size:24px}
+
+/* Kombo-Suche (Vorführung) */
+.cs-ov{position:absolute;inset:0;z-index:95;background:rgba(2,6,16,.92);display:flex;align-items:center;justify-content:center;padding:14px}
+.cs-box{width:min(520px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:9px;padding:14px 16px;border:1px solid var(--gold);border-radius:14px;background:linear-gradient(180deg,rgba(14,36,86,.96),rgba(6,16,40,.96));box-shadow:0 0 22px rgba(246,201,107,.22)}
+.cs-h{font-size:17px;font-weight:800;color:var(--gold);letter-spacing:.3px}
+.cs-hand{line-height:1.4}
+.cs-bar{height:8px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden}.cs-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cy),var(--gold));transition:width .25s linear}
+.cs-best{font-size:13.5px;line-height:1.4;font-weight:700;color:#e8f3ff;overflow-wrap:anywhere}
+.cs-meta{line-height:1.35}
+.cs-btn{display:flex;gap:8px;flex-wrap:wrap}.cs-btn .btn{flex:1 1 140px}

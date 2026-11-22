@@ -1,19 +1,49 @@
 // Spiel-Engines: lokal (Kern im Worker), als Gastgeber (lokal + Weiterleitung) und als Gast (über das Netz)
 import { LOC, isPrompt, OcgMessageType as MSG } from '../../src/core.mjs';
 
-let worker = null, seqId = 0; const waits = new Map();
 export const VERSION = typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'dev';
-function W() {
-  if (worker) return worker;
-  worker = new Worker('worker.js?v=' + VERSION);
-  worker.onmessage = (e) => { const { id, res, err } = e.data; const w = waits.get(id); if (!w) return; waits.delete(id); if (err) w.rej(new Error(err)); else w.res(res); };
-  worker.onerror = (e) => { for (const w of waits.values()) w.rej(new Error('Spielkern-Fehler: ' + (e.message || e))); waits.clear(); };
-  return worker;
+/** Ein Kern-Worker mit Aufrufen und Antworten (prog = Zwischenstände einer laufenden Suche) */
+function mkWorker() {
+  const w = new Worker('worker.js?v=' + VERSION); const waits = new Map(); let seq = 0;
+  w.onmessage = (e) => { const d = e.data; if (d.prog) { const x = waits.get(d.prog); if (x && x.prog) x.prog(d.info); return; } const x = waits.get(d.id); if (!x) return; waits.delete(d.id); if (d.err) x.rej(new Error(d.err)); else x.res(d.res); };
+  w.onerror = (e) => { for (const x of waits.values()) x.rej(new Error('Spielkern-Fehler: ' + (e.message || e))); waits.clear(); };
+  return { w, call: (op, a, prog) => new Promise((res, rej) => { const id = ++seq; waits.set(id, { res, rej, prog }); w.postMessage({ id, op, a }); }) };
 }
-const call = (op, a) => new Promise((res, rej) => { const id = ++seqId; waits.set(id, { res, rej }); W().postMessage({ id, op, a }); });
+let main = null;
+const M = () => main || (main = mkWorker());
+const call = (op, a) => M().call(op, a);
 /** Kern schon im Hauptmenü vorladen */
 let warm = null;
 export const prewarm = () => (warm = warm || call('init', { v: VERSION }).catch((e) => { warm = null; throw e; }));
+
+/** Kombo-Suche für eine Starthand. args = Duell-Aufbau (wie bei create) + goal; opt = { ms, helpers, onProgress(info) } → { rec, board, … } oder null.
+ *  Mehrere Worker suchen unabhängig voneinander (verschiedene Zufallsfolgen), das beste Ergebnis gewinnt. */
+let searching = null;
+export async function searchCombo(args, { ms = 15000, helpers = 0, onProgress = () => {} } = {}) {
+  await prewarm();
+  const deadline = Date.now() + ms; const pool = [{ call: (op, a, p) => M().call(op, a, p), tmp: null }];
+  for (let k = 0; k < helpers; k++) { try { const x = mkWorker(); pool.push({ call: x.call, tmp: x.w }); } catch (e) { /* kein weiterer Worker */ } }
+  const last = pool.map(() => null); let stopped = false;
+  const merge = () => {
+    const f = last.filter(Boolean); if (!f.length) return;
+    const top = f.reduce((a, b) => (b.score > a.score ? b : a));
+    onProgress({ sims: f.reduce((n, x) => n + x.sims, 0), ms: Math.max(...f.map((x) => x.ms)), score: top.score, board: top.board, base: f[0].base, hand: (f.find((x) => x.hand) || {}).hand, left: Math.max(0, deadline - Date.now()), total: ms, workers: f.length });
+  };
+  searching = { stop: () => { stopped = true; for (const x of pool) { if (x.tmp) x.tmp.postMessage({ op: 'cancel' }); } M().w.postMessage({ op: 'cancel' }); } };
+  const jobs = pool.map((x, k) => (async () => {
+    if (x.tmp) await x.call('init', { v: VERSION });
+    if (stopped) return null;
+    return x.call('search', { ...args, v: VERSION, deadline, rseed: 20260101 + k * 7919, worker: k }, (info) => { last[k] = info; merge(); });
+  })());
+  const out = await Promise.allSettled(jobs);
+  for (const x of pool) if (x.tmp) x.tmp.terminate();
+  searching = null;
+  const ok = out.filter((r) => r.status === 'fulfilled' && r.value).map((r) => r.value);
+  if (!ok.length) { const bad = out.find((r) => r.status === 'rejected'); if (bad && !stopped) throw bad.reason; return null; }
+  const best = ok.reduce((a, b) => (b.board.score > a.board.score ? b : a));
+  return { ...best, sims: ok.reduce((n, x) => n + x.sims, 0), workers: ok.length };
+}
+export const stopSearch = () => { if (searching) searching.stop(); };
 
 export class LocalEngine {
   async create(opts) { await prewarm(); await call('create', { ...opts, v: VERSION }); }

@@ -10,10 +10,11 @@ import { screens, back, replace, root as navRoot, setGuard } from './nav.js';
 import { store } from './store.js';
 import { sys, descText, PHASE, PHASE_HELP, victoryText, typeText, levelText, attrName, statsText } from './strings.js';
 import { idleTip, battleTip, introText } from './tips.js';
-import { explain, readMs } from './demo.js';
+import { explain, readMs, boardText, ReplayBot, endBoard } from './demo.js';
 import { ask, autoAnswer } from './prompts.js';
 import { settings, handComment } from './screens.js';
-import { LocalEngine, RemoteEngine, HostLink, maskEvents } from './engine.js';
+import { LocalEngine, RemoteEngine, HostLink, maskEvents, searchCombo, stopSearch } from './engine.js';
+import { passiveReply, passiveRng, GOALS } from '../../src/combo.mjs';
 import { session, keepAwake } from './net.js';
 import { netRematch, netMenu } from './online.js';
 
@@ -29,7 +30,7 @@ class Duel {
     this.net = conf.mode === 'net-host' || conf.mode === 'net-guest' ? session : null; this.viewer = this.net ? conf.seat : conf.mode === 'demo' ? 0 : (conf.human[0] ? 0 : 1); this.snap = null; this.logLines = []; this.chain = []; this.stopped = false; this.turnNo = 0; this.phase = 0; this.turnPlayer = 0;
     this.actList = []; this.acts = new Map(); this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.tip = null; this.tipKeys = new Set(); this.pending = null; this.hintText = ''; this.introShown = [false, false];
     this.lpShown = [conf.lp, conf.lp]; this.floats = []; this.prevHand = [0, 0]; this.newHand = 0; this.anim = store.get('anim', true); this.tempo = store.get('tempo', 'fast'); this.aiPace = AIP[store.get('aipace', 'relaxed')] ? store.get('aipace', 'relaxed') : 'relaxed'; this.ff = false; this.naps = new Set(); this.aiBusy = false; // Effekt-Tempo: schnell (Standard) oder normal
-    this.demo = conf.mode === 'demo' ? { auto: true, step: 0, wake: null, timer: null, arm: null, skipFrom: 0, notes: [] } : null; // Kombo-Vorführung: die KI spielt, du schaust zu
+    this.demo = conf.mode === 'demo' ? { auto: true, step: 0, wake: null, timer: null, arm: null, skipFrom: 0, notes: [], anim: 900 } : null; this.pasRnd = passiveRng(); // Kombo-Vorführung: die KI spielt, du schaust zu
     this.build(); window.__duel = this; this.ask = (m) => ask(this, m); // (Prüfhaken für Tests)
   }
   deckOf(p) { return this.conf.players[p].deck; }
@@ -105,7 +106,13 @@ class Duel {
       else {
         const mk = (i) => ({ main: expand(conf.players[i].deck.main), extra: expand(conf.players[i].deck.extra) });
         const seed = conf.seed ? conf.seed.map((x) => BigInt(x)) : [BigInt(rand32()), BigInt(rand32()), BigInt(rand32()), BigInt(rand32())]; this.seedUsed = seed.map(Number);
-        this.eng = new LocalEngine(); await this.eng.create({ flags: m.flags, decks: [mk(0), mk(1)], scripts: m.scripts, seed, lp: conf.lp, hand: m.hand, stack: conf.stack, field: conf.field });
+        const copts = { flags: m.flags, decks: [mk(0), mk(1)], scripts: m.scripts, seed, lp: conf.lp, hand: m.hand, stack: conf.stack, field: conf.field };
+        if (this.demo && conf.demoOpp !== 'ai' && conf.demoMs > 0) { // Kombo-Suche: erst die beste Variante für diese Starthand finden, dann vorspielen
+          const found = await this.searchOverlay(copts); if (this.stopped) return;
+          if (found) { this.bots[0] = this.ai = new ReplayBot(found.rec, this.bots[0]); this.found = found; }
+        }
+        this.eng = new LocalEngine(); await this.eng.create(copts);
+        if (this.found) this.demoIntro();
         if (conf.mode === 'net-host') this.host = new HostLink(this.net, 1 - this.viewer);
       }
     } catch (e) { this.fatal(e); return; }
@@ -142,9 +149,10 @@ class Duel {
       if (this.host) this.host.forward(st);
       if (this.net) evs = maskEvents(evs, this.viewer);
       this.collectHints(evs);
-      await this.present(evs);
+      const ta = performance.now(); await this.present(evs); if (this.demo) this.demo.anim = performance.now() - ta;
       if (this.stopped) return;
       this.snap = st.snap;
+      if (this.demo && this.found && st.snap.turn === 2 && !this.demo.res) { this.demo.res = true; this.demoNote('Endboard bei der Übergabe: ' + endBoard(this, 0).replace(/^Feld am Zugende: /, '')); } // nach der End Phase (Endphasen-Effekte sind durch)
       if (st.snap.turn && st.snap.turn !== this.turnNo) { this.turnNo = st.snap.turn; this.turnPlayer = st.snap.turnPlayer; if (st.snap.phase) this.phase = st.snap.phase; this.renderTop(); }
       if (r.kind === 'end') { this.render(); await this.finish(r.winner, r.reason); return; }
       if (r.kind === 'wait') { this.render(); this.setBar(`⏳ ${this.pname(r.player)} ist dran …`, [], 'Du kannst dir solange Karten ansehen.'); continue; }
@@ -171,7 +179,8 @@ class Duel {
   }
   botResponse(msg, evs, retry) {
     if (this.demo && this.bots[msg.player]) return this.bots[msg.player].respond(msg, { snap: this.snap, evs, retry });
-    if (this.conf.mode === 'solo' || this.demo) { // Übungsgegner: steht still
+    if (this.demo) return passiveReply(msg, this.pasRnd, App.cards); // gleiche Regel wie in der Suche → gleicher Spielverlauf
+    if (this.conf.mode === 'solo') { // Übungsgegner: steht still
       if (msg.type === MSG.SELECT_IDLECMD) return { type: R.SELECT_IDLECMD, action: msg.to_ep ? IA.TO_EP : IA.TO_BP, index: null };
       if (msg.type === MSG.SELECT_BATTLECMD) return { type: R.SELECT_BATTLECMD, action: msg.to_ep ? BA.TO_EP : BA.TO_M2, index: null };
       if (msg.type === MSG.SELECT_CHAIN) return msg.forced ? { type: R.SELECT_CHAIN, index: 0 } : { type: R.SELECT_CHAIN, index: null };
@@ -191,7 +200,7 @@ class Duel {
     console.error(e); this.stopped = true; if (this.net) this.net.send({ t: 'leave' });
     openModal({ host: this.root, title: 'Hoppla – ein Fehler', center: true, body: h('div', null, h('p', null, 'Das Duell konnte nicht weiterlaufen. Das tut mir leid! Du kannst ein neues Duell starten.'), h('pre', { class: 'small muted', style: 'white-space:pre-wrap;max-height:30vh;overflow:auto' }, String(e && e.message || e))), footer: h('button', { class: 'btn pri', onclick: () => { this.destroy(); if (this.net) netMenu(); else navRoot('home'); } }, 'Zum Menü') });
   }
-  destroy() { this.stopped = true; this.ff = true; for (const f of [...this.naps]) f(); setGuard(null); try { this.ro.disconnect(); } catch (e) { /* */ } try { if (this.eng && this.eng.destroy) this.eng.destroy(); if (this.eng && this.eng.abort) this.eng.abort(); if (this.host) this.host.abort(); } catch (e) { /* */ } this.eng = null; if (this.offNet) this.offNet(); if (this.net) { this.net.wantAwake = false; keepAwake(false); } if (this.pending) { this.pending.resolve(null); this.pending = null; } }
+  destroy() { this.stopped = true; if (this.csEl) { stopSearch(); this.csEl.remove(); this.csEl = null; } this.ff = true; for (const f of [...this.naps]) f(); setGuard(null); try { this.ro.disconnect(); } catch (e) { /* */ } try { if (this.eng && this.eng.destroy) this.eng.destroy(); if (this.eng && this.eng.abort) this.eng.abort(); if (this.host) this.host.abort(); } catch (e) { /* */ } this.eng = null; if (this.offNet) this.offNet(); if (this.net) { this.net.wantAwake = false; keepAwake(false); } if (this.pending) { this.pending.resolve(null); this.pending = null; } }
 
   // ---------------------------------------------------------------- Übergabe & Einführung
   handover(p) {
@@ -214,6 +223,7 @@ class Duel {
   /** Faktor für alle Wartezeiten der Effekte: schnell = knapp die Hälfte */
   fxs() {
     if (this.ff) return 0.1;
+    if (this.demo) return 0.8; // Vorführung: Animationen eher knapp, die Zeit gehört der Erklärung
     const f = AIP[this.aiPace].fx; if (f && this.watching()) return f; // am Zug der KI: eigenes Tempo (entspannt = ruhiger als „normal“)
     return this.tempo === 'fast' ? 0.42 : 1;
   }
@@ -228,7 +238,7 @@ class Duel {
   setFF(on) { this.ff = !!on; if (this.ff) for (const f of [...this.naps]) f(); this.renderFF(); }
   renderFF() { this.ffBtn.style.display = this.aiBusy && this.anim && this.ai ? '' : 'none'; this.ffBtn.classList.toggle('on', this.ff); this.root.classList.toggle('ffing', this.ff); }
   /** Wie lange die Entscheidung der KI sichtbar stehen bleibt */
-  botPause(msg) { return AIP[this.aiPace].pause[msg.type === MSG.SELECT_IDLECMD || msg.type === MSG.SELECT_BATTLECMD ? 0 : 1]; }
+  botPause(msg) { if (this.demo) return 150; return AIP[this.aiPace].pause[msg.type === MSG.SELECT_IDLECMD || msg.type === MSG.SELECT_BATTLECMD ? 0 : 1]; }
   async banner(o) {
     if (!this.anim || this.ff) return;
     const el = h('div', { class: 'fx-b ' + (o.cls || '') }, o.code ? cardEl(o.code, { cls: 'md' }) : null, o.back ? cardEl(0, { back: true, cls: 'md' }) : null, h('div', { class: 'fx-bt' }, h('div', { class: 'fx-h' }, o.title), o.sub ? h('div', { class: 'fx-s' }, o.sub) : null, o.mark ? h('div', { class: 'fx-tx' }, o.mark) : null));
@@ -287,7 +297,7 @@ class Duel {
   }
   confirmShow(m) {
     if (!m.cards || !m.cards.length) return Promise.resolve();
-    if (this.demo) { const t = m.cards.map((c) => '«' + nameOf(c.code) + '»').join(', '); this.addLog('Karten wurden gezeigt: ' + t); this.demoNote('Gezeigt: ' + t); return this.demoWait(1700 * AIP[this.aiPace].rd); } // Vorführung: kein Fenster, nur ein Hinweis im Erklärfeld
+    if (this.demo) { const t = m.cards.map((c) => '«' + nameOf(c.code) + '»').join(', '); this.addLog('Karten wurden gezeigt: ' + t); this.demoNote('Gezeigt: ' + t); return this.demoWait(1300 * AIP[this.aiPace].rd); } // Vorführung: kein Fenster, nur ein Hinweis im Erklärfeld
     return new Promise((res) => {
       const mo = openModal({ host: this.root, title: m.type === MSG.CONFIRM_CARDS ? 'Karten werden gezeigt' : 'Oberste Karte(n)', center: true, body: h('div', { class: 'cgrid' }, m.cards.map((c) => h('button', { class: 'cg', onclick: () => this.info(c.code) }, cardEl(c.code, { cls: 'md' }), h('div', { class: 'small' }, nameOf(c.code))))), footer: h('button', { class: 'btn pri', onclick: () => mo.close() }, 'OK'), onClose: () => res() });
       this.addLog('Karten wurden gezeigt: ' + m.cards.map((c) => '«' + nameOf(c.code) + '»').join(', '));
@@ -558,10 +568,12 @@ class Duel {
   async demoStep(msg, resp, p) {
     const d = this.demo; const ex = explain(this, msg, resp);
     if (!ex || (p !== 0 && this.conf.demoOpp !== 'ai')) { await this.nap(this.botPause(msg)); return; }
-    if (ex.kind === 'note') { this.demoNote(ex.text); await this.nap(Math.min(900, 250 + ex.text.length * 8) * AIP[this.aiPace].rd * (this.ff ? 0 : 1)); return; }
-    d.step++; d.notes = []; this.showDemo(ex);
+    if (ex.kind === 'note') { this.demoNote(ex.text); await this.nap(Math.min(700, 200 + ex.text.length * 6) * AIP[this.aiPace].rd * (this.ff ? 0 : 1)); return; }
+    const rd = AIP[this.aiPace].rd;
+    if (d.auto && d.shownAt) { const rest = d.T - (performance.now() - d.shownAt); if (rest > 60) await this.demoWait(rest); } // Taktung: jede Karte bleibt ≈ 4 s – Animation und Zwischenschritte laufen in dieser Zeit mit
+    d.step++; d.notes = []; this.showDemo(ex); d.shownAt = performance.now(); d.T = readMs(ex) * rd;
     if (ex.end && this.turnNo === 1 && p === 0) { d.auto = false; this.renderDemoCtl(); } // nach dem ersten Zug anhalten: Feld in Ruhe ansehen
-    await this.demoWait(readMs(ex) * AIP[this.aiPace].rd);
+    await this.demoWait(Math.min(1200 * rd, d.T * 0.4)); // kurz ansehen, dann wird die Aktion ausgeführt
     this.selKey = null; this.render();
   }
   showDemo(ex) {
@@ -574,6 +586,37 @@ class Duel {
     this.dmBody.scrollTop = 0; void k;
   }
   demoNote(t) { const box = this.dmBody.querySelector('.dm-notes'); if (!box) return; this.demo.notes.push(t); box.append(h('div', { class: 'dm-n' }, '↳ ' + t)); }
+  /** Such-Fenster: zeigt Starthand, Fortschritt und das beste bisher gefundene Board; „Jetzt vorspielen“ nimmt den Zwischenstand */
+  async searchOverlay(opts) {
+    const ms = this.conf.demoMs, goal = this.conf.demoGoal || 'balance'; const G = GOALS[goal] || GOALS.balance;
+    const bar = h('i'); const head = h('div', { class: 'cs-h' }, '🔎 Suche die beste Kombo für diese Starthand …');
+    const hand = h('div', { class: 'cs-hand muted small' }, 'Starthand wird gemischt …'); const best = h('div', { class: 'cs-best' }, 'Erste Versuche laufen …'); const meta = h('div', { class: 'cs-meta muted small' });
+    let discard = false;
+    const go = h('button', { class: 'btn pri', onclick: () => stopSearch() }, '▶ Jetzt vorspielen'); const no = h('button', { class: 'btn', onclick: () => { discard = true; stopSearch(); } }, 'Ohne Suche');
+    const box = h('div', { class: 'cs-box' }, head, h('div', { class: 'muted small' }, `Ziel: ${G.name}`), hand, h('div', { class: 'cs-bar' }, bar), best, meta, h('div', { class: 'cs-btn' }, go, no));
+    const el = this.csEl = h('div', { class: 'cs-ov' }, box); this.root.append(el);
+    const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2; const helpers = Math.max(0, Math.min(2, cores - 2));
+    let res = null;
+    try {
+      res = await searchCombo({ ...opts, goal }, { ms, helpers, onProgress: (p) => {
+        bar.style.width = Math.min(100, Math.round((1 - p.left / p.total) * 100)) + '%';
+        if (p.hand && !hand.dataset.set) { hand.dataset.set = 1; hand.textContent = 'Starthand: ' + p.hand.map((c) => nameOf(c)).join(' · '); }
+        if (p.board) best.textContent = 'Bestes Board bisher: ' + boardText(p.board);
+        meta.textContent = `${p.sims} Varianten geprüft${p.workers > 1 ? ` · ${p.workers} Rechenkerne` : ''} · Wertung ${Math.round(p.score)} (Standard-KI: ${Math.round(p.base)})`;
+      } });
+    } catch (e) { console.warn('Kombo-Suche', e); res = null; }
+    if (this.stopped) return null;
+    if (res && !discard) { head.textContent = '✅ Beste Variante gefunden'; bar.style.width = '100%'; best.textContent = boardText(res.board); go.style.display = no.style.display = 'none'; meta.textContent = `${res.sims} Varianten geprüft · Wertung ${Math.round(res.board.score)} statt ${Math.round(res.base)} bei der Standard-KI`; await sleep(this.anim ? 1600 : 300); }
+    el.remove(); this.csEl = null;
+    if (discard) { toast('Ohne Suche: Die KI spielt nach Spielwert.'); return null; }
+    if (!res) toast('Die Suche hat nichts gefunden – die KI spielt nach Spielwert.', 3500);
+    return res;
+  }
+  /** Erster Text im Erklärfeld nach der Suche */
+  demoIntro() {
+    const f = this.found; if (!f || !this.dmBody) return; const G = GOALS[this.conf.demoGoal || 'balance'] || GOALS.balance;
+    clear(this.dmBody); this.dmBody.append(h('div', { class: 'dm-hint' }, `Ziel „${G.name}“: Aus ${f.sims} geprüften Varianten spielt die KI gleich die beste vor – ${boardText(f.board)}.`));
+  }
   /** Neue Starthand: dasselbe Deck noch einmal anspielen */
   demoRestart() { const conf = { ...this.conf, seed: undefined }; this.destroy(); replace('duel', conf); }
 

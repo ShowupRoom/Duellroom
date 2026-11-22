@@ -36,6 +36,10 @@ jobs:
         run: |
           N=30 node test/packed-smoke.mjs | tee smoke.txt
           grep -q "Lua-Fehler \[\]" smoke.txt
+      - name: Kombo-Suche (Nachspiel ergibt exakt das gefundene Board)
+        env:
+          SRC: ${{ runner.temp }}/src
+        run: node test/combo-search.mjs ryzeal
       - name: Geänderte Listen im Repository sichern
         run: |
           git config user.name "duellraum-bot"

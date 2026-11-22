@@ -176,7 +176,7 @@ export class DuelAI {
     if (!sel.length) return { type: R.SELECT_CHAIN, index: null };
     let p = this.L.chainP; const top = this.chain.length ? this.chain[this.chain.length - 1] : null;
     if (top === null) p = Math.max(p, this.L.trigP * 0.9);           // Auslöser nach Beschwörung o. Ä.
-    else if (top === me) p = p * 0.35;                              // nicht auf die eigene Kette setzen
+    else if (top === me) p = p * (this.L.own ?? 0.35);              // nicht auf die eigene Kette setzen
     const scored = sel.map((c, i) => { const t = this.info(c.code).type; return { i, s: (t & T.TRAP ? 60 : t & T.SPELL ? 50 : 45) + this.rnd() * 8 }; }).sort((a, b) => b.s - a.s);
     if (this.rnd() < p) return { type: R.SELECT_CHAIN, index: scored[0].i };
     return { type: R.SELECT_CHAIN, index: null };

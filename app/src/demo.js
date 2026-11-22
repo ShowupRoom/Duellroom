@@ -92,4 +92,24 @@ export function explain(D, msg, resp) {
 }
 
 /** Wie lange der Schritt zum Lesen stehen bleibt (ms) */
-export const readMs = (ex) => Math.min(9000, 2600 + ((ex.line || '').length + (ex.text || '').length) * 32);
+export const readMs = (ex) => Math.min(5800, 3300 + Math.min(230, (ex.line || '').length + (ex.text || '').length) * 5); // ≈ 4 s pro Karte, längere Texte etwas länger
+
+/** Das Endboard der Suche in einem Satz */
+export function boardText(b) {
+  if (!b) return '';
+  const mons = (b.mon || []).filter(([c]) => c).map(([c, a]) => `${nm(c)}${a ? ' (' + a + ')' : ''}`);
+  const ints = (b.intCards || []).map(([c]) => nm(c)); const hd = (b.hand || []).map((c) => nm(c));
+  const parts = [`${b.mons} Monster${mons.length ? ': ' + mons.join(', ') : ''}`];
+  if (b.st) parts.push(`${b.st} Zauber/Fallen`);
+  if (ints.length || hd.length) parts.push(`Unterbrechungen: ${[...ints, ...hd.map((x) => x + ' (Hand)')].join(', ')}`);
+  return parts.join(' · ');
+}
+
+/** Spielt die in der Suche gefundene Antwortfolge der Reihe nach ab; weicht das Spiel ab (sollte nie passieren) oder ist die Folge zu Ende, übernimmt die normale KI */
+export class ReplayBot {
+  constructor(rec, fallback) { this.rec = rec; this.i = 0; this.fb = fallback; this.off = false; }
+  respond(msg, ctx) {
+    if (!this.off && this.i < this.rec.length) { const e = this.rec[this.i]; if (e.t === msg.type) { this.i++; return e.r; } this.off = true; }
+    return this.fb.respond(msg, ctx);
+  }
+}

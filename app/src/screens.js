@@ -69,7 +69,7 @@ const MODES = [
 ];
 screens.setup = ({ fmt, demo }) => {
   const saved = store.get('setup.' + fmt, {}); const info = FORMAT_INFO[fmt];
-  let st = { mode: demo ? 'demo' : (saved.mode === 'bot' || saved.mode === 'demo' ? 'ai' : (saved.mode || 'hot')), demoOpp: saved.demoOpp || 'passive', level: saved.level || 'normal', names: saved.names || settings.names, decks: saved.decks || [null, null], list: saved.list || 'tcg', first: saved.first || 'random' };
+  let st = { mode: demo ? 'demo' : (saved.mode === 'bot' || saved.mode === 'demo' ? 'ai' : (saved.mode || 'hot')), demoOpp: saved.demoOpp || 'passive', demoGoal: saved.demoGoal || 'balance', demoMs: saved.demoMs === undefined ? 15000 : saved.demoMs, level: saved.level || 'normal', names: saved.names || settings.names, decks: saved.decks || [null, null], list: saved.list || 'tcg', first: saved.first || 'random' };
   const pool = () => allDecks(fmt).filter((d) => d.status !== 'entwurf' && (fmt !== 'advanced' || st.list === 'none' || d.list === st.list || d.custom));
   const byId = (id) => id && allDecks(fmt).find((d) => d.id === id);
   const start = () => {
@@ -80,7 +80,7 @@ screens.setup = ({ fmt, demo }) => {
     const first = st.mode === 'demo' ? 0 : st.first === 'random' ? (rand32() & 1) : +st.first; // in der Vorführung beginnt immer das gezeigte Deck
     if (first === 1) { pl.reverse(); }
     const human = st.mode === 'demo' ? [false, false] : st.mode === 'hot' ? [true, true] : (first === 1 ? [false, true] : [true, false]);
-    const conf = { fmt, list: st.list, mode: st.mode, level: st.level, demoOpp: st.mode === 'demo' ? st.demoOpp : undefined, players: pl, human, lp: settings.lp, tutor: st.mode === 'demo' ? false : settings.tutor };
+    const conf = { fmt, list: st.list, mode: st.mode, level: st.level, demoOpp: st.mode === 'demo' ? st.demoOpp : undefined, demoGoal: st.demoGoal, demoMs: st.mode === 'demo' && st.demoOpp !== 'ai' ? st.demoMs : 0, players: pl, human, lp: settings.lp, tutor: st.mode === 'demo' ? false : settings.tutor };
     store.set('last', { ...conf, players: pl.map((p) => ({ name: p.name, deck: p.deck.id })) });
     go('duel', conf);
   };
@@ -95,6 +95,8 @@ screens.setup = ({ fmt, demo }) => {
       h('div', { class: 'seg' }, MODES.map((m) => h('button', { class: 'seg-b' + (st.mode === m.id ? ' on' : ''), onclick: () => { st.mode = m.id; save(); render(); } }, m.t))),
       h('div', { class: 'muted small', style: 'margin:-2px 2px 4px' }, MODES.find((m) => m.id === st.mode).d),
       st.mode === 'demo' ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('span', { class: 'muted small' }, 'Gegner:'), [['passive', 'Steht still'], ['ai', 'Spielt mit (KI)']].map(([v, t]) => h('button', { class: 'chip' + (st.demoOpp === v ? ' on' : ''), onclick: () => { st.demoOpp = v; save(); render(); } }, t))) : null,
+      st.mode === 'demo' && st.demoOpp !== 'ai' ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('span', { class: 'muted small' }, 'Ziel:'), [['balance', 'Ausgewogen'], ['power', 'Stärkste Monster'], ['inter', 'Meiste Unterbrechungen']].map(([v, t]) => h('button', { class: 'chip' + (st.demoGoal === v ? ' on' : ''), onclick: () => { st.demoGoal = v; save(); render(); } }, t))) : null,
+      st.mode === 'demo' && st.demoOpp !== 'ai' ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('span', { class: 'muted small' }, 'Suche:'), [[0, 'Aus'], [8000, 'Kurz 8 s'], [15000, 'Normal 15 s'], [30000, 'Gründlich 30 s']].map(([v, t]) => h('button', { class: 'chip' + (st.demoMs === v ? ' on' : ''), onclick: () => { st.demoMs = v; save(); render(); } }, t))) : null,
       st.mode === 'ai' ? h('div', { class: 'row', style: 'flex-wrap:wrap' }, h('span', { class: 'muted small' }, 'Stärke der KI:'), Object.entries(AI_LEVELS).map(([id, l]) => h('button', { class: 'chip' + (st.level === id ? ' on' : ''), onclick: () => { st.level = id; save(); render(); } }, l.name))) : null,
       fmt === 'advanced' ? h('div', { class: 'row' }, h('span', { class: 'muted small' }, 'Verbotsliste:'), ADV_LISTS.map((l) => h('button', { class: 'chip' + (st.list === l ? ' on' : ''), onclick: () => { st.list = l; st.decks = [null, null]; save(); render(); } }, LIST_NAME[l]))) : null,
       h('div', { class: 'pl-grid' }, (st.mode === 'demo' && st.demoOpp !== 'ai' ? [0] : [0, 1]).map((i) => {
@@ -107,7 +109,7 @@ screens.setup = ({ fmt, demo }) => {
             h('button', { class: 'btn grow ' + (d ? '' : 'pri'), onclick: () => go('decks', { fmt, list: st.list, title: `Deck für ${st.names[i] || 'Spieler ' + (i + 1)}`, onPick: (dk) => { st.decks[i] = dk.id; save(); } }) }, d ? 'Anderes Deck' : 'Deck wählen'),
             h('button', { class: 'btn ghost', title: 'Zufälliges Deck', onclick: () => { const p = pool(); st.decks[i] = p[rand32() % p.length].id; save(); render(); } }, '🎲')));
       })),
-      st.mode === 'demo' ? h('div', { class: 'muted small', style: 'margin:0 2px' }, 'Die KI spielt als Profi und beginnt. Sie folgt keiner festen Combo-Liste, sondern wählt nach Spielwert – du siehst also, was sie aus der Starthand macht. Mit „Neue Starthand“ (☰) probierst du eine andere.') : h('div', { class: 'panel row', style: 'flex-wrap:wrap' },
+      st.mode === 'demo' ? h('div', { class: 'muted small', style: 'margin:0 2px' }, st.demoOpp === 'ai' ? 'Die KI spielt als Profi und beginnt. Sie folgt keiner festen Combo-Liste, sondern wählt nach Spielwert – du siehst also, was sie aus der Starthand macht. Mit „Neue Starthand“ (☰) probierst du eine andere.' : st.demoMs > 0 ? 'Für jede Starthand probiert die App im Hintergrund viele Spielzüge durch (auch solche, die eigene Monster als Material auflösen) und spielt dir die beste gefundene Variante vor. Das ist eine Näherung: Sie findet gute, aber nicht garantiert die allerbesten Züge. Mit „Neue Starthand“ (☰) probierst du eine andere Hand.' : 'Ohne Suche spielt die KI als Profi nach Spielwert – sie folgt keiner festen Combo-Liste. Mit „Neue Starthand“ (☰) probierst du eine andere.') : h('div', { class: 'panel row', style: 'flex-wrap:wrap' },
         h('span', { class: 'muted small' }, 'Wer beginnt?'),
         [['random', 'Zufall'], ['0', st.names[0] || 'Spieler 1'], ['1', st.names[1] || 'Spieler 2']].map(([v, t]) => h('button', { class: 'chip' + (st.first === v ? ' on' : ''), onclick: () => { st.first = v; save(); render(); } }, t)),
         h('span', { class: 'grow' }), h('label', { class: 'chip' }, h('input', { type: 'checkbox', checked: settings.tutor, onchange: (e) => { settings.tutor = e.target.checked; } }), ' Tutor-Tipps'))));
