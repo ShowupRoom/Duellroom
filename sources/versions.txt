@@ -1,4 +1,4 @@
-CardScripts: 2026-11-23 17ad0cb2
+CardScripts: 2026-11-23 5fa45a2c
 BabelCDB: 2026-11-23 a481fc0
 LFLists: 2026-11-23 1c12674
 windbot: 2026-08-27 bffe6b6
