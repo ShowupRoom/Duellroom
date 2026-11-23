@@ -2,7 +2,7 @@
 import { h, $, clear, toast, uid, shuffled, rand32, sound } from './util.js';
 import { App, FORMAT_INFO, FORMATS, allDecks, fmtOf, fmtById, nameOf, withTutor, expand, count, cardOf, cleanName, customDecks, deleteCustom, consOf, ADV_LISTS, LIST_NAME, imageId } from './data.js';
 import { consBlock, consChip } from './cons.js';
-import { cardEl, cfg as imgCfg, setImages, preload, idbCount, storageInfo, isOcg, ocgTag } from './cards.js';
+import { cardEl, cfg as imgCfg, setImages, preload, idbCount, storageInfo, isOcg, ocgTag, testImages } from './cards.js';
 import { openModal, confirmBox, showCard } from './ui.js';
 import { go, back, screens } from './nav.js';
 import { store } from './store.js';
@@ -268,11 +268,16 @@ export const dataPanels = (n, si, paint) => {
         h('div', { class: 'row', style: 'flex-wrap:wrap' }, [['Alle Decks aller Formate', 'alle Karten, die in irgendeinem Deck vorkommen', () => deckCodes()], ['Wirklich alle Karten', 'alle Karten der Datenbank – für eigene Decks mit beliebigen Karten', () => { const s = deckCodes(); for (const c of App.cards.values()) if (!(c.type & 0x4000)) s.add(c.code); return s; }]].map(([label, what, get]) => h('button', { class: 'btn sm pri', onclick: async (e) => {
           const b = e.currentTarget; if (b._ctl) { b._ctl.stop = true; return; } // zweiter Tipp = abbrechen
           const codes = [...get()]; const n = new Set(codes.map(imageId)).size; const mb = Math.round(n * 15 / 1024);
-          if (!(await confirmBox(`${label} laden?`, `${n} Karten (${what}), ca. ${mb} MB. Am besten im WLAN und mit Strom. Schon gespeicherte Bilder werden übersprungen. Du kannst jederzeit abbrechen (Knopf nochmal antippen) und später weitermachen.`, 'Laden', 'Abbrechen'))) return;
+          if (!(await confirmBox(`${label} laden?`, `${n} Karten (${what}), ca. ${mb} MB, Dauer ca. ${Math.max(1, Math.round(n * 2 / 4 / 60))} Min. (bewusst langsam, damit die Bildquelle euren Anschluss nicht sperrt). Am besten im WLAN und mit Strom. Schon gespeicherte Bilder werden übersprungen. Du kannst jederzeit abbrechen (Knopf nochmal antippen) und später weitermachen.`, 'Laden', 'Abbrechen'))) return;
           const ctl = { stop: false }; b._ctl = ctl; const r = await preload(codes, (a, t) => { b.textContent = `${Math.round(a / t * 100)} % · tippen = stopp`; }, ctl); b._ctl = null; const had = await idbCount();
-          toast(r.stopped ? `Gestoppt – ${r.ok} Bilder gespeichert. Du kannst später weitermachen.` : `${r.ok} von ${r.total} Bildern gespeichert (jetzt ${had} auf dem Gerät)` + (r.ok < r.total ? ' – manche Karten haben kein Bild oder es gab keine Verbindung.' : '')); paint();
+          toast(r.aborted ? `Abgebrochen nach ${r.ok} Bildern: Die Bildquelle antwortet nicht mehr. Unten „Bilder-Verbindung testen“ – später einfach weitermachen.` : r.stopped ? `Gestoppt – ${r.ok} Bilder gespeichert. Du kannst später weitermachen.` : `${r.ok} von ${r.total} Bildern gespeichert (jetzt ${had} auf dem Gerät)` + (r.ok < r.total ? ' – manche Karten haben kein Bild oder es gab keine Verbindung.' : '')); paint();
         } }, label))),
         h('div', { class: 'row', style: 'flex-wrap:wrap' }, ['goat', 'edison', 'advanced', 'genesys', 'speed'].map((f) => h('button', { class: 'btn sm', onclick: async (e) => { const b = e.currentTarget; const codes = new Set(); for (const d of allDecks(f).filter((x) => x.grp === 'Beliebte Decks' || x.grp === 'Turnier-Decks' || x.custom || f === 'speed')) for (const s of ['main', 'extra']) for (const [c] of d[s]) codes.add(c); b.disabled = true; const r = await preload([...codes], (a, t) => { b.textContent = `${a}/${t}`; }); b.textContent = FORMAT_INFO[f].title; b.disabled = false; toast(`${r.ok} von ${r.total} Bildern gespeichert` + (r.ok < r.total ? ' – ohne Internet nicht möglich?' : '')); paint(); } }, FORMAT_INFO[f].title)))),
+      h('div', { class: 'panel col' }, h('b', null, '🖼 Bilder-Verbindung testen'),
+        h('div', { class: 'muted small' }, 'Die Kartenbilder kommen von ygoprodeck.com und werden einmal geladen und auf dem Gerät gemerkt. Fehlen Bilder, prüft dieser Test die Verbindung.'),
+        h('button', { class: 'btn sm', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Prüfe …'; const r = await testImages(); b.disabled = false; b.textContent = 'Nochmal testen';
+          const msg = { ok: '✅ Verbindung in Ordnung – fehlende Bilder laden jetzt nach (App ggf. einmal schließen und öffnen).', offline: '📴 Das Gerät ist offline. Gespeicherte Bilder werden weiter angezeigt.', gesperrt: '⛔ ygoprodeck antwortet nicht. Meist sperrt ygoprodeck nach sehr vielen Abrufen den Internetanschluss für eine Weile. Test: WLAN aus, mobile Daten an, nochmal testen – klappt es dort, ist euer WLAN-Anschluss gesperrt. Gespeicherte Bilder bleiben sichtbar.' }[r] || '⚠️ Bildquelle meldet ' + r + '.';
+          const out = b.parentElement.querySelector('.imgt') || h('div', { class: 'small imgt', style: 'margin-top:6px' }); out.textContent = msg; b.after(out); } }, 'Bilder-Verbindung testen')),
       h('div', { class: 'panel col' }, h('b', null, 'Eigene Decks'), h('div', { class: 'muted small' }, customDecks().length + ' gespeichert (nur auf diesem Gerät).'),
         h('button', { class: 'btn red sm', onclick: async () => { if (await confirmBox('Alle eigenen Decks löschen?', 'Das kann nicht rückgängig gemacht werden – speichere vorher eine Sicherung.', 'Löschen', 'Abbrechen', true)) { customDecks().forEach((d) => deleteCustom(d.id)); paint(); } } }, 'Alle eigenen Decks löschen'))
   ];

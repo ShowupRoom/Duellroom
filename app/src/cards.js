@@ -54,54 +54,84 @@ export const storageInfo = async () => {
   return o;
 };
 
-const urls = new Map(); // Schlüssel → Objekt-URL | 'fail'
+const urls = new Map(); // Schlüssel → Objekt-URL | {fail: Zeitpunkt}
 const waiting = new Map(); // Schlüssel → [img-Elemente]
 const queue = []; let active = 0; let offlineUntil = 0;
 const key = (k, id) => k + id;
+const RETRY_MS = 45000; // ein fehlgeschlagenes Bild wird nach dieser Zeit (oder sobald das Netz zurück ist) erneut versucht
+/** Zustand der Bildquelle – für „Bilder-Verbindung testen“ und die Drosselung */
+export const imgHealth = { ok: 0, fail: 0, streak: 0, last: null };
+const noteOk = () => { imgHealth.ok++; imgHealth.streak = 0; imgHealth.last = 'ok'; };
+const noteFail = (why) => { imgHealth.fail++; imgHealth.streak++; imgHealth.last = why; };
 
 async function fetchOne(k, id) {
   const kk = key(k, id);
   const cached = await idbGet(kk);
   if (cached) return URL.createObjectURL(cached);
-  if (Date.now() < offlineUntil) return 'fail';
+  if (Date.now() < offlineUntil) return 'later';
   const url = BASE + PATH[k] + id + '.jpg';
   try {
-    const r = await fetch(url, { mode: 'cors' }); if (!r.ok) return 'fail';
-    const b = await r.blob(); if (!b.size || !/image/.test(b.type)) return 'fail';
-    idbPut(kk, b); return URL.createObjectURL(b);
+    const r = await fetch(url, { mode: 'cors' }); if (!r.ok) { noteFail('http ' + r.status); return r.status === 404 ? 'fail' : backoff(); }
+    const b = await r.blob(); if (!b.size || !/image/.test(b.type)) { noteFail('kein Bild'); return 'fail'; }
+    noteOk(); idbPut(kk, b); return URL.createObjectURL(b);
   } catch (e) {
     // Ohne CORS-Freigabe: Bild direkt anzeigen (wird dann vom Browser gemerkt, aber nicht von uns)
     const ok = await new Promise((res) => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; setTimeout(() => res(false), 8000); });
-    if (ok) return url; offlineUntil = Date.now() + 15000; return 'fail';
+    if (ok) { noteOk(); return url; } noteFail('netz'); return backoff();
   }
 }
+// Netz weg oder Quelle sperrt: kurz pausieren (wächst bei Dauerfehlern bis 2 min) – die Bilder bleiben in der Warteschlange
+function backoff() { offlineUntil = Date.now() + Math.min(120000, 5000 * Math.max(1, imgHealth.streak)); return 'later'; }
 function pump() {
   while (active < 4 && queue.length) {
+    if (Date.now() < offlineUntil) { setTimeout(pump, offlineUntil - Date.now() + 50); return; }
     const [k, id] = queue.shift(); active++;
-    fetchOne(k, id).then((u) => { urls.set(key(k, id), u); for (const im of waiting.get(key(k, id)) || []) if (u !== 'fail') { im.src = u; } waiting.delete(key(k, id)); }).finally(() => { active--; pump(); });
+    fetchOne(k, id).then((u) => {
+      const kk = key(k, id);
+      if (u === 'later') { queue.push([k, id]); return; } // später erneut – die wartenden Bilder bleiben angemeldet
+      if (u === 'fail') { urls.set(kk, { fail: Date.now() }); waiting.delete(kk); return; }
+      urls.set(kk, u); for (const im of waiting.get(kk) || []) im.src = u; waiting.delete(kk);
+    }).finally(() => { active--; pump(); });
   }
 }
+// Netz zurück / App wieder im Vordergrund: Pausen und alte Fehlschläge vergessen, Warteschlange weiterlaufen lassen
+const wake = () => { offlineUntil = 0; for (const [kk, u] of urls) if (u && u.fail) urls.delete(kk); pump(); };
+try { addEventListener('online', wake); document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); }); } catch (e) { /* kein Browser */ }
 export function wantImage(img, k, code) {
   if (!cfg.images) return;
   const id = imageId(code); const kk = key(k, id); const u = urls.get(kk);
-  if (u === 'fail') return;
+  if (u && u.fail) { if (Date.now() - u.fail < RETRY_MS) return; urls.delete(kk); }
   img.classList.add('art'); img.onload = () => img.classList.add('ok'); img.onerror = () => img.classList.remove('ok');
-  if (u) { img.classList.add('nf'); img.src = u; if (img.complete && img.naturalWidth) img.classList.add('ok'); return; } // schon geladen: sofort zeigen, kein erneutes Einblenden (sonst flackert das Bild bei jedem Neuzeichnen des Felds)
+  if (typeof u === 'string') { img.classList.add('nf'); img.src = u; if (img.complete && img.naturalWidth) img.classList.add('ok'); return; } // schon geladen: sofort zeigen, kein erneutes Einblenden (sonst flackert das Bild bei jedem Neuzeichnen des Felds)
   if (!waiting.has(kk)) { waiting.set(kk, []); queue.push([k, id]); }
   waiting.get(kk).push(img); pump();
 }
-/** Bilder vorab laden (für Offline-Betrieb); gibt Fortschritt zurück */
+/** Verbindung zur Bildquelle prüfen (ohne Zwischenspeicher): 'ok' | 'gesperrt' | 'offline' | 'fehler <code>' */
+export async function testImages() {
+  if (!navigator.onLine) return 'offline';
+  const url = BASE + PATH.small + '46986414.jpg?t=' + Date.now();
+  try { const r = await fetch(url, { mode: 'cors', cache: 'no-store' }); if (r.ok) { const b = await r.blob(); return b.size && /image/.test(b.type) ? 'ok' : 'fehler kein Bild'; } return r.status === 403 || r.status === 429 ? 'gesperrt' : 'fehler ' + r.status; }
+  catch (e) { const ok = await new Promise((res) => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; setTimeout(() => res(false), 9000); }); return ok ? 'ok' : (navigator.onLine ? 'gesperrt' : 'offline'); }
+}
+/** Bilder vorab laden (für Offline-Betrieb); gedrosselt (≈ 4 pro Sekunde), bricht bei Dauerfehlern ab – ygoprodeck sperrt sonst den Anschluss */
 export async function preload(codes, onProgress = () => {}, ctl = { stop: false }) {
   const ids = [...new Set(codes.map(imageId))]; let done = 0, ok = 0; const kinds = ['small', 'crop'];
   const work = []; for (const id of ids) for (const k of kinds) work.push([k, id]);
-  let i = 0; const total = work.length;
+  let i = 0; const total = work.length; let streak = 0; let aborted = false;
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // Nur auf dem Gerät speichern (kein Objekt-URL im Speicher behalten – bei tausenden Bildern wichtig)
   const one = async (k, id) => {
-    const kk = key(k, id); if (await idbHas(kk)) return true;
-    try { const r = await fetch(BASE + PATH[k] + id + '.jpg', { mode: 'cors' }); if (!r.ok) return false; const b = await r.blob(); if (!b.size || !/image/.test(b.type)) return false; return await idbPutWait(kk, b); } catch (e) { return false; }
+    const kk = key(k, id); if (await idbHas(kk)) return 'have';
+    try { const r = await fetch(BASE + PATH[k] + id + '.jpg', { mode: 'cors' }); if (!r.ok) return r.status === 404 ? 'skip' : false; const b = await r.blob(); if (!b.size || !/image/.test(b.type)) return 'skip'; return (await idbPutWait(kk, b)) ? 'net' : false; } catch (e) { return false; }
   };
-  const lane = async () => { while (i < work.length && !ctl.stop) { const [k, id] = work[i++]; if (await one(k, id)) ok++; onProgress(++done, total); } };
-  await Promise.all([lane(), lane(), lane(), lane(), lane()]); return { ok, total, done, stopped: !!ctl.stop && done < total };
+  const lane = async () => {
+    while (i < work.length && !ctl.stop && !aborted) {
+      const [k, id] = work[i++]; const t0 = Date.now(); const r = await one(k, id);
+      if (r === 'have' || r === 'net') { ok++; streak = 0; } else if (r === false) { streak++; if (streak >= 12) { aborted = true; break; } await wait(2000 * streak); }
+      onProgress(++done, total); if (r === 'net') await wait(Math.max(0, 500 - (Date.now() - t0))); // höchstens ~2 neue Bilder pro Sekunde und Spur
+    }
+  };
+  await Promise.all([lane(), lane()]); return { ok, total, done, stopped: (!!ctl.stop || aborted) && done < total, aborted };
 }
 
 // ---- Elemente -------------------------------------------------------------
