@@ -43,7 +43,7 @@ const LIST_OF = { speed: 'speed', goat: 'goat', edison: 'edison', advanced: 'tcg
 export function easyDuel(deck) {
   const d = withTutor(deck); const op = App.decks.find((x) => x.fmt === d.fmt && x.status === 'ok' && x.id !== d.id && EASY(x) >= 2) || App.decks.find((x) => x.fmt === d.fmt && x.status === 'ok' && x.id !== d.id);
   store.set('buddy.on', true); store.set('banlist', LIST_OF[d.fmt] || 'tcg');
-  go('duel', { fmt: d.fmt, list: LIST_OF[d.fmt] || 'tcg', mode: 'ai', level: 'leicht', players: [{ name: settings.names[0] || 'Du', deck: d }, { name: 'KI · Anfänger', deck: withTutor(op) }], human: [true, false], lp: d.fmt === 'speed' ? 4000 : 8000, tutor: true });
+  go('duel', { fmt: d.fmt, list: LIST_OF[d.fmt] || 'tcg', mode: 'ai', level: 'leicht', players: [{ name: settings.names[0] || 'Du', deck: d }, { name: 'KI · Anfänger', deck: withTutor(op) }], human: [true, false], lp: d.fmt === 'speed' ? 4000 : 8000, tutor: settings.tutor });
 }
 
 screens.welcome = () => {

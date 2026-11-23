@@ -629,6 +629,7 @@ class Duel {
       h('button', { class: 'btn', onclick: () => { m.close(); this.showLog(); } }, '📜 Verlauf'),
       h('button', { class: 'btn', onclick: () => { const nx = !this.anim ? 'fast' : this.tempo === 'fast' ? 'normal' : 'off'; this.anim = nx !== 'off'; if (nx !== 'off') this.tempo = nx; store.set('anim', this.anim); store.set('tempo', this.tempo); this.root.classList.toggle('fxfast', this.tempo === 'fast'); toast({ fast: 'Effekte: schnell', normal: 'Effekte: normal', off: 'Effekte: aus' }[nx]); m.close(); } }, `✨ Effekte: ${!this.anim ? 'aus' : this.tempo === 'fast' ? 'schnell' : 'normal'}`),
       this.ai ? h('button', { class: 'btn', onclick: () => { const ks = Object.keys(AIP); this.aiPace = ks[(ks.indexOf(this.aiPace) + 1) % ks.length]; store.set('aipace', this.aiPace); toast(`KI-Tempo: ${AIP[this.aiPace].name}`); m.close(); this.menu(); } }, `🐢 KI-Tempo: ${AIP[this.aiPace].name}`) : null,
+      this.conf.human[this.viewer] && !this.demo && !this.conf.lesson && !this.conf.replay ? h('button', { class: 'btn', onclick: () => { m.close(); this.setTutor(!this.conf.tutor); } }, this.conf.tutor ? '💡 Tutor ausschalten' : '💡 Tutor einschalten') : null,
       h('button', { class: 'btn', onclick: () => { setFieldFull(!fieldCfg.full); m.close(); this.render(); toast(fieldCfg.full ? 'Feldkarten: ganzes Kartenbild' : 'Feldkarten: Kunst mit Rahmen'); } }, `🃏 Feldkarten: ${fieldCfg.full ? 'ganze Karte' : 'Kunst + Rahmen'}`),
       this.demo ? h('button', { class: 'btn', onclick: () => { m.close(); this.demoRestart(); } }, '🔁 Neue Starthand') : h('button', { class: 'btn', onclick: () => { m.close(); this.surrender(); } }, '🏳 Aufgeben'),
       h('button', { class: 'btn red', onclick: async () => { m.close(); if (this.net) { if (await confirmBox('Duell verlassen?', 'Das Online-Duell wird für beide beendet.', 'Verlassen', 'Weiterspielen', true)) { this.net.send({ t: 'leave' }); this.destroy(); netMenu(); } } else back(); } }, '⟵ Duell verlassen')), footer: h('button', { class: 'btn', onclick: () => m.close() }, 'Weiterspielen') });
@@ -788,6 +789,13 @@ class Duel {
   /** wartet auf eine Antwort der Oberfläche */
   wait(kind) { return new Promise((resolve) => { this.pending = { resolve, kind }; setTimeout(() => buddyUpdate(this), 0); }); }
   answer(resp) { const p = this.pending; if (!p) return; this.tutorStop(); this.buddyHidden = false; setTimeout(() => buddyUpdate(this), 0); this.closePhMenu(); this.pending = null; this.phaseOpts = null; this.cand = new Map(); this.chosen = new Set(); this.zoneSel = null; this.acts = new Map(); this.tipKeys = new Set(); this.tip = null; this.dropFloat(); this.closeSheet(); this.clearBar(); if (this.snap) this.render(); p.resolve(resp); }
+  /** Tutor im laufenden Duell an/aus – gilt sofort und wird als Einstellung gemerkt */
+  setTutor(v) {
+    this.conf.tutor = !!v; settings.tutor = !!v;
+    if (!v) { this.tutorStop(); this.tip = null; this.tipBtn.classList.remove('pulse'); if (this.tipModal) { try { this.tipModal.close(); } catch (e) { /* */ } } }
+    this.tipBtn.style.display = this.conf.tutor && this.conf.human[this.viewer] ? '' : 'none'; buddyUpdate(this);
+    toast(v ? '💡 Tutor an – ab deiner nächsten Entscheidung gibt es wieder Tipps.' : 'Tutor aus – keine Tipps und keine Begleiterin mehr. Im Menü ☰ wieder einschaltbar.');
+  }
   setTip(t) { this.tip = t; if (t) this.buddyHidden = this.buddyHidden && this.buddyKeep; buddyUpdate(this); }
   tutHelpers() { const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2; return Math.max(1, Math.min(3, cores - 2)); }
   tutorOn() { return !!(this.conf.tutor && !this.demo && this.copts && !(this.net && !this.host) && store.get('tutor.bg', true)); }

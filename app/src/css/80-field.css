@@ -99,3 +99,11 @@ html[data-field=arena] .duel.land.mdf .zn.chosen,html[data-field=arena] .duel.la
   .duel.land.mdf .bdy-b{margin-top:6px}
   .duel.land.mdf .bdy-b button{padding:6px 9px}
 }
+/* Auswahl-Hinweis (Material, Zone, Ziel …) im Querformat: lesbare Karte links statt 70-px-Spalte rechts */
+.duel.land.mdf.baron .d-r>.d-bar{position:fixed;left:calc(10px + var(--safe-l));top:calc(58px + var(--safe-t));right:auto;bottom:auto;width:min(270px,32vw);max-height:calc(100% - 140px);overflow:auto;z-index:30;padding:10px 12px;gap:8px;
+  border:1px solid rgba(127,227,255,.6);border-radius:8px;background:linear-gradient(180deg,rgba(16,28,74,.97),rgba(6,12,34,.97));box-shadow:0 0 18px rgba(67,211,255,.25),0 8px 24px rgba(0,0,0,.55);justify-content:flex-start}
+.duel.land.mdf.baron .d-r>.d-bar .bar-m{font-size:14px;color:#fff}
+.duel.land.mdf.baron .d-r>.d-bar .bar-s{font-size:12px;color:#bcd0ff;line-height:1.35}
+.duel.land.mdf.baron .d-r>.d-bar .bar-b{flex-wrap:wrap}
+.duel.land.mdf.baron .d-r>.d-bar .bar-b .btn{min-height:40px;flex:1 1 auto}
+.duel.land.mdf.baron .d-sheet.show,.duel.land.mdf.baron .bdy{visibility:hidden}
