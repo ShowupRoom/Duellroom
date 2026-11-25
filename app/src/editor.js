@@ -7,7 +7,7 @@ import { handtrapInfo, TIER_TEXT, TIER_SHORT } from '../../src/handtraps.mjs';
 import { roleOf, ROLE_DE } from '../../src/tutor.mjs';
 import { matches } from '../../src/goals.mjs';
 import { consBlock } from './cons.js';
-import { cardEl, isOcg, ocgTag } from './cards.js';
+import { cardEl, isOcg, ocgTag, warmDeck } from './cards.js';
 import { openModal, confirmBox, cardInfoBody } from './ui.js';
 import { go, back, replace, screens, setGuard, setParams } from './nav.js';
 import { store } from './store.js';
@@ -109,6 +109,7 @@ export function importDialog(fmtId, done) {
 screens.editor = (params = {}) => {
   const src = params.deck || {}; const S = { id: src.id || 'my-' + uid(), saved: !!src.id && customDecks().some((d) => d.id === src.id), name: src.name || 'Mein Deck', fmt: src.fmt || params.fmt || 'advanced', list: src.list || params.list || 'tcg', main: clone(src.main), extra: clone(src.extra), side: clone(src.side), dirty: params.dirty ?? !src.id };
   if (S.fmt === 'goat') { for (const k of ['main', 'extra', 'side']) S[k] = S[k].map(([c, n]) => [toFmtCode(c, 'goat'), n]); }
+  warmDeck(S.main, S.extra, S.side); // Bilder dieses Decks zuerst holen
   try { const sv = store.get('ed.sort', null); if (sv && sv.pool && sv.deck) { Object.assign(SORTS.pool, sv.pool); Object.assign(SORTS.deck, sv.deck); } } catch (e) { /* Standard */ }
   const F = { q: '', type: 'all', attr: 0, lvl: 'all', sub: 'all', legal: true, more: false, ocg: 'all', rec: false, ht: 0, eng: null }; let split = 1; let sel = null;
   let CONS = null, REC = null, recSet = new Set(), recT = 0;

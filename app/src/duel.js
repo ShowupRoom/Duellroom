@@ -12,7 +12,7 @@ import { h, clear, sleep, toast, shuffled, beep, rand32, zkey as key } from './u
 import { App, MODES, FORMATS, fmtById, expand, nameOf, cardOf, cleanName, withTutor, descOf } from './data.js';
 import { DuelAI } from '../../src/ai.mjs';
 import { randomResponse, OcgResponseType as R, OcgMessageType as MSG, SelectIdleCMDAction as IA, SelectBattleCMDAction as BA, LOC, MSG_NAME } from '../../src/core.mjs';
-import { cardEl, fieldEl, fieldCfg, setFieldFull } from './cards.js';
+import { cardEl, fieldEl, fieldCfg, setFieldFull, warmDeck } from './cards.js';
 import { openModal, confirmBox, cardInfoBody } from './ui.js';
 import { effectView, mergeViews, markNode, revealMark } from './effecttext.js';
 import { screens, back, replace, root as navRoot, setGuard } from './nav.js';
@@ -36,6 +36,7 @@ const FACEUP = 5;
 
 class Duel {
   constructor(conf) {
+    try { for (const pl of conf.players || []) if (pl && pl.deck) warmDeck(pl.deck.main, pl.deck.extra); } catch (e) { /* nur Bilder */ }
     this.hist = []; this.tut = { id: 0, ctl: null, first: true }; this.tipModal = null; // hist: alle Antworten beider Spieler – damit die Tutor-Suche das Duell nachspielen kann
     libPause(); applyLook(true); this.conf = conf; this.mode = MODES[conf.fmt]; if (this.mode.lp) conf.lp = this.mode.lp; // Speed Duell: fest 4000 LP this.fmtDef = fmtById(conf.fmt, conf.list);
     this.net = conf.mode === 'net-host' || conf.mode === 'net-guest' ? session : null; this.viewer = this.net ? conf.seat : conf.mode === 'demo' ? 0 : (conf.human[0] ? 0 : 1); this.snap = null; this.logLines = []; this.chain = []; this.stopped = false; this.turnNo = 0; this.phase = 0; this.turnPlayer = 0;

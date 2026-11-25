@@ -10,6 +10,37 @@ export const setImages = (v) => { cfg.images = !!v; store.set('images', !!v); };
 // ---- Bild-Speicher (IndexedDB) ---------------------------------------------
 const BASE = 'https://images.ygoprodeck.com/images/';
 const PATH = { small: 'cards_small/', crop: 'cards_cropped/', big: 'cards/' };
+// Ersatzweg: öffentlicher Bild-Zwischenspeicher wsrv.nl (kostenlos, holt das Bild einmal bei ygoprodeck und liefert es selbst aus).
+// Hilft, wenn ygoprodeck den eigenen Anschluss sperrt oder hakt – dann fragt das Handy nicht mehr direkt dort an.
+const SRC = {
+  ygo: (k, id) => BASE + PATH[k] + id + '.jpg',
+  wsrv: (k, id) => 'https://wsrv.nl/?url=' + encodeURIComponent('images.ygoprodeck.com/images/' + PATH[k] + id + '.jpg') + '&maxage=31d',
+};
+let ygoBadUntil = 0; // ygoprodeck hakt → so lange zuerst den Ersatzweg nehmen
+const order = () => (Date.now() < ygoBadUntil ? ['wsrv', 'ygo'] : ['ygo', 'wsrv']);
+/** ein Bild von einer Quelle holen: {blob} | {url} (nur anzeigbar, ohne CORS) | '404' | 'err' */
+async function getFrom(src, k, id, allowUrl = true) {
+  const url = SRC[src](k, id);
+  try {
+    const r = await fetch(url, { mode: 'cors' }); if (r.status === 404) return '404'; if (!r.ok) return 'err';
+    const b = await r.blob(); return b.size && /image/.test(b.type) ? { blob: b } : '404';
+  } catch (e) {
+    if (!allowUrl) return 'err';
+    const ok = await new Promise((res) => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; setTimeout(() => res(false), 8000); });
+    return ok ? { url } : 'err';
+  }
+}
+/** der Reihe nach über die Quellen: merkt sich, wenn ygoprodeck hakt (10 min Ersatzweg zuerst) */
+async function getAny(k, id, allowUrl = true) {
+  let miss = 0;
+  for (const src of order()) {
+    const r = await getFrom(src, k, id, allowUrl);
+    if (typeof r === 'object') { if (src === 'ygo') ygoBadUntil = 0; imgHealth.src = src; return r; }
+    if (r === '404') { miss++; if (src === 'ygo') return '404'; continue; } // Karte hat kein Bild – der Ersatzweg kennt es dann auch nicht
+    if (src === 'ygo') ygoBadUntil = Date.now() + 10 * 60000;
+  }
+  return miss ? '404' : 'err';
+}
 let dbp = null;
 const open = () => new Promise((res) => {
   try {
@@ -60,7 +91,7 @@ const queue = []; let active = 0; let offlineUntil = 0;
 const key = (k, id) => k + id;
 const RETRY_MS = 45000; // ein fehlgeschlagenes Bild wird nach dieser Zeit (oder sobald das Netz zurück ist) erneut versucht
 /** Zustand der Bildquelle – für „Bilder-Verbindung testen“ und die Drosselung */
-export const imgHealth = { ok: 0, fail: 0, streak: 0, last: null };
+export const imgHealth = { ok: 0, fail: 0, streak: 0, last: null, src: null };
 const noteOk = () => { imgHealth.ok++; imgHealth.streak = 0; imgHealth.last = 'ok'; };
 const noteFail = (why) => { imgHealth.fail++; imgHealth.streak++; imgHealth.last = why; };
 
@@ -69,16 +100,10 @@ async function fetchOne(k, id) {
   const cached = await idbGet(kk);
   if (cached) return URL.createObjectURL(cached);
   if (Date.now() < offlineUntil) return 'later';
-  const url = BASE + PATH[k] + id + '.jpg';
-  try {
-    const r = await fetch(url, { mode: 'cors' }); if (!r.ok) { noteFail('http ' + r.status); return r.status === 404 ? 'fail' : backoff(); }
-    const b = await r.blob(); if (!b.size || !/image/.test(b.type)) { noteFail('kein Bild'); return 'fail'; }
-    noteOk(); idbPut(kk, b); return URL.createObjectURL(b);
-  } catch (e) {
-    // Ohne CORS-Freigabe: Bild direkt anzeigen (wird dann vom Browser gemerkt, aber nicht von uns)
-    const ok = await new Promise((res) => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; setTimeout(() => res(false), 8000); });
-    if (ok) { noteOk(); return url; } noteFail('netz'); return backoff();
-  }
+  const r = await getAny(k, id);
+  if (r === '404') { noteFail('kein Bild'); return 'fail'; }
+  if (r === 'err') { noteFail('netz'); return backoff(); }
+  noteOk(); if (r.blob) { idbPut(kk, r.blob); return URL.createObjectURL(r.blob); } return r.url;
 }
 // Netz weg oder Quelle sperrt: kurz pausieren (wächst bei Dauerfehlern bis 2 min) – die Bilder bleiben in der Warteschlange
 function backoff() { offlineUntil = Date.now() + Math.min(120000, 5000 * Math.max(1, imgHealth.streak)); return 'later'; }
@@ -106,12 +131,23 @@ export function wantImage(img, k, code) {
   if (!waiting.has(kk)) { waiting.set(kk, []); queue.push([k, id]); }
   waiting.get(kk).push(img); pump();
 }
+/** Bilder eines Decks sofort holen, vor allem anderen (beim Öffnen eines Decks oder Duellstart) – schon gespeicherte werden übersprungen */
+export function warmDeck(...lists) {
+  if (!cfg.images) return; const ids = new Set();
+  for (const L of lists) for (const e of L || []) { const c = Array.isArray(e) ? e[e.length - 1] : (e && e.code) || e; if (c) ids.add(imageId(+c)); }
+  const front = [];
+  for (const id of ids) for (const k of ['small', 'crop']) { const kk = key(k, id); if (urls.has(kk) && !(urls.get(kk) && urls.get(kk).fail)) continue; if (urls.get(kk) && urls.get(kk).fail) urls.delete(kk); if (waiting.has(kk)) { const i = queue.findIndex(([a, b]) => a === k && b === id); if (i > 0) front.push(...queue.splice(i, 1)); continue; } waiting.set(kk, []); front.push([k, id]); }
+  queue.unshift(...front); pump();
+}
 /** Verbindung zur Bildquelle prüfen (ohne Zwischenspeicher): 'ok' | 'gesperrt' | 'offline' | 'fehler <code>' */
 export async function testImages() {
   if (!navigator.onLine) return 'offline';
-  const url = BASE + PATH.small + '46986414.jpg?t=' + Date.now();
-  try { const r = await fetch(url, { mode: 'cors', cache: 'no-store' }); if (r.ok) { const b = await r.blob(); return b.size && /image/.test(b.type) ? 'ok' : 'fehler kein Bild'; } return r.status === 403 || r.status === 429 ? 'gesperrt' : 'fehler ' + r.status; }
-  catch (e) { const ok = await new Promise((res) => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; setTimeout(() => res(false), 9000); }); return ok ? 'ok' : (navigator.onLine ? 'gesperrt' : 'offline'); }
+  const probe = async (src) => { const t = Date.now(); const url = SRC[src]('small', 46986414) + (src === 'ygo' ? '?t=' : '&t=') + t;
+    try { const r = await fetch(url, { mode: 'cors', cache: 'no-store' }); if (!r.ok) return r.status === 403 || r.status === 429 ? 'gesperrt' : 'fehler ' + r.status; const b = await r.blob(); return b.size && /image/.test(b.type) ? 'ok' : 'fehler'; }
+    catch (e) { const ok = await new Promise((res) => { const im = new Image(); im.onload = () => res(true); im.onerror = () => res(false); im.src = url; setTimeout(() => res(false), 9000); }); return ok ? 'ok' : 'gesperrt'; } };
+  const [y, w] = await Promise.all([probe('ygo'), probe('wsrv')]);
+  if (y !== 'ok' && w === 'ok') ygoBadUntil = Date.now() + 10 * 60000;
+  return y === 'ok' ? 'ok' : w === 'ok' ? 'ersatz' : y;
 }
 /** Bilder vorab laden (für Offline-Betrieb); gedrosselt (≈ 4 pro Sekunde), bricht bei Dauerfehlern ab – ygoprodeck sperrt sonst den Anschluss */
 export async function preload(codes, onProgress = () => {}, ctl = { stop: false }) {
@@ -122,7 +158,8 @@ export async function preload(codes, onProgress = () => {}, ctl = { stop: false 
   // Nur auf dem Gerät speichern (kein Objekt-URL im Speicher behalten – bei tausenden Bildern wichtig)
   const one = async (k, id) => {
     const kk = key(k, id); if (await idbHas(kk)) return 'have';
-    try { const r = await fetch(BASE + PATH[k] + id + '.jpg', { mode: 'cors' }); if (!r.ok) return r.status === 404 ? 'skip' : false; const b = await r.blob(); if (!b.size || !/image/.test(b.type)) return 'skip'; return (await idbPutWait(kk, b)) ? 'net' : false; } catch (e) { return false; }
+    const r = await getAny(k, id, false); if (r === '404') return 'skip'; if (r === 'err' || !r.blob) return false;
+    return (await idbPutWait(kk, r.blob)) ? 'net' : false;
   };
   const lane = async () => {
     while (i < work.length && !ctl.stop && !aborted) {

@@ -2,7 +2,7 @@
 import { h, $, clear, toast, uid, shuffled, rand32, sound } from './util.js';
 import { App, FORMAT_INFO, FORMATS, allDecks, fmtOf, fmtById, nameOf, withTutor, expand, count, cardOf, cleanName, customDecks, deleteCustom, consOf, ADV_LISTS, LIST_NAME, imageId } from './data.js';
 import { consBlock, consChip } from './cons.js';
-import { cardEl, cfg as imgCfg, setImages, preload, idbCount, storageInfo, isOcg, ocgTag, testImages } from './cards.js';
+import { cardEl, cfg as imgCfg, setImages, preload, idbCount, storageInfo, isOcg, ocgTag, testImages, warmDeck } from './cards.js';
 import { openModal, confirmBox, showCard } from './ui.js';
 import { go, back, screens } from './nav.js';
 import { store } from './store.js';
@@ -188,6 +188,7 @@ export function startTest(deck) {
   go('duel', { fmt, list: lst, mode: 'solo', test: true, players: [{ name: 'Du', deck: d }, { name: 'Übungsgegner', deck: d }], human: [true, false], lp: settings.lp, tutor: settings.tutor });
 }
 export function deckDetail(deck, { edit } = {}) {
+  warmDeck(deck.main, deck.extra, deck.side);
   withTutor(deck); const t = deck.tutor; const root = h('div', { class: 'ddet' });
   root.append(h('div', { class: 'row', style: 'flex-wrap:wrap;gap:6px' }, h('span', { class: 'chip on' }, t.style || 'Deck'), h('span', { class: 'chip' }, count(deck.main) + ' Haupt'), h('span', { class: 'chip' }, count(deck.extra) + ' Extra'), deck.src && !/^http/.test(deck.src) ? h('span', { class: 'chip muted' }, deck.src) : null, deck.status === 'angepasst' ? h('span', { class: 'chip warn' }, 'regelkonform angepasst') : null));
   root.append(h('div', { class: 'tutor panel' }, h('div', { class: 'tut-h' }, h('span', { class: 'tut-ic' }, '🎓'), h('b', null, 'Tutor: Das Ziel dieses Decks')),
@@ -276,7 +277,7 @@ export const dataPanels = (n, si, paint) => {
       h('div', { class: 'panel col' }, h('b', null, '🖼 Bilder-Verbindung testen'),
         h('div', { class: 'muted small' }, 'Die Kartenbilder kommen von ygoprodeck.com und werden einmal geladen und auf dem Gerät gemerkt. Fehlen Bilder, prüft dieser Test die Verbindung.'),
         h('button', { class: 'btn sm', onclick: async (e) => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Prüfe …'; const r = await testImages(); b.disabled = false; b.textContent = 'Nochmal testen';
-          const msg = { ok: '✅ Verbindung in Ordnung – fehlende Bilder laden jetzt nach (App ggf. einmal schließen und öffnen).', offline: '📴 Das Gerät ist offline. Gespeicherte Bilder werden weiter angezeigt.', gesperrt: '⛔ ygoprodeck antwortet nicht. Meist sperrt ygoprodeck nach sehr vielen Abrufen den Internetanschluss für eine Weile. Test: WLAN aus, mobile Daten an, nochmal testen – klappt es dort, ist euer WLAN-Anschluss gesperrt. Gespeicherte Bilder bleiben sichtbar.' }[r] || '⚠️ Bildquelle meldet ' + r + '.';
+          const msg = { ersatz: '✅ Bilder kommen jetzt über den Ersatzweg (wsrv.nl) – ygoprodeck antwortet eurem Anschluss gerade nicht. Fehlende Bilder laden nach, „Bilder vorladen“ funktioniert wieder.', ok: '✅ Verbindung in Ordnung – fehlende Bilder laden jetzt nach (App ggf. einmal schließen und öffnen).', offline: '📴 Das Gerät ist offline. Gespeicherte Bilder werden weiter angezeigt.', gesperrt: '⛔ Weder ygoprodeck noch der Ersatzweg antworten. Meist sperrt ygoprodeck nach sehr vielen Abrufen den Internetanschluss für eine Weile. Test: WLAN aus, mobile Daten an, nochmal testen – klappt es dort, ist euer WLAN-Anschluss gesperrt. Gespeicherte Bilder bleiben sichtbar.' }[r] || '⚠️ Bildquelle meldet ' + r + '.';
           const out = b.parentElement.querySelector('.imgt') || h('div', { class: 'small imgt', style: 'margin-top:6px' }); out.textContent = msg; b.after(out); } }, 'Bilder-Verbindung testen')),
       h('div', { class: 'panel col' }, h('b', null, 'Eigene Decks'), h('div', { class: 'muted small' }, customDecks().length + ' gespeichert (nur auf diesem Gerät).'),
         h('button', { class: 'btn red sm', onclick: async () => { if (await confirmBox('Alle eigenen Decks löschen?', 'Das kann nicht rückgängig gemacht werden – speichere vorher eine Sicherung.', 'Löschen', 'Abbrechen', true)) { customDecks().forEach((d) => deleteCustom(d.id)); paint(); } } }, 'Alle eigenen Decks löschen'))
