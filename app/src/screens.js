@@ -81,7 +81,7 @@ const MODES = [
 screens.setup = ({ fmt, demo, list: listP, mode: modeP }) => {
   const saved = store.get('setup.' + fmt, {}); const info = FORMAT_INFO[fmt]; const G = store.get('cfg.demo', {}); // Kombo-Ansicht und KI-Stärke stehen auch in den Einstellungen – dort gilt dasselbe
   let st = { mode: demo ? 'demo' : (modeP || (saved.mode === 'bot' || saved.mode === 'demo' ? 'ai' : (saved.mode || 'hot'))), demoOpp: G.opp || saved.demoOpp || 'passive', demoGoal: G.goal || saved.demoGoal || 'balance', demoMs: G.ms !== undefined ? G.ms : (saved.demoMs === undefined ? 15000 : saved.demoMs), level: store.get('cfg.level', null) || saved.level || 'normal', names: saved.names || settings.names, decks: saved.decks || [null, null], list: listP || saved.list || 'tcg', first: saved.first || 'random' };
-  const pool = () => allDecks(fmt).filter((d) => d.status !== 'entwurf' && (fmt !== 'advanced' || st.list === 'none' || (d.custom ? (d.list || 'tcg') === st.list : d.list === st.list)));
+  const pool = () => allDecks(fmt).filter((d) => d.status !== 'entwurf' && (fmt !== 'advanced' || st.list === 'none' || ((d.custom || d.grp === 'Dennis’ Decks') || d.list === st.list)));
   const byId = (id) => id && allDecks(fmt).find((d) => d.id === id);
   const start = () => {
     const ds = st.decks.map(byId); if (st.mode === 'demo' && st.demoOpp !== 'ai') ds[1] = ds[0]; // der stille Gegner braucht nur irgendein Deck
@@ -145,7 +145,7 @@ function deckMini(d) {
 const GROUP_ORDER = ['Meine Decks', 'Dennis’ Decks', 'Beliebte Decks', 'Turnier-Decks', 'Archetypen', 'Mechaniken', 'Master Duel', 'Anime', 'Structure Decks', 'Promo-Decks', 'Starter Decks', 'Weltmeisterschaft', 'Entwürfe'];
 export function deckArt(d) { const t = withTutor(d).tutor; return (t.keys?.bosses?.[0]) || (t.keys?.starters?.[0]) || d.main[0]?.[0]; }
 screens.decks = ({ fmt, list, title, onPick }) => {
-  const f = FORMATS[fmt]; let decks = allDecks(fmt).filter((d) => fmt !== 'advanced' || list === 'none' || (d.custom ? (d.list || 'tcg') === list : d.list === list));
+  const f = FORMATS[fmt]; let decks = allDecks(fmt).filter((d) => fmt !== 'advanced' || list === 'none' || ((d.custom || d.grp === 'Dennis’ Decks') || d.list === list));
   const groups = GROUP_ORDER.filter((g) => decks.some((d) => d.grp === g));
   let grp = groups.includes('Beliebte Decks') ? 'Beliebte Decks' : (decks.some((d) => d.custom) ? 'Meine Decks' : groups.includes('Turnier-Decks') ? 'Turnier-Decks' : groups[0]);
   let sub = null, q = ''; let sortBy = 'name';
@@ -177,7 +177,7 @@ export function deckRow(d, onclick) {
   return h('button', { class: 'deck-row', onclick },
     cardEl(art, { cls: 'sm' }),
     h('div', { class: 'grow', style: 'text-align:left' }, h('div', { class: 'dr-n' }, d.name), h('div', { class: 'muted small dr-s' }, [d.sub, t.style].filter(Boolean).join(' · ')),
-      h('div', { class: 'row', style: 'gap:6px;margin-top:3px;flex-wrap:wrap' }, d.status === 'angepasst' ? h('span', { class: 'chip warn' }, 'angepasst') : null, d.custom ? h('span', { class: 'chip ok' }, 'eigenes Deck') : null, consChip(t.cons), stat(d) ? h('span', { class: 'chip' }, stat(d)) : null)));
+      h('div', { class: 'row', style: 'gap:6px;margin-top:3px;flex-wrap:wrap' }, d.status === 'angepasst' ? h('span', { class: 'chip warn' }, 'angepasst') : null, d.custom ? h('span', { class: 'chip ok' }, 'eigenes Deck') : null, d.fmt === 'advanced' && d.list === 'none' ? h('span', { class: 'chip' }, 'ohne Banlist') : null, consChip(t.cons), stat(d) ? h('span', { class: 'chip' }, stat(d)) : null)));
 }
 const stat = (d) => { const s = store.get('stats', {})[d.id]; return s ? `${s.w}–${s.l}` : ''; };
 

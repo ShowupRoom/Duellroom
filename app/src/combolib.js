@@ -2,7 +2,9 @@
 // Die besten gefundenen Züge werden je Deck als Kartenfolge gespeichert (Art + Karte, z. B. „Normalbeschwörung Kitt → Aktiviere …“).
 // Tutor und Kombo-Ansicht probieren diese bekannten Kombos dann als Erstes aus (comboSearch → guides) und bauen darauf auf.
 import { store } from './store.js';
-import { customDecks, MODES, expand } from './data.js';
+import { customDecks, MODES, expand, App } from './data.js';
+// eigene Decks: „Meine Decks“ auf diesem Gerät + die fest eingebauten „Dennis’ Decks“ (doppelte Listen nur einmal)
+const ownDecks = () => { const seen = new Set(); const L = [...customDecks(), ...((App.decks || []).filter((d) => d.grp === 'Dennis’ Decks'))]; return L.filter((d) => { const k = JSON.stringify([d.main, d.extra]); if (seen.has(k)) return false; seen.add(k); return true; }); };
 import { searchCombo } from './engine.js';
 import { rand32, sleep } from './util.js';
 
@@ -24,10 +26,10 @@ export function libAdd(d, res) {
 /** Gespeicherte Kombos als Vorgaben für die Suche */
 export function libGuides(d) { return d ? libGet(d).items.slice(0, 24).map((x) => x.plan) : []; }
 export function libSummary() {
-  const ds = customDecks(); let n = 0, runs = 0, k = 0; for (const d of ds) { const L = libGet(d); if (L.items.length) k++; n += L.items.length; runs += L.runs || 0; }
+  const ds = ownDecks(); let n = 0, runs = 0, k = 0; for (const d of ds) { const L = libGet(d); if (L.items.length) k++; n += L.items.length; runs += L.runs || 0; }
   return { decks: ds.length, withLib: k, combos: n, runs };
 }
-export function libClear() { for (const d of customDecks()) store.set(KEY(d), null); }
+export function libClear() { for (const d of ownDecks()) store.set(KEY(d), null); }
 
 // ---- Hintergrund-Lauf ----------------------------------------------------------------------------------------------------------
 let running = false, cur = null;
@@ -37,7 +39,7 @@ export function libPause() { if (cur) { cur.aborted = true; try { cur.stop && cu
 export async function libLoop() {
   if (running || !libOn()) return; running = true;
   try {
-    const decks = customDecks().filter((d) => d && d.main && d.main.length && MODES[d.fmt || 'advanced']);
+    const decks = ownDecks().filter((d) => d && d.main && d.main.length && MODES[d.fmt || 'advanced']);
     const rounds = decks.length * 4; // je App-Start vier neue Starthände pro Deck
     for (let r = 0; r < rounds && libOn(); r++) {
       while (busy()) await sleep(2000);

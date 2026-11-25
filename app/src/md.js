@@ -28,7 +28,7 @@ export const banOf = (id) => BANS.find((b) => b.id === id) || BANS[2];
 export const curBan = () => banOf(store.get('banlist', 'tcg'));
 export const setBan = (b) => store.set('banlist', b.id);
 /** Decks einer Banlist: Vorlagen des Formats; bei Advanced nur die der gewählten Liste, eigene Decks nur in der Liste, für die sie gebaut wurden */
-export const decksOf = (ban) => allDecks(ban.fmt).filter((d) => ban.fmt !== 'advanced' || ban.list === 'none' || (d.custom ? (d.list || 'tcg') === ban.list : d.list === ban.list));
+export const decksOf = (ban) => allDecks(ban.fmt).filter((d) => ban.fmt !== 'advanced' || ban.list === 'none' || ((d.custom || d.grp === 'Dennis’ Decks') || d.list === ban.list));
 
 const hdr = (title, sub, right) => h('div', { class: 'hd' }, h('button', { class: 'ibtn', onclick: () => back(), 'aria-label': 'Zurück' }, '←'), h('h2', null, title, sub ? h('div', { class: 'sub' }, sub) : null), right || null);
 const mdItem = ({ ic, t, s, on, sm, onclick }) => h('button', { class: 'md-item' + (on ? ' on' : '') + (sm ? ' sm' : ''), onclick }, h('span', { class: 'mi-ic' }, ic), h('span', { class: 'mi-x' }, h('span', { class: 'mi-t' }, t), s ? h('span', { class: 'mi-s' }, s) : null), h('i', { class: 'mi-arr' }, '›'));

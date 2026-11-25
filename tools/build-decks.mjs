@@ -14,7 +14,9 @@ const normalize = (l) => group(l.flatMap(([c, n]) => Array(n).fill(toGoat && GM.
 const raw = []; // {id,name,fmt,list,grp,sub,src,main,extra,side,tutor?}
 // 0) Dennis’ eigene Decks (fest eingebaut, auf beiden Handys verfügbar) – data/own-decks.json, gepflegt mit tools/import-own.mjs
 { const f = new URL('../data/own-decks.json', import.meta.url);
-  if (existsSync(f)) for (const d of JSON.parse(readFileSync(f, 'utf-8'))) raw.push({ id: 'own-' + slug(d.name) + (d.fmt !== 'advanced' ? '-' + d.fmt : ''), name: d.name, fmt: d.fmt || 'advanced', list: d.list || (d.fmt === 'advanced' ? 'tcg' : d.fmt), grp: 'Dennis’ Decks', sub: '', src: 'eigenes Deck', main: d.main, extra: d.extra || [], side: d.side || [] }); }
+  const legalIn = (d, l) => !validate({ main: d.main, extra: d.extra || [], side: d.side || [] }, { ...FORMATS.advanced, list: l }, cards, lists).length;
+  if (existsSync(f)) for (const d0 of JSON.parse(readFileSync(f, 'utf-8'))) { const d = { ...d0 }; if ((d.fmt || 'advanced') === 'advanced' && (!d.list || d.list === 'none')) d.list = legalIn(d, 'tcg') ? 'tcg' : legalIn(d, 'ocg') ? 'ocg' : 'none'; // ohne Banlist gespeichert → passende Liste, damit das Deck in der Auswahl gleich sichtbar ist
+    raw.push({ id: 'own-' + slug(d.name) + (d.fmt !== 'advanced' ? '-' + d.fmt : ''), name: d.name, fmt: d.fmt || 'advanced', list: d.list || (d.fmt === 'advanced' ? 'tcg' : d.fmt), grp: 'Dennis’ Decks', sub: '', src: 'eigenes Deck', main: d.main, extra: d.extra || [], side: d.side || [] }); } }
 // 1) Vorlagen (handgeschriebene Erklärungen)
 for (const p of JSON.parse(readFileSync(new URL('../data/presets.json', import.meta.url), 'utf-8'))) {
   raw.push({ id: p.id, name: p.name, fmt: 'advanced', list: p.list === 'ocg' ? 'ocg' : 'tcg', grp: 'Turnier-Decks', sub: p.grp === 'own' ? 'Eigene' : p.grp.toUpperCase(), src: p.src || 'cardcluster.de', handmade: { style: p.style, goal: p.idea, plan: p.ratio, weak: p.weak },
