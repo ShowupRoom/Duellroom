@@ -142,7 +142,7 @@ function deckMini(d) {
 }
 
 // ---- Deck wählen ----------------------------------------------------------------
-const GROUP_ORDER = ['Meine Decks', 'Beliebte Decks', 'Turnier-Decks', 'Archetypen', 'Mechaniken', 'Master Duel', 'Anime', 'Structure Decks', 'Promo-Decks', 'Starter Decks', 'Weltmeisterschaft', 'Entwürfe'];
+const GROUP_ORDER = ['Meine Decks', 'Dennis’ Decks', 'Beliebte Decks', 'Turnier-Decks', 'Archetypen', 'Mechaniken', 'Master Duel', 'Anime', 'Structure Decks', 'Promo-Decks', 'Starter Decks', 'Weltmeisterschaft', 'Entwürfe'];
 export function deckArt(d) { const t = withTutor(d).tutor; return (t.keys?.bosses?.[0]) || (t.keys?.starters?.[0]) || d.main[0]?.[0]; }
 screens.decks = ({ fmt, list, title, onPick }) => {
   const f = FORMATS[fmt]; let decks = allDecks(fmt).filter((d) => fmt !== 'advanced' || list === 'none' || (d.custom ? (d.list || 'tcg') === list : d.list === list));

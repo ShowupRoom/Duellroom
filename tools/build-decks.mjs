@@ -12,6 +12,9 @@ let toGoat = false;
 const normalize = (l) => group(l.flatMap(([c, n]) => Array(n).fill(toGoat && GM.has(canon(c, cards)) ? GM.get(canon(c, cards)) : c)), cards);
 
 const raw = []; // {id,name,fmt,list,grp,sub,src,main,extra,side,tutor?}
+// 0) Dennis’ eigene Decks (fest eingebaut, auf beiden Handys verfügbar) – data/own-decks.json, gepflegt mit tools/import-own.mjs
+{ const f = new URL('../data/own-decks.json', import.meta.url);
+  if (existsSync(f)) for (const d of JSON.parse(readFileSync(f, 'utf-8'))) raw.push({ id: 'own-' + slug(d.name) + (d.fmt !== 'advanced' ? '-' + d.fmt : ''), name: d.name, fmt: d.fmt || 'advanced', list: d.list || (d.fmt === 'advanced' ? 'tcg' : d.fmt), grp: 'Dennis’ Decks', sub: '', src: 'eigenes Deck', main: d.main, extra: d.extra || [], side: d.side || [] }); }
 // 1) Vorlagen (handgeschriebene Erklärungen)
 for (const p of JSON.parse(readFileSync(new URL('../data/presets.json', import.meta.url), 'utf-8'))) {
   raw.push({ id: p.id, name: p.name, fmt: 'advanced', list: p.list === 'ocg' ? 'ocg' : 'tcg', grp: 'Turnier-Decks', sub: p.grp === 'own' ? 'Eigene' : p.grp.toUpperCase(), src: p.src || 'cardcluster.de', handmade: { style: p.style, goal: p.idea, plan: p.ratio, weak: p.weak },

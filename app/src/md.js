@@ -73,7 +73,7 @@ screens.duelhub = () => {
 };
 
 // ---- Deck-Zentrale (Deck-Werkstatt) -----------------------------------------------------------------------------------
-const GROUPS = ['Meine Decks', 'Beliebte Decks', 'Turnier-Decks', 'Archetypen', 'Mechaniken', 'Master Duel', 'Anime', 'Structure Decks', 'Promo-Decks', 'Starter Decks', 'Weltmeisterschaft', 'Entwürfe'];
+const GROUPS = ['Meine Decks', 'Dennis’ Decks', 'Beliebte Decks', 'Turnier-Decks', 'Archetypen', 'Mechaniken', 'Master Duel', 'Anime', 'Structure Decks', 'Promo-Decks', 'Starter Decks', 'Weltmeisterschaft', 'Entwürfe'];
 screens.deckhub = () => {
   let ban = curBan(), q = '', sub = null; const pg = store.get('deckhub', {}); let grp = pg.grp || (decksOf(ban).some((d) => d.custom) ? 'Meine Decks' : 'Beliebte Decks');
   const root = h('div', { class: 'screen md-pg' }, hdr('Decks', 'Deck-Werkstatt · jedes Deck gehört zu einer Banlist'));
