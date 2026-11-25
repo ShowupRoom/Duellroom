@@ -378,6 +378,7 @@ class Duel {
   /** Ist eine in einer Auswahl genannte Karte für den Betrachter sichtbar? */
   selVisible(s) { if (s.controller === this.viewer) return true; const c = this.cardAt(s.controller, s.location, s.sequence); if (c) return (c.position & FACEUP) > 0; return s.position !== undefined ? (s.position & FACEUP) > 0 : false; }
   render() {
+    this.root.classList.toggle('selon', !!this.selKey);
     if (this._pl && this.root.classList.contains('mdf')) requestAnimationFrame(() => this._pl && this.fitPlates(...this._pl)); if (!this.snap) return; this.renderTop(); this.renderStrips(); this.renderBoard(); this.renderHand(); this.renderSheet(); this.renderFloat(); this.renderActs(); }
   renderTop() {
     const tp = this.turnPlayer;
@@ -575,7 +576,7 @@ class Duel {
   /** Karte antippen: Hochformat = Blatt von unten; Querformat = Karteninfo links bleibt stehen (zuletzt gewählte Karte), Aktionen rechts unter dem Phasenrad */
   openSheet(c, k) {
     this.selKey = k; this.lastSel = { c: { ...c }, k }; this._sheetSig = null;
-    if (!this.root.classList.contains('land')) this.sheet.classList.add('open'); else this.sheet.classList.add('show');
+    this.sheetOff = false; if (!this.root.classList.contains('land')) this.sheet.classList.add('open'); else this.sheet.classList.add('show');
     this.render(); this.renderSheet(true);
   }
   renderSheet(reveal = false) {
@@ -595,7 +596,7 @@ class Duel {
     const actBtns = acts.map((a) => h('button', { class: 'btn ' + (a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, a.label));
     const none = !acts.length && own && this.selKey === k && this.pending && this.pending.kind === 'idle' ? h('div', { class: 'small muted', style: 'margin-top:6px' }, 'Mit dieser Karte ist gerade keine Aktion möglich.') : null;
     if (land) {
-      this.sheet.append(h('button', { class: 'sh-x mdx', onclick: () => this.sheet.classList.remove('show') }, '✕'), head, txt || h('div', { class: 'sh-t muted' }, 'Der Gegner hat diese Karte verdeckt gelegt.'));
+      this.sheet.append(h('button', { class: 'sh-x mdx', onclick: () => { this.sheetOff = true; this.sheet.classList.remove('show'); } }, '✕'), head, txt || h('div', { class: 'sh-t muted' }, 'Der Gegner hat diese Karte verdeckt gelegt.'));
     } else {
       this.sheet.append(h('button', { class: 'sh-x', onclick: () => this.closeSheet() }, '✕'), head, txt);
       if (actBtns.length) this.sheet.append(h('div', { class: 'sh-acts' }, actBtns)); else if (none) this.sheet.append(none);
@@ -644,7 +645,7 @@ class Duel {
   }
   closeSheet() {
     const had = this.selKey; this.selKey = null; this.dropFloat();
-    if (this.root.classList.contains('land')) { this._sheetSig = null; this.sheet.classList.remove('show'); if (this.snap) this.render(); else clear(this.actsEl); return; } // Querformat: die Karteninfo bleibt stehen
+    if (this.root.classList.contains('land')) { this._sheetSig = null; if (!this.root.classList.contains('mdf') || !this.lastSel || this.sheetOff) this.sheet.classList.remove('show'); if (this.snap) this.render(); else clear(this.actsEl); return; } // Querformat (MD-Ansicht): die zuletzt gewählte Karte bleibt links stehen
     this.sheet.classList.remove('open'); clear(this.sheet); if (had && this.snap) this.render();
   }
   async challengeEnd() {
