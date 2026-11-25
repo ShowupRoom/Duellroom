@@ -143,10 +143,12 @@ class Duel {
         }
         this.eng = new LocalEngine(); await this.eng.create(copts);
         if (this.found) { this.demoIntro(); this.demoBg(); }
-        if (conf.mode === 'net-host') this.host = new HostLink(this.net, 1 - this.viewer);
+        if (conf.mode === 'net-host') { this.host = new HostLink(this.net, 1 - this.viewer); if (conf.resumeSeq) this.host.seq = conf.resumeSeq; }
+        if (conf.resumeHist && conf.resumeHist.length) this.resumeQ = conf.resumeHist.slice(); // unterbrochenes Online-Duell: bis zum letzten Stand nachspielen
       }
     } catch (e) { this.fatal(e); return; }
     if (!conf.resume && !conf.test) await this.coin();
+    if (this.net) setTimeout(() => this.saveNet(true), 400);
     this.loop().catch((e) => this.fatal(e));
   }
   netSetup() {
@@ -172,16 +174,17 @@ class Duel {
   async loop() {
     let resp;
     while (!this.stopped) {
-      if (resp !== undefined && resp !== null) this.hist.push(resp);
+      if (resp !== undefined && resp !== null) { this.hist.push(resp); this.saveNet(); }
       const st = await this.eng.step(resp); resp = undefined;
       if (this.stopped || !st) return;
       if (st.r && st.r.retry) this.hist.pop(); // vom Kern abgelehnte Antwort zählt nicht
       if (st.errors && st.errors.length) console.warn('Lua', st.errors);
       const r = st.r; let evs = st.evs;
-      if (this.host) this.host.forward(st);
+      const resuming = !!(this.resumeQ && this.resumeQ.length);
+      if (this.host && !resuming) this.host.forward(st);
       if (this.net) evs = maskEvents(evs, this.viewer);
       this.collectHints(evs);
-      const ta = performance.now(); await this.present(evs); if (this.demo) this.demo.anim = performance.now() - ta;
+      const ta = performance.now(); if (!resuming) await this.present(evs); if (this.demo) this.demo.anim = performance.now() - ta;
       if (this.stopped) return;
       this.snap = st.snap; recSnap(this, st.snap);
       if (this.conf.lesson && lessonCheck(this)) { this.render(); return; }
@@ -191,6 +194,7 @@ class Duel {
       if (r.kind === 'end') { this.render(); await this.finish(r.winner, r.reason); return; }
       if (r.kind === 'wait') { this.render(); this.setBar(`⏳ ${this.pname(r.player)} ist dran …`, [], 'Du kannst dir solange Karten ansehen.'); continue; }
       const msg = r.msg; const p = msg.player;
+      if (resuming) { resp = this.resumeQ.shift(); if (!this.resumeQ.length) { this.render(); toast('✅ Duell wiederhergestellt – es geht weiter.'); } continue; }
       if (this.host && p === this.host.gs) {
         this.render(); this.setBar(`⏳ Warte auf ${this.pname(p)} …`, [], 'Du kannst dir solange Karten ansehen.');
         resp = await this.host.waitResp(); if (this.stopped) return; continue;
@@ -356,7 +360,16 @@ class Duel {
       this.addLog('Karten wurden gezeigt: ' + m.cards.map((c) => '«' + nameOf(c.code) + '»').join(', '));
     });
   }
+  /** Online-Duell sichern (höchstens alle 1,5 s): Gastgeber speichert alle Antworten, damit er nach dem Neuladen fortsetzen kann */
+  saveNet(now) {
+    if (!this.net || !this.conf.netCode || this.ended || this.resumeQ && this.resumeQ.length) return;
+    const t = Date.now(); if (!now && t - (this._netSaved || 0) < 1500) { clearTimeout(this._netT); this._netT = setTimeout(() => this.saveNet(true), 1600); return; } this._netSaved = t;
+    const c = this.conf; const rec = { role: this.host ? 'host' : 'guest', code: c.netCode, partner: c.netPartner || '', t };
+    if (this.host) Object.assign(rec, { conf: { ...c, remote: undefined, resumeHist: undefined, resume: undefined }, seed: this.seedUsed, hist: this.hist, seq: this.host.seq, guestConf: c.netGuestConf });
+    try { store.set('online.last', rec); } catch (e) { /* Speicher voll – Wiederaufnahme dann nicht möglich */ }
+  }
   async finish(winner, reason) {
+    if (this.net) { clearTimeout(this._netT); store.set('online.last', null); }
     this.aiBusy = false; this.ff = false; this.renderFF();
     this.ended = true; this.stopped = true; if (this.net) { this.net.inDuel = false; this.net.wantAwake = false; keepAwake(false); }
     const draw = winner == null || winner > 1; const stats = store.get('stats', {});

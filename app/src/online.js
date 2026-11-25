@@ -66,7 +66,7 @@ function wireGuest(s) {
     s.emit('state');
   });
   s.handle('start', (m) => {
-    const conf = { ...m.conf, mode: 'net-guest', tutor: settings.tutor, human: [true, true] };
+    const conf = { ...m.conf, mode: 'net-guest', tutor: settings.tutor, human: [true, true], netCode: s.code, netPartner: s.hostName || '' };
     s.inDuel = true; conf.remote = new RemoteEngine(s); if (window.__duel && !window.__duel.ended) window.__duel.destroy();
     navRoot('duel', conf); setTimeout(() => conf.remote.sync(), 50);
   });
@@ -77,10 +77,22 @@ export function hostStart(s = session) {
   const hostSeat = s.first === 'me' ? 0 : s.first === 'other' ? 1 : rand32() % 2;
   const players = []; players[hostSeat] = { name: myName() || 'Ich', deck: withTutor(s.myDeck) }; players[1 - hostSeat] = { name: s.guestName || 'Gast', deck: s.guestDeck };
   const base = { fmt: s.fmt, list: s.list, players, lp: 8000 };
-  s.duelConf = { ...base, mode: 'net-host', seat: hostSeat, human: [true, true], tutor: settings.tutor };
   s.guestConf = { ...base, seat: 1 - hostSeat };
+  s.duelConf = { ...base, mode: 'net-host', seat: hostSeat, human: [true, true], tutor: settings.tutor, netCode: s.code, netPartner: s.guestName || '', netGuestConf: s.guestConf };
   s.inDuel = true; s.send({ t: 'start', conf: s.guestConf });
   if (window.__duel && !window.__duel.ended) window.__duel.destroy();
+  navRoot('duel', s.duelConf);
+}
+/** Unterbrochenes Online-Duell fortsetzen (nach dem Neuladen der App) */
+export async function resumeOnline(rec) {
+  if (!rec || !rec.code) return;
+  if (rec.role === 'guest') { joinRoom(rec.code); return; }
+  // Gastgeber: denselben Raum wieder eröffnen und das Duell aus den gespeicherten Antworten nachspielen
+  const c = rec.conf; const s = startSession('host', rec.code); const seat = c.seat;
+  Object.assign(s, { fmt: c.fmt, list: c.list, myDeck: c.players[seat].deck, guestDeck: c.players[1 - seat].deck, guestName: rec.partner || c.players[1 - seat].name, first: 'random', inDuel: true, guestConf: rec.guestConf });
+  s.duelConf = { ...c, seed: rec.seed, resumeHist: rec.hist, resumeSeq: rec.seq, resume: true, noIntro: true };
+  wireHost(s);
+  for (let i = 0; i < 6; i++) { try { await s.open(); break; } catch (e) { if (i === 5) { toast('Der Raum ließ sich nicht wieder eröffnen – bitte neu starten.'); return; } await new Promise((r) => setTimeout(r, 2500)); s.closed = false; } } // alter Raum-Code wird vom Server erst nach ein paar Sekunden frei
   navRoot('duel', s.duelConf);
 }
 /** vom Duell-Ende aus */

@@ -1,6 +1,7 @@
 import { App, boot } from './data.js';
 import * as TXT from './strings.js';
 import { toast } from './util.js';
+import { store } from './store.js';
 // Wischleisten (Reiter, Banlisten, Formate): den gewählten Eintrag ins Bild holen, sobald er wechselt
 let scT = 0; new MutationObserver(() => { clearTimeout(scT); scT = setTimeout(() => { for (const on of document.querySelectorAll('.screen:not(.duel) .on')) { const row = on.parentElement; if (!row || row.scrollWidth <= row.clientWidth + 4) continue; const ox = getComputedStyle(row).overflowX; if (ox !== 'auto' && ox !== 'scroll') continue; const key = on.textContent; if (row.dataset.scOn === key) continue; row.dataset.scOn = key; const l = on.offsetLeft - row.offsetLeft, r = l + on.offsetWidth; if (l < row.scrollLeft || r > row.scrollLeft + row.clientWidth) row.scrollLeft = Math.max(0, l - (row.clientWidth - on.offsetWidth) / 2); } }, 60); }).observe(document.documentElement, { childList: true, subtree: true });
 window.addEventListener('dr-full', () => toast('⚠️ Der Speicher dieses Geräts ist voll – Neues wird evtl. nicht gespeichert. Einstellungen → Daten: Sicherung speichern, alte Duelle oder Bilder löschen.', 7000));
@@ -50,6 +51,15 @@ setTimeout(() => { libLoop().catch(() => {}); }, 6000);
 
 // Deck per Link (…?deck=…): nach Rückfrage bei „Meine Decks“ speichern und im Editor öffnen
 if (new URLSearchParams(location.search).get('deck')) { const t0 = Date.now(); const w = setInterval(() => { if (document.body.dataset.done || Date.now() - t0 > 60000) { clearInterval(w); readDeckFromUrl((d) => import('./nav.js').then((n) => n.go('editor', { deck: d }))).catch(() => {}); } }, 300); }
+
+// Unterbrochenes Online-Duell (App neu geladen, z. B. nach App-Wechsel auf dem iPhone): Rückkehr anbieten
+{ const rec = store.get('online.last', null);
+  if (rec && rec.code && Date.now() - rec.t < 3 * 3600e3 && !new URLSearchParams(location.search).get('join')) {
+    const t0 = Date.now(); const w = setInterval(async () => { if (!document.body.dataset.done && Date.now() - t0 < 60000) return; clearInterval(w);
+      const { confirmBox } = await import('./ui.js'); const { resumeOnline } = await import('./online.js');
+      const yes = await confirmBox('Zurück ins Online-Duell?', `Dein Duell${rec.partner ? ' gegen ' + rec.partner : ''} (Raum ${rec.code}) wurde unterbrochen. ${rec.role === 'host' ? 'Der Raum wird wieder eröffnet und das Duell geht beim letzten Stand weiter.' : 'Du trittst dem Raum wieder bei und spielst weiter.'}`, 'Zurück ins Duell', 'Nein');
+      if (yes) resumeOnline(rec); else store.set('online.last', null);
+    }, 300); } }
 
 // Herausforderung per Link (…?ch=…): ins Duellbuch übernehmen
 try { const ch = readChallengeFromUrl(); if (ch) setTimeout(() => { import('./nav.js').then((n) => n.go('book')); }, 1500); } catch (e) { /* */ }
