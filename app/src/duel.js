@@ -205,7 +205,7 @@ class Duel {
         if (this.viewer !== p) await this.handover(p);
         this.render();
         if (r.retry) toast('Das ist nicht erlaubt – bitte noch einmal wählen.');
-        if (!this.introShown[p]) { this.introShown[p] = true; if (this.conf.lesson) await lessonIntro(this); else if (this.conf.tutor && !this.conf.test && !this.conf.noIntro) await this.intro(p); }
+        if (!this.introShown[p] && (msg.type === MSG.SELECT_IDLECMD || this.conf.lesson)) { this.introShown[p] = true; if (this.conf.lesson) await lessonIntro(this); else if (this.conf.tutor && !this.conf.test && !this.conf.noIntro) await this.intro(p); }
         resp = await ask(this, msg);
         if (this.stopped) return;
       } else {
@@ -299,6 +299,13 @@ class Duel {
   }
   /** Banner-Platz wie in MDPro3: Zug/Phase des eigenen Spielers unten (nah), die des Gegners oben (fern) */
   sideOf(p) { return p === this.viewer ? 'near' : 'far'; }
+  /** Querformat: Karte des Gegners, die gerade beschworen/aktiviert wird, links in der Karten-Spalte zeigen – so lässt sich seine Kombo mitlesen */
+  watchCard(m) {
+    if (!m || !m.code || m.controller === this.viewer || this.selKey || !this.root.classList.contains('land') || !this.root.classList.contains('mdf') || this.sheetOff) return;
+    const loc = m.location != null ? m.location : m.triggering_location; const seq = m.sequence != null ? m.sequence : m.triggering_sequence;
+    this.lastSel = { c: { code: m.code, name: nameOf(m.code), controller: m.controller, location: loc, sequence: seq, position: m.position || 1 }, k: key(m.controller, loc, seq) };
+    this._sheetSig = null; this.sheet.classList.add('show'); this.renderSheet(true);
+  }
   seeCard(code, ctrl, pos) { return ctrl === this.viewer || (pos & FACEUP) || pos === undefined; }
   async present(evs) {
     for (const m of evs) {
@@ -310,13 +317,13 @@ class Duel {
         case MSG.SUMMONING: case MSG.SPSUMMONING: case MSG.FLIPSUMMONING: {
           if (!this.spCount) this.spCount = [0, 0]; if (t === MSG.SPSUMMONING) this.spCount[m.controller]++;
           const k = t === MSG.SUMMONING ? 'Normalbeschwörung' : t === MSG.SPSUMMONING ? 'Spezialbeschwörung' : 'Flipp-Beschwörung';
-          recPlay(this, m.controller, m.code); this.addLog(`${this.pname(m.controller)}: ${k} – «${nameOf(m.code)}»`); beep('summon');
+          recPlay(this, m.controller, m.code); this.addLog(`${this.pname(m.controller)}: ${k} – «${nameOf(m.code)}»`); beep('summon'); this.watchCard(m);
           if (iconicOn() && iconicOf(m.code) && !this.ff && !(this.demo && this.demo.skipFrom != null && this.turnNo > this.demo.skipFrom)) { await playIconic(this.root, m.code, { fast: this.fxs && this.fxs() < 1, kind: k }); break; } // ikonische Karte: große Animation
           await this.banner({ title: k, sub: nameOf(m.code), code: m.code, cls: 'summon', ms: 850 }); break; }
         case MSG.SET: if (m.controller === this.viewer) this.akSet = true; this.addLog(`${this.pname(m.controller)} setzt eine Karte`); beep('tap'); break;
         case MSG.CHAIN_SOLVING: this.solving = this.chain[(m.chain_size || this.chain.length) - 1] || null; break;
         case MSG.CHAINING: {
-          this.chain.push({ code: m.code, p: m.controller }); recPlay(this, m.controller, m.code); recChain(this); const lbl = descText(m.description, m.code, m.triggering_location != null ? m.triggering_location : m.location); const BT = { 16: 'Battle Step', 32: 'Battle Step', 64: 'Damage Step', 128: 'Schadensberechnung' };
+          this.chain.push({ code: m.code, p: m.controller }); recPlay(this, m.controller, m.code); recChain(this); this.watchCard(m); const lbl = descText(m.description, m.code, m.triggering_location != null ? m.triggering_location : m.location); const BT = { 16: 'Battle Step', 32: 'Battle Step', 64: 'Damage Step', 128: 'Schadensberechnung' };
           this.addLog(`Kette ${this.chain.length}: «${nameOf(m.code)}»${lbl && lbl.length < 60 ? ' – ' + lbl : ''} (${this.pname(m.controller)})${BT[this.phase] ? ' · ' + BT[this.phase] : ''}`); this.renderTop(); beep('chain');
           const vw = effectView(m.code, m.description, m.triggering_location != null ? m.triggering_location : m.location); const has = !!(vw.ranges && vw.ranges.length);
           await this.banner({ title: `Kette ${this.chain.length}`, sub: nameOf(m.code), code: m.code, cls: 'chain', pair: this.chain.length > 1 ? this.chain.slice(-2).map((c, i, arr) => ({ ...c, n: this.chain.length - arr.length + i + 1 })) : null, ms: has ? 1100 + Math.min(2400, vw.text.length * 8) : 800, // (Tippen überspringt)
@@ -830,7 +837,7 @@ class Duel {
   // ---------------------------------------------------------------- Prompt-Bereich & Antworten
   setBar(text, buttons = [], sub) {
     const round = this.root.classList.contains('land') && buttons.length > 0 && buttons.length <= 2 && buttons.every((b) => !b.cls || /^(pri|ghost)$/.test(b.cls)) && buttons.some((b) => /^(Bestätigen|Abbrechen|Fertig|Ja|Nein|OK|Weiter|Zurück)/i.test(b.label) || b.cls === 'pri' && buttons.length === 1);
-    this.bar.classList.remove('off'); this.root.classList.add('baron'); clear(this.bar); this.bar.append(h('div', { class: 'bar-t' }, h('div', { class: 'bar-m' }, text), sub ? h('div', { class: 'bar-s' }, sub) : null), h('div', { class: 'bar-b' + (round ? ' rd' : '') }, buttons.map((b) => (round ? h('button', { class: 'rb ' + (/ghost/.test(b.cls || '') ? 'rb-no' : 'rb-ok'), disabled: b.disabled, onclick: b.onclick }, h('span', { class: 'rb-i' }, /ghost/.test(b.cls || '') ? '✕' : '✔'), h('span', { class: 'rb-l' }, b.label)) : h('button', { class: 'btn ' + (b.cls || ''), disabled: b.disabled, onclick: b.onclick }, b.label)))));
+    this.bar.classList.remove('off'); this.root.classList.add('baron'); this.root.classList.toggle('barwait', !buttons.length); clear(this.bar); this.bar.append(h('div', { class: 'bar-t' }, h('div', { class: 'bar-m' }, text), sub ? h('div', { class: 'bar-s' }, sub) : null), h('div', { class: 'bar-b' + (round ? ' rd' : '') }, buttons.map((b) => (round ? h('button', { class: 'rb ' + (/ghost/.test(b.cls || '') ? 'rb-no' : 'rb-ok'), disabled: b.disabled, onclick: b.onclick }, h('span', { class: 'rb-i' }, /ghost/.test(b.cls || '') ? '✕' : '✔'), h('span', { class: 'rb-l' }, b.label)) : h('button', { class: 'btn ' + (b.cls || ''), disabled: b.disabled, onclick: b.onclick }, b.label)))));
   }
   /** Leiste ausblenden – im Zug steuert das Phasenrad Kampf und Zugende */
   hideBar() { clear(this.bar); this.bar.classList.add('off'); this.root.classList.remove('baron'); }
