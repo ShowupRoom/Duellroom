@@ -49,8 +49,11 @@ export function buddyUpdate(D) {
   const t = D.tip; const mine = D.pending && D.conf.human[D.pending.player != null ? D.pending.player : D.viewer];
   const show = !!(t && t.text && D.pending && !D.buddyHidden);
   B.el.classList.toggle('quiet', !show); if (!show) { B.sig = ''; return; }
-  const sig = (t.text || '') + '|' + (t.keys || []).join(',') + '|' + (t.search ? t.search.sims : '');
-  if (sig === B.sig) return; B.sig = sig; clear(B.bub);
+  // Nur neu bauen, wenn sich der Tipp selbst ändert – die laufende Suchanzeige wird an Ort und Stelle aktualisiert,
+  // sonst würden die Knöpfe ständig ersetzt und ein Fingertipp ginge verloren.
+  const sig = (t.text || '') + '|' + (t.keys || []).join(',') + '|' + !!(t.search && t.search.live) + '|' + !!mine;
+  if (sig === B.sig) { const lv = B.bub.querySelector('.bdy-live'); if (lv && t.search) lv.textContent = `⏳ Ich suche noch nach etwas Besserem … (${t.search.sims} Varianten)`; return; }
+  B.sig = sig; clear(B.bub);
   const code = keyCode(D, (t.keys || [])[0]); const rows = code ? shortRows(code) : [];
   const canDo = !!(mine && ((t.keys && t.keys.length && D.acts && D.acts.get(t.keys[0])) || (t.ep && D.phaseOpts && D.phaseOpts.EP) || (t.bp && D.phaseOpts && D.phaseOpts.BP)));
   B.bub.append(...[h('div', { class: 'bdy-t' }, t.text.replace(/\s+/g, ' ').slice(0, 260)),

@@ -63,7 +63,7 @@ class Duel {
     this.wheel = h('button', { class: 'ph-wheel', title: 'Phase wählen', onclick: () => this.phaseTap() }, h('b', null, '–'), h('small', null, ''));
     this.phaseEl = h('div', { class: 'd-phases' }, this.wheel, h('div', { class: 'ph-pills' }, PH_PILLS.filter((x) => !(this.mode.noM2 && x[0] === 'M2')).map((x) => h('button', { class: 'ph', 'data-ph': x[0], title: x[1], onclick: () => this.phasePick(x[0]) }, x[0]))));
     this.board.addEventListener('click', (e) => { const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); });
-    this.handEl = h('div', { class: 'd-hand' }); this.handEl.addEventListener('click', (e) => { const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); }); this.bar = h('div', { class: 'd-bar' });
+    this.handEl = h('div', { class: 'd-hand' }); this.handEl.addEventListener('click', (e) => { if (this._dragJust) { this._dragJust = false; return; } const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); }); this.handEl.addEventListener('pointerdown', (e) => this.dragStart(e)); this.bar = h('div', { class: 'd-bar' });
     this.sheet = h('div', { class: 'd-sheet' }); this.actsEl = h('div', { class: 'd-acts' }); this.fx = h('div', { class: 'd-fx' });
     this.over = h('div', { class: 'd-over' });
     this.demoEl = this.demo ? this.buildDemo() : null;
@@ -520,6 +520,40 @@ class Duel {
   }
 
   // ---------------------------------------------------------------- Berührungen
+  // ---- Karte aus der Hand aufs Feld ziehen (wie in Master Duel) ---------------------------------------------------------------
+  // Monster → Normalbeschwörung (sonst Spezialbeschwörung, sonst Setzen), Zauber → Aktivieren (sonst Setzen), Falle → Setzen.
+  // Die Zone unter dem Finger wird gemerkt und bei der folgenden Zonenwahl genommen, wenn sie erlaubt ist.
+  dragPlan(k) {
+    const L = (this.acts && this.acts.get(k)) || []; if (!L.length || !this.pending || this.pending.kind !== 'idle') return null;
+    const c = cardOf(L[0].code) || {}; const T = c.type || 0; const by = (kd) => L.find((a) => a.kind === kd);
+    if (T & 0x1) return by('summon') || by('special') || by('set') || (L.length === 1 ? L[0] : null);
+    if (T & 0x2) return by('activate') || by('spellset');
+    if (T & 0x4) return by('spellset') || by('activate');
+    return L.length === 1 ? L[0] : null;
+  }
+  dragStart(e) {
+    const hc = e.target.closest('.hc[data-k]'); if (!hc || e.button > 0) return; const k = hc.dataset.k; const x0 = e.clientX, y0 = e.clientY; let ghost = null; const pid = e.pointerId;
+    const move = (ev) => {
+      if (ev.pointerId !== pid) return; const dx = ev.clientX - x0, dy = ev.clientY - y0;
+      if (!ghost) { if (Math.hypot(dx, dy) < 12 || dy > -8) return; // erst ab einer kleinen Bewegung nach oben – sonst bleibt es ein Antippen
+        const r = hc.getBoundingClientRect(); ghost = hc.cloneNode(true); ghost.classList.add('d-ghost'); Object.assign(ghost.style, { width: r.width + 'px', height: r.height + 'px' }); document.body.append(ghost); hc.classList.add('dragging'); this.root.classList.add('drag-on'); this.closeSheet && this.closeSheet(); this.dropFloat(); }
+      ghost.style.transform = `translate(${ev.clientX - ghost.offsetWidth / 2}px, ${ev.clientY - ghost.offsetHeight * 0.7}px) rotate(${Math.max(-8, Math.min(8, dx / 20))}deg) scale(1.08)`;
+      const z = this.zoneAt(ev.clientX, ev.clientY); if (z !== this._dragOver) { this.root.querySelectorAll('.drop-over').forEach((x) => x.classList.remove('drop-over')); if (z) z.classList.add('drop-over'); this._dragOver = z; }
+      ev.preventDefault();
+    };
+    const up = (ev) => {
+      if (ev.pointerId !== pid) return; removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      if (!ghost) return; this._dragJust = true; setTimeout(() => { this._dragJust = false; }, 400);
+      const z = this.zoneAt(ev.clientX, ev.clientY); const hr = this.handEl.getBoundingClientRect(); const onField = ev.type === 'pointerup' && ev.clientY < hr.top + 6;
+      ghost.remove(); hc.classList.remove('dragging'); this.root.classList.remove('drag-on'); this.root.querySelectorAll('.drop-over').forEach((x) => x.classList.remove('drop-over')); this._dragOver = null;
+      if (!onField) return; const a = this.dragPlan(k);
+      if (!a) { toast((this.acts && this.acts.get(k) && this.acts.get(k).length) ? 'Mehrere Möglichkeiten – tippe die Karte an und wähle.' : 'Diese Karte kann gerade nicht gespielt werden.'); return; }
+      this.dropZone = z ? { k: z.dataset.k, t: Date.now() } : null; this.answer(a.resp);
+    };
+    addEventListener('pointermove', move, { passive: false }); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  }
+  /** eigene Zone unter dem Finger (Monster-/Zauber-Fallen-/Feldzone) */
+  zoneAt(x, y) { const el = document.elementFromPoint(x, y); const z = el && el.closest && el.closest('.zn[data-k]'); return z && this.boardWrap.contains(z) && +z.dataset.k.split(':')[0] === this.viewer ? z : null; }
   tapKey(k, el) {
     if (this.zoneSel) { const kk = [k, el && el.dataset.k2].find((x) => x && this.zoneSel.allowed.has(x)); if (kk) { this.zoneSel.toggle(kk); return; } }
     const [p, l, s] = k.split(':').map(Number);
@@ -797,7 +831,7 @@ class Duel {
     this.tipBtn.style.display = this.conf.tutor && this.conf.human[this.viewer] ? '' : 'none'; buddyUpdate(this);
     toast(v ? '💡 Tutor an – ab deiner nächsten Entscheidung gibt es wieder Tipps.' : 'Tutor aus – keine Tipps und keine Begleiterin mehr. Im Menü ☰ wieder einschaltbar.');
   }
-  setTip(t) { this.tip = t; if (t) this.buddyHidden = this.buddyHidden && this.buddyKeep; buddyUpdate(this); }
+  setTip(t) { this.tip = t; buddyUpdate(this); } // „Selbst spielen“ gilt bis zur nächsten eigenen Entscheidung (answer() setzt es zurück) – neue Suchergebnisse holen die Blase nicht wieder hervor
   tutHelpers() { const cores = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2; return Math.max(1, Math.min(3, cores - 2)); }
   tutorOn() { return !!(this.conf.tutor && !this.demo && this.copts && !(this.net && !this.host) && store.get('tutor.bg', true)); }
   /** Hintergrund-Suche ab der aktuellen Situation (gleiche Suche wie in der Kombo-Ansicht); der Vorschlag verbessert sich laufend, bis du antwortest */

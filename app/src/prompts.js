@@ -247,6 +247,9 @@ function askPlace(D, msg) {
   const toResp = (ks) => ({ type, places: ks.map((k) => { const [player, location, sequence] = k.split(':').map(Number); return { player, location, sequence }; }) });
   const allowed = new Set(list.map((z) => key(z.player, z.location, z.sequence)));
   if (allowed.size <= count) return Promise.resolve(toResp([...allowed]));
+  // aus der Hand gezogen: die Zone unter dem Finger nehmen, wenn erlaubt
+  const dz = D.dropZone; D.dropZone = null;
+  if (count === 1 && dz && Date.now() - dz.t < 15000 && allowed.has(dz.k)) return Promise.resolve(toResp([dz.k]));
   return new Promise((resolve) => {
     const chosen = new Set(); D.setTip(null);
     const upd = () => { D.zoneSel = { allowed, chosen, count, toggle }; D.render(); D.setBar(D.hintText || (isDis ? 'Wähle Zonen, die gesperrt werden' : 'Wähle eine Zone'), [{ label: 'Bestätigen', cls: 'pri', disabled: chosen.size !== count, onclick: () => D.answer(toResp([...chosen])) }], `${chosen.size} von ${count} gewählt · leuchtende Zonen antippen`); };

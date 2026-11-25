@@ -107,3 +107,10 @@ html[data-field=arena] .duel.land.mdf .zn.chosen,html[data-field=arena] .duel.la
 .duel.land.mdf.baron .d-r>.d-bar .bar-b{flex-wrap:wrap}
 .duel.land.mdf.baron .d-r>.d-bar .bar-b .btn{min-height:40px;flex:1 1 auto}
 .duel.land.mdf.baron .d-sheet.show,.duel.land.mdf.baron .bdy{visibility:hidden}
+/* Ziehen aus der Hand */
+.d-ghost{position:fixed;left:0;top:0;z-index:200;pointer-events:none;filter:drop-shadow(0 10px 18px rgba(0,0,0,.55)) drop-shadow(0 0 10px rgba(67,211,255,.6));transition:none}
+.d-hand .hc.dragging{opacity:.25}
+.duel .d-hand .hc{touch-action:none}
+.duel.drag-on .zn[data-k^="0:4:"],.duel.drag-on .zn[data-k^="0:8:"]{box-shadow:inset 0 0 0 2px rgba(67,211,255,.45)}
+.duel.drag-on .zn.drop-over{box-shadow:inset 0 0 0 3px #b6f23a,0 0 16px rgba(182,242,58,.6)!important}
+.duel.drag-on .bdy{visibility:hidden}
