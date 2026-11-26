@@ -35,3 +35,28 @@
   .ed .ed-split.v-deck>.ed-pool,.ed .ed-split.v-pool>.ed-deck{display:none}
   .ed .ed-ratio{display:none}
 }
+/* Querformat auf dem Handy (wenig Höhe): Kopf, Format-/Banlist-Zeile und Suche kompakt – mehr Platz für Deck und Kartenliste */
+@media (orientation:landscape) and (max-height:520px){
+  .ed .hd{padding-top:calc(3px + var(--safe-t));padding-bottom:3px;min-height:0;gap:6px}
+  .ed .hd .ibtn,.ed .hd .btn{height:32px;min-height:32px;width:auto;min-width:32px;padding:0 9px}
+  .ed .hd .ed-name{height:32px;font-size:15px;padding:0 10px}
+  .ed .ed-status{flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:6px;padding:3px 10px 4px;scrollbar-width:none}
+  .ed .ed-status::-webkit-scrollbar{display:none}
+  .ed .ed-status>.tabs,.ed .ed-status>.row{flex:0 0 auto;flex-wrap:nowrap;gap:5px}
+  .ed .ed-status .chip{min-height:26px;height:26px;padding:0 9px;font-size:12.5px;white-space:nowrap}
+  .ed .ed-pool-h{flex-direction:row;flex-wrap:nowrap;align-items:center;gap:6px;padding:4px 8px 4px;border-top:3px solid #b6f23a}
+  .ed .ed-pool-h::before{display:none}
+  .ed .ed-pool-h .search{flex:1 1 38%;min-width:0;height:32px;font-size:13px;padding:0 9px}
+  .ed .ed-pool-h .ed-filters{flex:1 1 62%;min-width:0;overflow-x:auto;scrollbar-width:none}
+  .ed .ed-pool-h .ed-filters::-webkit-scrollbar{display:none}
+  .ed .ed-pool-h .ed-filters .tabs{flex-wrap:nowrap;gap:5px}
+  .ed .ed-pool-h .chip{min-height:28px;height:28px;padding:0 10px;font-size:12.5px;white-space:nowrap}
+  .ed .dz-h{padding:3px 10px;min-height:0}
+  .ed .dz-h b{font-size:14px}
+  .ed .ed-split{gap:8px;padding:4px 8px calc(4px + var(--safe-b))}
+}
+@media (orientation:landscape) and (max-height:520px){
+  .ed .ed-deck .dz-h{padding:3px 10px;margin-bottom:4px}
+  .ed .ed-deck .dz-h b{font-size:13.5px}
+  .ed .ed-deck .dz-h b::before{width:11px;height:14px;margin-right:7px}
+}

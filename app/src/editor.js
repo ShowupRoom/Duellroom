@@ -231,7 +231,7 @@ screens.editor = (params = {}) => {
   const refreshPool = () => { for (const e of poolList.querySelectorAll('.pc')) { const code = +e.dataset.code; const n = totalOf(code); e.classList.toggle('rec', recSet.has(code)); const i = e.querySelector('.inn'); if (i) i.textContent = n ? '×' + n : ''; } };
   poolList.addEventListener('scroll', () => { if (poolList.scrollTop + poolList.clientHeight > poolList.scrollHeight - 400 && shown < filtered.length) more(); });
   const countEl = h('span', { class: 'muted small' });
-  let deb; const searchIn = h('input', { class: 'search', placeholder: 'Karte suchen (deutsch oder englisch) …', oninput: (e) => { clearTimeout(deb); deb = setTimeout(() => { F.q = e.target.value; applyFilter(); }, 150); } });
+  let deb; const searchIn = h('input', { class: 'search', placeholder: innerHeight < 520 && innerWidth > innerHeight ? '🔍 Karte suchen …' : 'Karte suchen (deutsch oder englisch) …', oninput: (e) => { clearTimeout(deb); deb = setTimeout(() => { F.q = e.target.value; applyFilter(); }, 150); } });
   const chip = (label, active, fn) => h('button', { class: 'chip' + (active ? ' on' : ''), onclick: fn }, label);
   const paintFilters = () => {
     clear(filterBar);
