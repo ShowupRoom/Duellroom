@@ -44,7 +44,7 @@
   .ed .ed-status::-webkit-scrollbar{display:none}
   .ed .ed-status>.tabs,.ed .ed-status>.row{flex:0 0 auto;flex-wrap:nowrap;gap:5px}
   .ed .ed-status .chip{min-height:26px;height:26px;padding:0 9px;font-size:12.5px;white-space:nowrap}
-  .ed .ed-pool-h{flex-direction:row;flex-wrap:nowrap;align-items:center;gap:6px;padding:4px 8px 4px;border-top:3px solid #b6f23a}
+  .ed .ed-pool-h{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 8px 4px;border-top:3px solid #b6f23a}
   .ed .ed-pool-h::before{display:none}
   .ed .ed-pool-h .search{flex:1 1 38%;min-width:0;height:32px;font-size:13px;padding:0 9px}
   .ed .ed-pool-h .ed-filters{flex:1 1 62%;min-width:0;overflow-x:auto;scrollbar-width:none}
@@ -59,4 +59,30 @@
   .ed .ed-deck .dz-h{padding:3px 10px;margin-bottom:4px}
   .ed .ed-deck .dz-h b{font-size:13.5px}
   .ed .ed-deck .dz-h b::before{width:11px;height:14px;margin-right:7px}
+}
+/* Aufklapp-Knöpfe (Format, Filter): nur im Querformat am Handy sichtbar, dort statt der wischbaren Chip-Leisten */
+.screen.ed .ed-status .ed-fmt-tabs{display:none}.screen.ed .ed-dd{display:inline-flex}.screen.ed .ed-pool-h .ed-filters{display:none}.screen.ed .ed-pool-h{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px}.screen.ed .ed-pool-h .search{flex:1 1 0;min-width:90px}.screen.ed .ed-status{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px}.screen.ed .ed-status>.row{display:contents}.screen.ed .ed-pool-h::before{flex:1 0 100%;box-sizing:border-box;margin-bottom:0}.screen.ed .ed-pool-h .ed-dd{flex:0 0 auto;max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.screen.ed .ed-dd-n{flex:0 0 auto;font-size:12px}.screen.ed .ed-pool-h .ed-sum{flex:1 0 100%;order:5}
+.ed>.ed-dock{position:absolute}
+.ed-pop{position:absolute;inset:0;z-index:80;background:rgba(2,4,14,.35)}
+.ed-pop-b{position:fixed;overflow:auto;padding:10px 12px 12px;background:linear-gradient(180deg,#141f4c,#0a1130);border:1px solid rgba(190,210,255,.55);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.65);display:flex;flex-direction:column;gap:9px}
+.ed-pop-t{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#43d3ff;margin-bottom:5px}
+.ed-pop-c{display:flex;flex-wrap:wrap;gap:6px}
+.ed-pop .chip{min-height:32px;padding:0 12px;font-size:13.5px;background:#000;border:2px solid #d9dde6;border-radius:16px;color:#fff;font-weight:700}
+.ed-pop .chip.on{background:linear-gradient(180deg,#c6f04c,#93c71c);color:#132000;border-color:#e3ff8a}
+.ed-pop-f{display:flex;align-items:center;justify-content:flex-end;gap:8px;position:sticky;bottom:-12px;margin:0 -12px -12px;padding:8px 12px;background:#0a1130;border-top:1px solid rgba(150,180,255,.28)}
+@media (orientation:landscape) and (max-height:520px){
+  /* Kopfzeile und Formatzeile in EINER Zeile – die Fenster bekommen die gewonnene Höhe */
+  .screen.ed{display:grid;grid-template-columns:minmax(150px,1fr) auto;grid-template-rows:auto minmax(0,1fr)}
+  .screen.ed>.hd{grid-column:1;grid-row:1;min-width:0}
+  .screen.ed>.ed-status{grid-column:2;grid-row:1;overflow:visible;flex-wrap:nowrap;padding:calc(3px + var(--safe-t)) calc(8px + var(--safe-r)) 3px 0;border:0;max-width:72vw}
+  .screen.ed>.ed-split{grid-column:1/-1;grid-row:2;min-height:0}
+  .screen.ed>.ed-view{display:none}
+  .ed .ed-status .ed-fmt-tabs,.ed .ed-status .ed-cnt.ok,.ed .ed-lt{display:none}
+  .ed .ed-status .ed-dd{display:inline-flex}
+  .ed .ed-status .chip{height:32px;min-height:32px}
+  .ed .ed-status>.row{flex-wrap:nowrap}
+  /* Kartenliste: Suche + Filter-Knopf, keine Wischleiste */
+  .ed .ed-pool-h .ed-filters{display:none}
+  .ed .ed-pool-h .ed-dd{display:inline-flex;flex:0 0 auto;height:32px;min-height:32px;padding:0 12px;font-size:13px;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ed .ed-pool-h .ed-dd-n{display:block;flex:0 0 auto;font-size:12px}
 }
