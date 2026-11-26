@@ -153,8 +153,12 @@ async function askCards(D, msg, kind) {
     min = Math.min(msg.min, n); max = Math.min(msg.max || n, n);
     valid = (idx) => idx.length >= min && idx.length <= max;
     respond = (idx) => (kind === 'tribute' ? { type: R.SELECT_TRIBUTE, indicies: idx } : { type: R.SELECT_CARD, indicies: idx });
-    if (kind === 'tribute') { badge = (s) => (s.release_param > 1 ? `×${s.release_param}` : ''); valid = (idx) => idx.length >= Math.min(1, n) && idx.length <= max; }
     count = (idx) => `${idx.length} von ${min === max ? max : `${min}–${max}`} gewählt`;
+    if (kind === 'tribute') { // Tribute zählen (manche Monster zählen doppelt): erst bestätigen, wenn genug gewählt sind – sonst lehnt die Engine still ab
+      const need = msg.min || 1; const sum = (idx) => idx.reduce((a, i) => a + Math.max(1, list[i].release_param || 1), 0);
+      badge = (s) => (s.release_param > 1 ? `×${s.release_param}` : ''); valid = (idx) => sum(idx) >= need && idx.length <= max;
+      count = (idx) => { const r = need - sum(idx); return r > 0 ? `${idx.length} gewählt · noch ${r} Tribut${r > 1 ? 'e' : ''} nötig` : `${idx.length} gewählt · genug Tribute ✓`; };
+    }
     if (!msg.can_cancel && n > 0 && min >= n && kind === 'card') return respond(list.map((_, i) => i));
   }
   // Angriff durch Ziehen: das Monster, auf das gezogen wurde, als Angriffsziel nehmen
