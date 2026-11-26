@@ -84,7 +84,11 @@ function askBattle(D, msg) {
   D.setTip((D.conf.lesson && lessonTip(D, msg, 'battle')) || (D.conf.tutor ? battleTip(D, msg) : null)); if (D.conf.tutor) D.tipBtn.classList.add('pulse');
   D.phaseOpts = { M2: msg.to_m2 ? r(BA.TO_M2, null) : null, EP: msg.to_ep ? r(BA.TO_EP, null) : null };
   D.hideBar();
-  const p = D.wait('battle'); D.render(); return p;
+  // Angriff durch Ziehen (aus der Main Phase): gleich nach Beginn der Battle Phase den Angriff dieses Monsters wählen
+  const da = D.dragAtk; let auto = null;
+  if (da && !da.armed && Date.now() - da.t < 30000 && msg.player === D.viewer) { auto = D.actList.find((a) => a.kind === 'attack' && a.key === da.k) || D.actList.find((a) => a.kind === 'attack' && a.code === da.code); if (auto) da.armed = Date.now(); else { D.dragAtk = null; toast('Dieses Monster kann gerade nicht angreifen.'); } }
+  else if (da) D.dragAtk = null;
+  const p = D.wait('battle'); D.render(); if (auto) setTimeout(() => { if (D.pending && D.pending.kind === 'battle') D.answer(auto.resp); }, 120); return p;
 }
 
 // ---------------------------------------------------------------- Kartenauswahl
@@ -153,6 +157,8 @@ async function askCards(D, msg, kind) {
     count = (idx) => `${idx.length} von ${min === max ? max : `${min}–${max}`} gewählt`;
     if (!msg.can_cancel && n > 0 && min >= n && kind === 'card') return respond(list.map((_, i) => i));
   }
+  // Angriff durch Ziehen: das Monster, auf das gezogen wurde, als Angriffsziel nehmen
+  const da = D.dragAtk; if (da && da.armed && kind === 'card') { D.dragAtk = null; if (da.tk && Date.now() - da.armed < 8000 && list.every((s) => s.location === LOC.MZONE && s.controller !== D.viewer)) { const i = list.findIndex((s) => sk(s) === da.tk); if (i >= 0) return respond([i]); } }
   const title = D.hintText || (kind === 'tribute' ? 'Wähle die Monster, die du opferst' : kind === 'sum' ? 'Wähle Karten für die Summe' : 'Wähle Karten');
   const o = { title, min, max, valid, respond, count, badge, cancel: !!msg.can_cancel && kind !== 'sum' };
   const items = list;

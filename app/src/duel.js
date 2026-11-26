@@ -62,7 +62,7 @@ class Duel {
     this.boardWrap = h('div', { class: 'd-board' }); this.board = h('div', { class: 'bd' }); this.ohand = h('div', { class: 'd-ohand' }); this.boardWrap.append(this.board, this.ohand);
     this.wheel = h('button', { class: 'ph-wheel', title: 'Phase wählen', onclick: () => this.phaseTap() }, h('b', null, '–'), h('small', null, ''));
     this.phaseEl = h('div', { class: 'd-phases' }, this.wheel, h('div', { class: 'ph-pills' }, PH_PILLS.filter((x) => !(this.mode.noM2 && x[0] === 'M2')).map((x) => h('button', { class: 'ph', 'data-ph': x[0], title: x[1], onclick: () => this.phasePick(x[0]) }, x[0]))));
-    this.board.addEventListener('click', (e) => { const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); });
+    this.board.addEventListener('click', (e) => { if (this._dragJust) { this._dragJust = false; return; } const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); }); this.board.addEventListener('pointerdown', (e) => this.atkDragStart(e));
     this.handEl = h('div', { class: 'd-hand' }); this.handEl.addEventListener('click', (e) => { if (this._dragJust) { this._dragJust = false; return; } const z = e.target.closest('[data-k]'); if (z) this.tapKey(z.dataset.k, z); }); this.handEl.addEventListener('pointerdown', (e) => this.dragStart(e)); this.bar = h('div', { class: 'd-bar' });
     this.sheet = h('div', { class: 'd-sheet' }); this.actsEl = h('div', { class: 'd-acts' }); this.fx = h('div', { class: 'd-fx' });
     this.over = h('div', { class: 'd-over' });
@@ -573,6 +573,47 @@ class Duel {
     };
     addEventListener('pointermove', move, { passive: false }); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   }
+  // ---- Angriff durch Ziehen: eigenes Monster in Angriffsposition auf ein gegnerisches Monster (oder die Gegnerseite) ziehen.
+  // In der Main Phase 1 wird vorher gefragt, ob du in die Battle Phase wechselst; Angriff und Ziel werden dann automatisch gewählt.
+  atkDragStart(e) {
+    if (e.button > 0 || !this.pending || this.demo || !this.snap) return; const z = e.target.closest('.zn[data-k]'); if (!z || z.classList.contains('pile')) return;
+    const k = [z.dataset.k, z.dataset.k2].find((x) => x && +x.split(':')[0] === this.viewer && +x.split(':')[1] === LOC.MZONE && this.cardAt(...x.split(':').map(Number))); if (!k) return;
+    const c = this.cardAt(...k.split(':').map(Number)); if (!c || !(c.position & 1)) return; // nur offen in Angriffsposition
+    const kind = this.pending.kind; const can = kind === 'battle' ? (this.acts.get(k) || []).some((a) => a.kind === 'attack') : kind === 'idle' && !!(this.phaseOpts && this.phaseOpts.BP) && this.turnNo > 1;
+    if (!can) return;
+    const x0 = e.clientX, y0 = e.clientY, pid = e.pointerId; let ghost = null; const zr = z.getBoundingClientRect(); const src = z.querySelector('.fwrap') || z;
+    const move = (ev) => {
+      if (ev.pointerId !== pid) return; const dx = ev.clientX - x0, dy = ev.clientY - y0;
+      if (!ghost) { if (Math.hypot(dx, dy) < 14 || dy > -10) return;
+        const r = src.getBoundingClientRect(); ghost = src.cloneNode(true); ghost.classList.add('d-ghost', 'atk-ghost'); Object.assign(ghost.style, { width: r.width + 'px', height: r.height + 'px' }); document.body.append(ghost); z.classList.add('dragging'); this.root.classList.add('drag-on', 'atk-drag'); this.closeSheet(); this.dropFloat(); }
+      ghost.style.transform = `translate(${ev.clientX - ghost.offsetWidth / 2}px, ${ev.clientY - ghost.offsetHeight * 0.6}px) scale(1.06)`;
+      const t = this.oppZoneAt(ev.clientX, ev.clientY); const tz = t && t.z; if (tz !== this._dragOver) { this.root.querySelectorAll('.drop-over').forEach((x) => x.classList.remove('drop-over')); if (tz) tz.classList.add('drop-over'); this._dragOver = tz; }
+      ev.preventDefault();
+    };
+    const up = (ev) => {
+      if (ev.pointerId !== pid) return; removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
+      if (!ghost) return; this._dragJust = true; setTimeout(() => { this._dragJust = false; }, 400);
+      ghost.remove(); z.classList.remove('dragging'); this.root.classList.remove('drag-on', 'atk-drag'); this.root.querySelectorAll('.drop-over').forEach((x) => x.classList.remove('drop-over')); this._dragOver = null;
+      if (ev.type !== 'pointerup' || ev.clientY > zr.top - 8) return; // nicht über die eigene Monsterreihe hinaus gezogen → nichts tun
+      const t = this.oppZoneAt(ev.clientX, ev.clientY); this.dragAttackGo(k, c, t ? t.k : null);
+    };
+    addEventListener('pointermove', move, { passive: false }); addEventListener('pointerup', up); addEventListener('pointercancel', up);
+  }
+  /** gegnerisches Monster unter dem Finger */
+  oppZoneAt(x, y) {
+    const el = document.elementFromPoint(x, y); const z = el && el.closest && el.closest('.zn[data-k]'); if (!z || !this.boardWrap.contains(z)) return null;
+    const k = [z.dataset.k, z.dataset.k2].find((q) => q && +q.split(':')[0] !== this.viewer && +q.split(':')[1] === LOC.MZONE && this.cardAt(...q.split(':').map(Number))); return k ? { z, k } : null;
+  }
+  async dragAttackGo(k, c, tk) {
+    const tc = tk && this.cardAt(...tk.split(':').map(Number)); const nm = cleanName(nameOf(c.code)); const tn = tc ? (this.visible(tc) ? '„' + cleanName(nameOf(tc.code)) + '“' : 'das verdeckte Monster') : 'den Gegner';
+    if (this.pending && this.pending.kind === 'idle') {
+      const ok = await confirmBox('In die Battle Phase?', `„${nm}“ soll ${tn} angreifen. Dafür wechselst du jetzt von der Main Phase in die Battle Phase.`, '⚔ Ja, Battle Phase', 'Nein, hierbleiben');
+      if (!ok || !this.pending || this.pending.kind !== 'idle' || !this.phaseOpts || !this.phaseOpts.BP) return;
+      this.dragAtk = { code: c.code, k, tk, t: Date.now() }; this.answer(this.phaseOpts.BP); return;
+    }
+    const a = this.pending && this.pending.kind === 'battle' && (this.acts.get(k) || []).find((x) => x.kind === 'attack'); if (!a) { toast('Dieses Monster kann gerade nicht angreifen.'); return; }
+    this.dragAtk = { code: c.code, k, tk, t: Date.now(), armed: Date.now() }; this.answer(a.resp);
+  }
   /** eigene Zone unter dem Finger (Monster-/Zauber-Fallen-/Feldzone) */
   zoneAt(x, y) { const el = document.elementFromPoint(x, y); const z = el && el.closest && el.closest('.zn[data-k]'); return z && this.boardWrap.contains(z) && +z.dataset.k.split(':')[0] === this.viewer ? z : null; }
   tapKey(k, el) {
@@ -613,13 +654,12 @@ class Duel {
       : h('div', { class: 'sh-top' }, cardEl(0, { back: true, cls: 'md' }), h('div', { class: 'grow' }, h('div', { class: 'sh-n' }, 'Verdeckte Karte'), h('div', { class: 'small muted' }, `von ${this.pname(c.controller)}`)));
     const txt = vis ? h('div', { class: 'sh-t' }, (() => { const mv = mergeViews(acts.filter((a) => a.kind === 'activate' && a.c).map((a) => effectView(a.code, a.c.description, a.c.location))); return mv && mv.ranges.length ? markNode(mv) : descOf(card).replace(/\r/g, ''); })()) : null;
     const optNote = vis ? optHint(descOf(card)) : null; if (txt && optNote) txt.append(h('div', { class: 'opt-note' }, optNote));
-    const actBtns = acts.map((a) => h('button', { class: 'btn ' + (a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, a.label));
+    const ICO = { attack: '⚔ ', activate: '⚡ ', summon: '⇧ ', special: '✦ ', set: '▣ ', spellset: '▣ ', pos: '⟳ ' }; const actBtns = acts.map((a) => h('button', { class: 'btn ' + (a.kind === 'attack' ? 'red' : a.pri ? 'pri' : ''), onclick: () => { this.closeSheet(); this.answer(a.resp); } }, (ICO[a.kind] || '') + a.label));
     const none = !acts.length && own && this.selKey === k && this.pending && this.pending.kind === 'idle' ? h('div', { class: 'small muted', style: 'margin-top:6px' }, 'Mit dieser Karte ist gerade keine Aktion möglich.') : null;
     if (land) {
-      this.sheet.append(h('button', { class: 'sh-x mdx', onclick: () => { this.sheetOff = true; this.sheet.classList.remove('show'); } }, '✕'), head, txt || h('div', { class: 'sh-t muted' }, 'Der Gegner hat diese Karte verdeckt gelegt.'));
-    } else {
-      this.sheet.append(h('button', { class: 'sh-x', onclick: () => this.closeSheet() }, '✕'), head, txt);
-      if (actBtns.length) this.sheet.append(h('div', { class: 'sh-acts' }, actBtns)); else if (none) this.sheet.append(none);
+      this.sheet.append(h('button', { class: 'sh-x mdx', onclick: () => { this.sheetOff = true; this.sheet.classList.remove('show'); } }, '✕'), actBtns.length ? h('div', { class: 'sh-acts top' }, actBtns) : null, head, txt || h('div', { class: 'sh-t muted' }, 'Der Gegner hat diese Karte verdeckt gelegt.'));
+    } else { // Aktionen ganz oben, damit sie ohne Scrollen sichtbar sind
+      this.sheet.append(h('button', { class: 'sh-x', onclick: () => this.closeSheet() }, '✕'), actBtns.length ? h('div', { class: 'sh-acts top' }, actBtns) : none, head, txt);
       if (vis) this.sheet.append(h('button', { class: 'btn ghost sm', style: 'margin-top:8px', onclick: () => this.info(c.code) }, 'Ganzen Text'));
     }
     const box = this.sheet.querySelector('.sh-t');
@@ -631,7 +671,7 @@ class Duel {
     this.dropFloat(); const ls = this.lastSel;
     if (!ls || !this.selKey || ls.k !== this.selKey || !this.snap || !this.root.classList.contains('land')) return;
     const acts = this.acts.get(ls.k) || []; if (!acts.length || ls.c.controller !== this.viewer || !this.pending || (this.pending.kind !== 'idle' && this.pending.kind !== 'battle')) return;
-    const el = this.root.querySelector(`[data-k="${ls.k}"]`) || this.root.querySelector(`[data-k2="${ls.k}"]`); if (!el) return;
+    const PL = ls.c.location & (LOC.GRAVE | LOC.REMOVED | LOC.EXTRA); const el = (PL ? this.root.querySelector(`.pile[data-k="${key(ls.c.controller, ls.c.location === LOC.REMOVED ? LOC.GRAVE : ls.c.location, 0)}"]`) : null) || this.root.querySelector(`[data-k="${ls.k}"]`) || this.root.querySelector(`[data-k2="${ls.k}"]`); if (!el) return; // Karten im Friedhof/Extradeck/verbannt: Knöpfe über dem Stapel
     const FB = { summon: ['⇧', 'Beschwören', 'sum'], special: ['✦', 'Spezial', 'sp'], set: ['▣', 'Setzen', 'set'], spellset: ['▣', 'Setzen', 'set'], pos: ['⟳', 'Position', 'pos'], activate: ['⚡', 'Aktivieren', 'act'], attack: ['⚔', 'Angriff', 'atk'] };
     const nAct = acts.filter((a) => a.kind === 'activate').length; let ai = 0, btns0 = 0;
     const btns = acts.map((a) => {
